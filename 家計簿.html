@@ -272,12 +272,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto S
       <label class="form-label">記録日</label>
       <input class="form-input" type="date" id="asset-date">
     </div>
-    <div style="background:var(--bg3);border-radius:12px;padding:12px;margin-bottom:12px">
-      ${['現金','貯蓄','生命保険積立','自動車税積立','車検積立','固定資産税積立','自動車保険積立','史絵梨貯金','涼介貯金','き貯金','よ確定拠出年金','き確定拠出年金','生保解約返戻金'].map(k=>`
-      <div class="asset-input-row">
-        <div class="asset-input-label">${k}</div>
-        <input class="asset-input-field" type="number" id="ai-${k}" placeholder="0" inputmode="numeric">
-      </div>`).join('')}
+    <div id="asset-fields" style="background:var(--bg3);border-radius:12px;padding:12px;margin-bottom:12px">
     </div>
     <div class="btn-row">
       <button class="btn-secondary" onclick="closeModal('asset')">キャンセル</button>
@@ -759,12 +754,13 @@ async function bulkAdd(items){
 function openAssetModal(){
   const t=today();
   document.getElementById('asset-date').value=t;
-  // 最新データを初期値に
   const latest=assets.length>0?assets[assets.length-1]:null;
-  ASSET_KEYS.forEach(k=>{
-    const el=document.getElementById('ai-'+k);
-    if(el)el.value=latest?latest[k]||'':'';
-  });
+  const container=document.getElementById('asset-fields');
+  container.innerHTML=ASSET_KEYS.map(k=>`
+    <div class="asset-input-row">
+      <div class="asset-input-label">${k}</div>
+      <input class="asset-input-field" type="number" id="assetfield-${k}" placeholder="0" inputmode="numeric" value="${latest?latest[k]||'':''}">
+    </div>`).join('');
   openModal('asset');
 }
 
@@ -773,7 +769,7 @@ async function saveAsset(){
   const record={date};
   let total=0;
   ASSET_KEYS.forEach(k=>{
-    const v=parseInt(document.getElementById('ai-'+k).value)||0;
+    const v=parseInt(document.getElementById('assetfield-'+k).value)||0;
     record[k]=v;
     total+=v;
   });
