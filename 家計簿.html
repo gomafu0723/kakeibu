@@ -96,8 +96,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto S
 .loading-dots span:nth-child(3){animation-delay:.4s}
 @keyframes dot{0%,80%,100%{opacity:.3}40%{opacity:1}}
 .fab{position:fixed;bottom:calc(68px + env(safe-area-inset-bottom,0px));right:max(16px,calc(50% - 224px));width:50px;height:50px;background:var(--green);border-radius:50%;border:none;cursor:pointer;font-size:26px;color:#000;box-shadow:0 4px 20px rgba(74,222,128,.3);z-index:50;display:flex;align-items:center;justify-content:center}
-.asset-grid{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
-.asset-row{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--bg2);border-radius:10px;border:0.5px solid var(--border)}
+.asset-row{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--bg2);border-radius:10px;border:0.5px solid var(--border);margin-bottom:6px}
 .asset-name{font-size:13px}
 .asset-val{font-family:'DM Mono',monospace;font-size:13px;color:var(--text2)}
 .asset-input-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:0.5px solid var(--border)}
@@ -106,9 +105,13 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto S
 .asset-input-field{width:130px;background:var(--bg3);border:0.5px solid var(--border);border-radius:8px;padding:7px 10px;color:var(--text);font-size:14px;font-family:'DM Mono',monospace;outline:none;text-align:right;-webkit-appearance:none}
 .asset-input-field:focus{border-color:var(--green)}
 .total-row{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--bg3);border-radius:10px;border:0.5px solid var(--green);margin-top:8px}
-.chip{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;margin-left:6px}
-.chip-green{background:#052e16;color:var(--green)}
-.chip-red{background:#7f1d1d;color:var(--red)}
+.fixed-balance-item{background:var(--bg2);border-radius:var(--radius);padding:12px;border:0.5px solid var(--border);margin-bottom:8px}
+.fixed-balance-name{font-size:12px;color:var(--text3);margin-bottom:4px}
+.fixed-balance-row{display:flex;justify-content:space-between;align-items:baseline}
+.fixed-balance-remain{font-family:'DM Mono',monospace;font-size:16px;font-weight:500}
+.fixed-balance-detail{font-size:11px;color:var(--text3)}
+.fixed-bar{background:var(--bg4);border-radius:2px;height:3px;margin-top:8px;overflow:hidden}
+.fixed-bar-fill{height:100%;border-radius:2px}
 </style>
 </head>
 <body>
@@ -145,7 +148,6 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto S
       <div class="mode-tab" onclick="switchInputType('income')" id="type-income">収入</div>
       <div class="mode-tab" onclick="switchInputType('receipt')" id="type-receipt">レシート</div>
     </div>
-
     <!-- 支出フォーム -->
     <div id="form-expense">
       <div class="form-group">
@@ -158,6 +160,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto S
           <option>食料費</option><option>生活費</option><option>その他</option>
           <option>通信費</option><option>光熱費</option><option>保険費</option>
           <option>住居費</option><option>教育費</option>
+          <option disabled>── 積立 ──</option>
           <option>貯蓄</option><option>生命保険積立</option><option>IDECO</option>
           <option>自動車税積立</option><option>車検積立</option>
           <option>固定資産税積立</option><option>自動車保険積立</option>
@@ -176,7 +179,6 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto S
         <button class="btn-primary" onclick="addExpense()">追加</button>
       </div>
     </div>
-
     <!-- 収入フォーム -->
     <div id="form-income" style="display:none">
       <div class="form-group">
@@ -184,10 +186,14 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto S
         <input class="form-input" type="number" id="inc-amount" placeholder="0" inputmode="numeric">
       </div>
       <div class="form-group">
-        <label class="form-label">種別</label>
+        <label class="form-label">入金先</label>
         <select class="form-select" id="inc-cat">
           <option>よ収入</option><option>き収入</option><option>その他収入</option>
           <option>児童手当</option><option>雑収入</option>
+          <option disabled>── 積立口座へ ──</option>
+          <option>貯蓄</option><option>生命保険積立</option><option>IDECO</option>
+          <option>自動車税積立</option><option>車検積立</option>
+          <option>固定資産税積立</option><option>自動車保険積立</option>
         </select>
       </div>
       <div class="form-group">
@@ -203,7 +209,6 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto S
         <button class="btn-primary" onclick="addIncome()">追加</button>
       </div>
     </div>
-
     <!-- レシートフォーム -->
     <div id="form-receipt" style="display:none">
       <div class="receipt-area" onclick="document.getElementById('file-inp').click()">
@@ -243,6 +248,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto S
         <option>食料費</option><option>生活費</option><option>その他</option>
         <option>通信費</option><option>光熱費</option><option>保険費</option>
         <option>住居費</option><option>教育費</option>
+        <option disabled>── 積立 ──</option>
         <option>貯蓄</option><option>生命保険積立</option><option>IDECO</option>
         <option>自動車税積立</option><option>車検積立</option>
         <option>固定資産税積立</option><option>自動車保険積立</option>
@@ -272,8 +278,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto S
       <label class="form-label">記録日</label>
       <input class="form-input" type="date" id="asset-date">
     </div>
-    <div id="asset-fields" style="background:var(--bg3);border-radius:12px;padding:12px;margin-bottom:12px">
-    </div>
+    <div id="asset-fields" style="background:var(--bg3);border-radius:12px;padding:12px;margin-bottom:12px"></div>
     <div class="btn-row">
       <button class="btn-secondary" onclick="closeModal('asset')">キャンセル</button>
       <button class="btn-primary" onclick="saveAsset()">記録する</button>
@@ -283,14 +288,18 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto S
 
 <script>
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbxKuVAihUFNSCI1LxTIssawJDJ1NnaA3Kw5FNguS8cA6oyRxQEN2IKV6DVDS4nHSKe3/exec';
-const RESERVE = 20000; // 家のルール：2万円残す
+const RESERVE = 20000;
 
 const BUDGET = {
   食料費:83500,生活費:13000,その他:60000,通信費:10000,
   光熱費:38000,保険費:12000,住居費:22000,教育費:20000
 };
-const FIXED_CATS = ['貯蓄','生命保険積立','IDECO','自動車税積立','車検積立','固定資産税積立','自動車保険積立'];
-const FIXED_AMOUNTS = {貯蓄:99000,生命保険積立:64000,IDECO:10000,自動車税積立:3500,車検積立:7000,固定資産税積立:10500,自動車保険積立:2500};
+const FIXED_AMOUNTS = {
+  貯蓄:99000,生命保険積立:64000,IDECO:10000,
+  自動車税積立:3500,車検積立:7000,固定資産税積立:10500,自動車保険積立:2500
+};
+const FIXED_CATS = Object.keys(FIXED_AMOUNTS);
+const ALL_CATS = [...Object.keys(BUDGET), ...FIXED_CATS];
 const ASSET_KEYS = ['現金','貯蓄','生命保険積立','自動車税積立','車検積立','固定資産税積立','自動車保険積立','史絵梨貯金','涼介貯金','き貯金','よ確定拠出年金','き確定拠出年金','生保解約返戻金'];
 
 let expenses = JSON.parse(localStorage.getItem('kk_expenses')||'[]');
@@ -316,9 +325,33 @@ function getMonthData(arr){
 
 function calcCatUsed(){
   const used={};
-  Object.keys(BUDGET).forEach(k=>used[k]=0);
+  ALL_CATS.forEach(k=>used[k]=0);
   getMonthData(expenses).forEach(e=>{if(used[e.cat]!==undefined)used[e.cat]+=Number(e.amount)});
   return used;
+}
+
+// 積立残高計算：積立額の累計 + 収入 - 支出（全期間）
+function calcFixedBalance(){
+  const balance={};
+  const now = new Date();
+  const startYear = 2024;
+  
+  FIXED_CATS.forEach(cat=>{
+    // 全期間の収入（この口座への入金）
+    const totalIncome = incomes
+      .filter(e=>e.cat===cat)
+      .reduce((a,e)=>a+Number(e.amount),0);
+    // 全期間の支出
+    const totalExpense = expenses
+      .filter(e=>e.cat===cat)
+      .reduce((a,e)=>a+Number(e.amount),0);
+    // 月次積立額（今月まで）
+    const monthsElapsed = (now.getFullYear()-startYear)*12 + now.getMonth() + 1;
+    const monthlyAmount = FIXED_AMOUNTS[cat]||0;
+    const accumulated = monthlyAmount * monthsElapsed;
+    balance[cat] = accumulated + totalIncome - totalExpense;
+  });
+  return balance;
 }
 
 function syncBarHTML(){
@@ -349,6 +382,11 @@ async function syncFromSheet(){
       incomes=data['収入'].filter(e=>e.date&&e.amount>0);
       localStorage.setItem('kk_incomes',JSON.stringify(incomes));
     }
+    if(data['資産']){
+      // 資産データの変換
+      assets=data['資産'].filter(e=>e.date);
+      localStorage.setItem('kk_assets',JSON.stringify(assets));
+    }
     const now=new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
     lastSync=now;
     localStorage.setItem('kk_last_sync',now);
@@ -367,11 +405,11 @@ async function postToSheet(payload){
 
 function renderHome(){
   const used=calcCatUsed();
-  const totalUsed=Object.values(used).reduce((a,b)=>a+b,0);
+  const budgetUsed=Object.keys(BUDGET).reduce((a,k)=>a+(used[k]||0),0);
   const totalBudget=Object.values(BUDGET).reduce((a,b)=>a+b,0);
-  const remain=totalBudget-totalUsed;
+  const remain=totalBudget-budgetUsed;
   const remainAfterReserve=remain-RESERVE;
-  const pct=Math.min(100,Math.round(totalUsed/totalBudget*100));
+  const pct=Math.min(100,Math.round(budgetUsed/totalBudget*100));
   const cls=pct>90?'over':pct>70?'warn':'ok';
   const today2=new Date();
   const daysInMonth=new Date(today2.getFullYear(),today2.getMonth()+1,0).getDate();
@@ -393,7 +431,7 @@ function renderHome(){
     <div class="hero-card">
       <div class="hero-label">残り予算（2万円控除後）</div>
       <div class="hero-amount ${remainAfterReserve<0?'over':remainAfterReserve<10000?'warn':''}">${fmtYen(remainAfterReserve)}</div>
-      <div class="hero-sub">1日あたり ${fmtYen(dailyRemain)} · 予算 ${fmtYen(totalBudget)} · 使用 ${fmtYen(totalUsed)} · 控除 ${fmtYen(RESERVE)}</div>
+      <div class="hero-sub">1日あたり ${fmtYen(dailyRemain)} · 予算 ${fmtYen(totalBudget)} · 使用 ${fmtYen(budgetUsed)} · 控除 ${fmtYen(RESERVE)}</div>
       <div class="progress-track"><div class="progress-fill ${cls}-bar" style="width:${pct}%"></div></div>
     </div>
     <div class="cards-row">
@@ -486,48 +524,60 @@ function renderAsset(){
   const prev=assets.length>1?assets[assets.length-2]:null;
   document.getElementById('view-asset').innerHTML=`
     <div class="header"><h1>資産</h1></div>
+    ${syncBarHTML()}
     <div style="margin-bottom:12px">
       <button class="btn-primary" style="width:100%" onclick="openAssetModal()">＋ 今月の資産を記録</button>
     </div>
     ${latest?`
     <div class="section-title">最新 ${latest.date}</div>
-    <div class="asset-grid">
-      ${ASSET_KEYS.map(k=>{
-        const val=Number(latest[k]||0);
-        const prevVal=prev?Number(prev[k]||0):null;
-        const diff=prevVal!==null?val-prevVal:null;
-        return`<div class="asset-row">
-          <div class="asset-name">${k}</div>
-          <div style="text-align:right">
-            <div class="asset-val">${fmtYen(val)}</div>
-            ${diff!==null?`<div style="font-size:10px;color:${diff>=0?'var(--green)':'var(--red)'}">${diff>=0?'+':''}${fmtYen(diff)}</div>`:''}
-          </div>
-        </div>`;
-      }).join('')}
-      <div class="total-row">
-        <div style="font-weight:500">合計</div>
-        <div style="font-family:'DM Mono',monospace;font-size:16px;font-weight:500;color:var(--green)">${fmtYen(ASSET_KEYS.reduce((a,k)=>a+Number(latest[k]||0),0))}</div>
-      </div>
-    </div>`:'<div class="empty-msg">資産記録がありません</div>'}
+    ${ASSET_KEYS.map(k=>{
+      const val=Number(latest[k]||0);
+      const prevVal=prev?Number(prev[k]||0):null;
+      const diff=prevVal!==null?val-prevVal:null;
+      return`<div class="asset-row">
+        <div class="asset-name">${k}</div>
+        <div style="text-align:right">
+          <div class="asset-val">${fmtYen(val)}</div>
+          ${diff!==null?`<div style="font-size:10px;color:${diff>=0?'var(--green)':'var(--red)'}">${diff>=0?'+':''}${fmtYen(diff)}</div>`:''}
+        </div>
+      </div>`;
+    }).join('')}
+    <div class="total-row">
+      <div style="font-weight:500">合計</div>
+      <div style="font-family:'DM Mono',monospace;font-size:16px;font-weight:500;color:var(--green)">${fmtYen(ASSET_KEYS.reduce((a,k)=>a+Number(latest[k]||0),0))}</div>
+    </div>`:'<div class="empty-msg">資産記録がありません<br>同期ボタンを押してください</div>'}
   `;
 }
 
 function renderFixed(){
+  const balance=calcFixedBalance();
+  const used=calcCatUsed();
   const fixedTotal=Object.values(FIXED_AMOUNTS).reduce((a,b)=>a+b,0);
+  const fixedUsedTotal=FIXED_CATS.reduce((a,k)=>a+(used[k]||0),0);
+
   document.getElementById('view-fixed').innerHTML=`
     <div class="header"><h1>積立・固定費</h1></div>
     <div class="hero-card">
-      <div class="hero-label">積立合計</div>
+      <div class="hero-label">今月の積立合計</div>
       <div class="hero-amount">${fmtYen(fixedTotal)}</div>
+      <div class="hero-sub">今月の積立支出 ${fmtYen(fixedUsedTotal)}</div>
     </div>
-    <div class="section-title">内訳</div>
-    <div class="list-card">
-      ${Object.entries(FIXED_AMOUNTS).map(([k,v])=>`
-      <div class="list-item">
-        <div class="item-left"><div class="iname">${k}</div></div>
-        <div class="item-right"><div class="iamt expense">${fmtYen(v)}</div></div>
-      </div>`).join('')}
-    </div>
+    <div class="section-title">各口座の残高</div>
+    ${FIXED_CATS.map(cat=>{
+      const monthly=FIXED_AMOUNTS[cat];
+      const bal=balance[cat]||0;
+      const spent=used[cat]||0;
+      const pct=monthly>0?Math.min(100,Math.round(spent/monthly*100)):0;
+      const cls=bal<0?'over':bal<monthly?'warn':'ok';
+      return`<div class="fixed-balance-item">
+        <div class="fixed-balance-name">${cat}</div>
+        <div class="fixed-balance-row">
+          <div class="fixed-balance-remain ${cls}">${fmtYen(bal)}</div>
+          <div class="fixed-balance-detail">月額 ${fmtYen(monthly)} · 今月支出 ${fmtYen(spent)}</div>
+        </div>
+        <div class="fixed-bar"><div class="fixed-bar-fill ${cls}-bar" style="width:${pct}%"></div></div>
+      </div>`;
+    }).join('')}
   `;
 }
 
@@ -555,7 +605,7 @@ function changeMonth(d){
 function openModal(id){
   document.getElementById('modal-'+id).classList.add('open');
   const t=today();
-  ['exp-date','inc-date'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=t;});
+  ['exp-date','inc-date'].forEach(fid=>{const el=document.getElementById(fid);if(el)el.value=t;});
 }
 function closeModal(id){document.getElementById('modal-'+id).classList.remove('open')}
 
@@ -578,7 +628,7 @@ async function addExpense(){
   document.getElementById('exp-amount').value='';
   document.getElementById('exp-detail').value='';
   closeModal('input');
-  renderHome();
+  renderCurrent();
   await postToSheet({action:'add',...entry});
 }
 
@@ -617,9 +667,7 @@ async function saveEdit(){
   const detail=document.getElementById('edit-detail').value;
   const date=document.getElementById('edit-date').value;
   if(!amt||amt<=0){alert('金額を入力してください');return}
-  // 古いデータをスプレッドシートから削除
   await postToSheet({action:'delete',...editingOldEntry});
-  // 新しいデータを追加
   const entry={amount:amt,cat,detail,date};
   expenses[idx]=entry;
   localStorage.setItem('kk_expenses',JSON.stringify(expenses));
@@ -642,7 +690,6 @@ async function deleteEntry(){
 async function handleReceipt(input){
   if(!input.files[0])return;
   const file=input.files[0];
-  // ファイルサイズチェック（4MB以下に圧縮）
   const reader=new FileReader();
   reader.onload=async(e)=>{
     const img=new Image();
@@ -752,20 +799,20 @@ async function bulkAdd(items){
 }
 
 function openAssetModal(){
-  const t=today();
-  document.getElementById('asset-date').value=t;
+  document.getElementById('asset-date').value=today();
   const latest=assets.length>0?assets[assets.length-1]:null;
   const container=document.getElementById('asset-fields');
   container.innerHTML=ASSET_KEYS.map(k=>`
     <div class="asset-input-row">
       <div class="asset-input-label">${k}</div>
-      <input class="asset-input-field" type="number" id="assetfield-${k}" placeholder="0" inputmode="numeric" value="${latest?latest[k]||'':''}">
+      <input class="asset-input-field" type="number" id="assetfield-${k}" placeholder="0" inputmode="numeric" value="${latest&&latest[k]?latest[k]:''}">
     </div>`).join('');
   openModal('asset');
 }
 
 async function saveAsset(){
   const date=document.getElementById('asset-date').value;
+  if(!date){alert('日付を入力してください');return}
   const record={date};
   let total=0;
   ASSET_KEYS.forEach(k=>{
@@ -781,7 +828,6 @@ async function saveAsset(){
   await postToSheet({action:'saveAsset',...record});
 }
 
-// 初期化
 renderHome();
 syncFromSheet();
 </script>
