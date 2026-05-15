@@ -4,109 +4,119 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="家計簿">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
 <title>家計簿</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#0f0f0f;--bg2:#1a1a1a;--bg3:#242424;--bg4:#2e2e2e;
-  --text:#f0ede8;--text2:#a09890;--text3:#665f58;
-  --green:#4ade80;--amber:#fbbf24;--red:#f87171;
-  --border:#2e2e2e;--radius:12px;
+  --bg:#f8f9fa;--bg2:#ffffff;--bg3:#f1f3f5;--bg4:#e9ecef;
+  --text:#1a1a2e;--text2:#6c757d;--text3:#adb5bd;
+  --green:#16a34a;--green-light:#dcfce7;--green-mid:#4ade80;
+  --amber:#d97706;--amber-light:#fef3c7;
+  --red:#dc2626;--red-light:#fee2e2;
+  --orange:#fb923c;--orange-light:#fff7ed;
+  --blue:#2563eb;--blue-light:#eff6ff;
+  --border:#e9ecef;--radius:14px;--shadow:0 1px 3px rgba(0,0,0,.08);
 }
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans-serif}
 .app{max-width:480px;margin:0 auto;padding:16px;padding-bottom:90px;min-height:100vh}
 .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-top:env(safe-area-inset-top,12px)}
-.header h1{font-size:18px;font-weight:500}
+.header h1{font-size:20px;font-weight:700;color:var(--text)}
 .month-nav{display:flex;align-items:center;gap:8px}
-.month-nav button{background:var(--bg3);border:none;color:var(--text2);width:28px;height:28px;border-radius:8px;cursor:pointer;font-size:14px}
-.month-nav span{font-family:'DM Mono',monospace;font-size:14px;color:var(--text2)}
-.sync-bar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg2);border-radius:10px;margin-bottom:14px;border:0.5px solid var(--border)}
+.month-nav button{background:var(--bg2);border:1px solid var(--border);color:var(--text2);width:30px;height:30px;border-radius:10px;cursor:pointer;font-size:14px;box-shadow:var(--shadow)}
+.month-nav span{font-family:'DM Mono',monospace;font-size:14px;color:var(--text2);font-weight:500}
+.sync-bar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg2);border-radius:12px;margin-bottom:14px;border:1px solid var(--border);box-shadow:var(--shadow)}
 .sync-dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0}
 .sync-dot.syncing{background:var(--amber);animation:pulse .8s infinite}
 .sync-dot.error{background:var(--red)}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 .sync-text{font-size:12px;color:var(--text3);flex:1}
-.sync-btn{background:var(--bg3);border:0.5px solid var(--border);color:var(--text2);padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer;font-family:'Noto Sans JP',sans-serif}
-.hero-card{background:var(--bg2);border-radius:16px;padding:18px;margin-bottom:12px;border:0.5px solid var(--border)}
-.hero-label{font-size:11px;color:var(--text3);letter-spacing:.1em;margin-bottom:4px}
+.sync-btn{background:var(--bg3);border:1px solid var(--border);color:var(--text2);padding:4px 10px;border-radius:8px;font-size:11px;cursor:pointer;font-family:'Noto Sans JP',sans-serif}
+.hero-card{background:var(--bg2);border-radius:18px;padding:20px;margin-bottom:12px;border:1px solid var(--border);box-shadow:var(--shadow)}
+.hero-card.accent{background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);border:none}
+.hero-label{font-size:11px;color:var(--text3);letter-spacing:.08em;margin-bottom:4px}
+.hero-card.accent .hero-label{color:rgba(255,255,255,.6)}
 .hero-amount{font-family:'DM Mono',monospace;font-size:32px;font-weight:500;color:var(--green)}
+.hero-card.accent .hero-amount{color:#fb923c}
 .hero-amount.warn{color:var(--amber)}
 .hero-amount.over{color:var(--red)}
 .hero-sub{font-size:11px;color:var(--text3);margin-top:4px}
-.progress-track{background:var(--bg4);border-radius:4px;height:5px;margin-top:10px;overflow:hidden}
+.hero-card.accent .hero-sub{color:rgba(255,255,255,.5)}
+.progress-track{background:var(--bg4);border-radius:4px;height:6px;margin-top:12px;overflow:hidden}
 .progress-fill{height:100%;border-radius:4px;transition:width .5s ease}
 .ok-bar{background:var(--green)}.warn-bar{background:var(--amber)}.over-bar{background:var(--red)}
-.cards-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
-.mini-card{background:var(--bg2);border-radius:var(--radius);padding:12px;border:0.5px solid var(--border)}
-.mini-label{font-size:10px;color:var(--text3);margin-bottom:4px}
-.mini-val{font-family:'DM Mono',monospace;font-size:14px;font-weight:500}
-.section-title{font-size:11px;color:var(--text3);letter-spacing:.1em;margin:16px 0 8px}
-.budget-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
-.budget-item{background:var(--bg2);border-radius:var(--radius);padding:10px;border:0.5px solid var(--border)}
-.budget-item .bname{font-size:11px;color:var(--text3);margin-bottom:3px}
-.budget-item .bremain{font-family:'DM Mono',monospace;font-size:14px;font-weight:500}
+.cards-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.mini-card{background:var(--bg2);border-radius:var(--radius);padding:14px;border:1px solid var(--border);box-shadow:var(--shadow)}
+.mini-label{font-size:10px;color:var(--text3);margin-bottom:4px;font-weight:500;letter-spacing:.05em}
+.mini-val{font-family:'DM Mono',monospace;font-size:15px;font-weight:500}
+.section-title{font-size:11px;color:var(--text3);letter-spacing:.1em;margin:18px 0 8px;font-weight:600}
+.budget-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.budget-item{background:var(--bg2);border-radius:var(--radius);padding:12px;border:1px solid var(--border);box-shadow:var(--shadow)}
+.budget-item .bname{font-size:11px;color:var(--text3);margin-bottom:3px;font-weight:500}
+.budget-item .bremain{font-family:'DM Mono',monospace;font-size:14px;font-weight:600}
 .budget-item .btotal{font-size:10px;color:var(--text3);margin-top:2px}
-.budget-item .bbar{background:var(--bg4);border-radius:2px;height:3px;margin-top:6px;overflow:hidden}
-.budget-item .bbar-fill{height:100%;border-radius:2px}
+.budget-item .bbar{background:var(--bg4);border-radius:3px;height:4px;margin-top:8px;overflow:hidden}
+.budget-item .bbar-fill{height:100%;border-radius:3px}
 .ok{color:var(--green)}.warn{color:var(--amber)}.over{color:var(--red)}
-.list-card{background:var(--bg2);border-radius:var(--radius);border:0.5px solid var(--border);overflow:hidden;margin-bottom:12px}
-.list-item{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:0.5px solid var(--border);cursor:pointer}
+.list-card{background:var(--bg2);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;margin-bottom:12px;box-shadow:var(--shadow)}
+.list-item{display:flex;justify-content:space-between;align-items:center;padding:11px 14px;border-bottom:1px solid var(--border);cursor:pointer}
 .list-item:last-child{border-bottom:none}
-.item-left .iname{font-size:13px}
+.list-item:active{background:var(--bg3)}
+.item-left .iname{font-size:14px;font-weight:500}
 .item-left .icat{font-size:11px;color:var(--text3);margin-top:2px}
 .item-right{text-align:right;flex-shrink:0;margin-left:8px}
-.item-right .iamt{font-family:'DM Mono',monospace;font-size:13px}
+.item-right .iamt{font-family:'DM Mono',monospace;font-size:14px;font-weight:500}
 .item-right .idate{font-size:10px;color:var(--text3);margin-top:2px}
-.iamt.expense{color:var(--red)}
-.iamt.income{color:var(--green)}
-.empty-msg{padding:20px;text-align:center;color:var(--text3);font-size:13px}
-.tab-bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:rgba(15,15,15,.96);backdrop-filter:blur(12px);border-top:0.5px solid var(--border);display:flex;padding:6px 0;padding-bottom:calc(6px + env(safe-area-inset-bottom,0px))}
+.iamt.expense{color:var(--red)}.iamt.income{color:var(--green)}
+.empty-msg{padding:24px;text-align:center;color:var(--text3);font-size:13px}
+.tab-bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:rgba(255,255,255,.95);backdrop-filter:blur(16px);border-top:1px solid var(--border);display:flex;padding:6px 0;padding-bottom:calc(6px + env(safe-area-inset-bottom,0px));box-shadow:0 -1px 8px rgba(0,0,0,.06)}
 .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;background:none;border:none;color:var(--text3);padding:5px 0}
 .tab.active{color:var(--green)}
-.tab-icon{font-size:18px}
-.tab-label{font-size:10px}
-.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.75);display:flex;align-items:flex-end;justify-content:center;z-index:100;opacity:0;pointer-events:none;transition:opacity .2s}
+.tab-icon{font-size:19px}
+.tab-label{font-size:10px;font-weight:500}
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);display:flex;align-items:flex-end;justify-content:center;z-index:100;opacity:0;pointer-events:none;transition:opacity .2s}
 .modal-overlay.open{opacity:1;pointer-events:all}
-.modal{background:var(--bg2);border-radius:20px 20px 0 0;padding:20px;padding-bottom:calc(20px + env(safe-area-inset-bottom,0px));width:100%;max-width:480px;transform:translateY(100%);transition:transform .3s ease;border-top:0.5px solid var(--border);max-height:92vh;overflow-y:auto}
+.modal{background:var(--bg2);border-radius:24px 24px 0 0;padding:20px;padding-bottom:calc(20px + env(safe-area-inset-bottom,0px));width:100%;max-width:480px;transform:translateY(100%);transition:transform .3s ease;max-height:92vh;overflow-y:auto}
 .modal-overlay.open .modal{transform:translateY(0)}
-.modal-title{font-size:16px;font-weight:500;margin-bottom:16px}
-.form-group{margin-bottom:12px}
-.form-label{font-size:11px;color:var(--text3);margin-bottom:5px;display:block}
-.form-input{width:100%;background:var(--bg3);border:0.5px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--text);font-size:15px;font-family:'Noto Sans JP',sans-serif;outline:none;-webkit-appearance:none}
-.form-input:focus{border-color:var(--green)}
-.form-select{width:100%;background:var(--bg3);border:0.5px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--text);font-size:14px;font-family:'Noto Sans JP',sans-serif;outline:none;-webkit-appearance:none}
-.btn-row{display:flex;gap:8px;margin-top:8px}
-.btn-primary{flex:1;background:var(--green);color:#000;border:none;border-radius:12px;padding:13px;font-size:15px;font-weight:700;font-family:'Noto Sans JP',sans-serif;cursor:pointer}
-.btn-secondary{flex:1;background:var(--bg3);color:var(--text2);border:none;border-radius:12px;padding:13px;font-size:14px;font-family:'Noto Sans JP',sans-serif;cursor:pointer}
-.btn-danger{flex:1;background:#7f1d1d;color:var(--red);border:none;border-radius:12px;padding:13px;font-size:14px;font-family:'Noto Sans JP',sans-serif;cursor:pointer}
-.mode-tabs{display:flex;gap:6px;margin-bottom:14px}
-.mode-tab{flex:1;padding:8px;border-radius:8px;border:0.5px solid var(--border);background:var(--bg3);color:var(--text2);font-size:12px;cursor:pointer;font-family:'Noto Sans JP',sans-serif;text-align:center}
-.mode-tab.active{border-color:var(--green);color:var(--green)}
-.asset-row{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--bg2);border-radius:10px;border:0.5px solid var(--border);margin-bottom:6px}
-.asset-name{font-size:13px}
+.modal-handle{width:36px;height:4px;background:var(--bg4);border-radius:2px;margin:0 auto 16px}
+.modal-title{font-size:17px;font-weight:700;margin-bottom:16px}
+.form-group{margin-bottom:14px}
+.form-label{font-size:12px;color:var(--text2);margin-bottom:6px;display:block;font-weight:500}
+.form-input{width:100%;background:var(--bg3);border:1.5px solid var(--border);border-radius:12px;padding:11px 14px;color:var(--text);font-size:15px;font-family:'Noto Sans JP',sans-serif;outline:none;-webkit-appearance:none;transition:border-color .15s}
+.form-input:focus{border-color:var(--green);background:var(--bg2)}
+.form-select{width:100%;background:var(--bg3);border:1.5px solid var(--border);border-radius:12px;padding:11px 14px;color:var(--text);font-size:14px;font-family:'Noto Sans JP',sans-serif;outline:none;-webkit-appearance:none;transition:border-color .15s}
+.form-select:focus{border-color:var(--green)}
+.btn-row{display:flex;gap:8px;margin-top:10px}
+.btn-primary{flex:1;background:#1a1a2e;color:white;border:none;border-radius:14px;padding:14px;font-size:15px;font-weight:700;font-family:'Noto Sans JP',sans-serif;cursor:pointer}
+.btn-secondary{flex:1;background:var(--bg3);color:var(--text2);border:none;border-radius:14px;padding:14px;font-size:14px;font-family:'Noto Sans JP',sans-serif;cursor:pointer}
+.btn-danger{flex:1;background:var(--red-light);color:var(--red);border:none;border-radius:14px;padding:14px;font-size:14px;font-family:'Noto Sans JP',sans-serif;cursor:pointer}
+.mode-tabs{display:flex;gap:6px;margin-bottom:14px;background:var(--bg3);padding:4px;border-radius:12px}
+.mode-tab{flex:1;padding:8px;border-radius:9px;border:none;background:transparent;color:var(--text2);font-size:12px;cursor:pointer;font-family:'Noto Sans JP',sans-serif;text-align:center;font-weight:500;transition:all .15s}
+.mode-tab.active{background:var(--bg2);color:var(--green);box-shadow:var(--shadow);font-weight:700}
+.asset-row{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--bg2);border-radius:12px;border:1px solid var(--border);margin-bottom:6px;box-shadow:var(--shadow)}
+.asset-name{font-size:13px;font-weight:500}
 .asset-val{font-family:'DM Mono',monospace;font-size:13px;color:var(--text2)}
-.asset-input-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:0.5px solid var(--border)}
+.asset-input-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border)}
 .asset-input-row:last-child{border-bottom:none}
-.asset-input-label{font-size:13px;flex:1}
-.asset-input-field{width:130px;background:var(--bg3);border:0.5px solid var(--border);border-radius:8px;padding:7px 10px;color:var(--text);font-size:14px;font-family:'DM Mono',monospace;outline:none;text-align:right;-webkit-appearance:none}
+.asset-input-label{font-size:13px;flex:1;font-weight:500}
+.asset-input-field{width:130px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;padding:7px 10px;color:var(--text);font-size:14px;font-family:'DM Mono',monospace;outline:none;text-align:right;-webkit-appearance:none}
 .asset-input-field:focus{border-color:var(--green)}
-.total-row{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--bg3);border-radius:10px;border:0.5px solid var(--green);margin-top:8px}
-.fixed-balance-item{background:var(--bg2);border-radius:var(--radius);padding:12px;border:0.5px solid var(--border);margin-bottom:8px}
-.fixed-balance-name{font-size:12px;color:var(--text3);margin-bottom:4px}
+.total-row{display:flex;justify-content:space-between;align-items:center;padding:14px;background:#1a1a2e;border-radius:12px;margin-top:10px}
+.fixed-balance-item{background:var(--bg2);border-radius:var(--radius);padding:13px;border:1px solid var(--border);margin-bottom:8px;box-shadow:var(--shadow)}
+.fixed-balance-name{font-size:11px;color:var(--text3);margin-bottom:4px;font-weight:600;letter-spacing:.05em}
 .fixed-balance-row{display:flex;justify-content:space-between;align-items:baseline}
-.fixed-balance-remain{font-family:'DM Mono',monospace;font-size:16px;font-weight:500}
+.fixed-balance-remain{font-family:'DM Mono',monospace;font-size:17px;font-weight:600}
 .fixed-balance-detail{font-size:11px;color:var(--text3)}
-.fixed-bar{background:var(--bg4);border-radius:2px;height:3px;margin-top:8px;overflow:hidden}
-.fixed-bar-fill{height:100%;border-radius:2px}
-.fab{position:fixed;bottom:calc(68px + env(safe-area-inset-bottom,0px));right:max(16px,calc(50% - 224px));width:50px;height:50px;background:var(--green);border-radius:50%;border:none;cursor:pointer;font-size:26px;color:#000;box-shadow:0 4px 20px rgba(74,222,128,.3);z-index:50;display:flex;align-items:center;justify-content:center}
-.asset-record-item{background:var(--bg2);border-radius:var(--radius);border:0.5px solid var(--border);overflow:hidden;margin-bottom:8px}
-.asset-record-header{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:0.5px solid var(--border)}
-.asset-record-date{font-size:13px;font-weight:500}
-.asset-record-total{font-family:'DM Mono',monospace;font-size:13px;color:var(--green)}
-.asset-record-edit{background:var(--bg3);border:0.5px solid var(--border);color:var(--text2);padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer;font-family:'Noto Sans JP',sans-serif}
+.fixed-bar{background:var(--bg4);border-radius:3px;height:4px;margin-top:8px;overflow:hidden}
+.fixed-bar-fill{height:100%;border-radius:3px}
+.fab{position:fixed;bottom:calc(70px + env(safe-area-inset-bottom,0px));right:max(16px,calc(50% - 224px));width:52px;height:52px;background:#1a1a2e;border-radius:50%;border:none;cursor:pointer;font-size:26px;color:white;box-shadow:0 4px 16px rgba(26,26,46,.35);z-index:50;display:flex;align-items:center;justify-content:center}
+.asset-record-edit{background:var(--bg3);border:1px solid var(--border);color:var(--text2);padding:5px 12px;border-radius:8px;font-size:11px;cursor:pointer;font-family:'Noto Sans JP',sans-serif;font-weight:500}
+.compare-btn{padding:6px 12px;border-radius:10px;border:1.5px solid var(--border);background:var(--bg2);color:var(--text2);font-size:12px;cursor:pointer;font-family:'Noto Sans JP',sans-serif;font-weight:500;transition:all .15s}
+.compare-btn.active{border-color:var(--green);color:var(--green);background:var(--green-light)}
 </style>
 </head>
 <body>
@@ -137,12 +147,12 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto S
 <!-- 支出・収入入力モーダル -->
 <div class="modal-overlay" id="modal-input">
   <div class="modal">
+    <div class="modal-handle"></div>
     <div class="modal-title">入力</div>
     <div class="mode-tabs">
       <div class="mode-tab active" onclick="switchInputType('expense')" id="type-expense">支出</div>
       <div class="mode-tab" onclick="switchInputType('income')" id="type-income">収入</div>
     </div>
-    <!-- 支出フォーム -->
     <div id="form-expense">
       <div class="form-group">
         <label class="form-label">金額</label>
@@ -173,7 +183,6 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto S
         <button class="btn-primary" onclick="addExpense()">追加</button>
       </div>
     </div>
-    <!-- 収入フォーム -->
     <div id="form-income" style="display:none">
       <div class="form-group">
         <label class="form-label">金額</label>
@@ -209,12 +218,10 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto S
 <!-- 支出編集モーダル -->
 <div class="modal-overlay" id="modal-edit">
   <div class="modal">
+    <div class="modal-handle"></div>
     <div class="modal-title">支出を編集</div>
     <input type="hidden" id="edit-idx">
-    <div class="form-group">
-      <label class="form-label">金額</label>
-      <input class="form-input" type="number" id="edit-amount" inputmode="numeric">
-    </div>
+    <div class="form-group"><label class="form-label">金額</label><input class="form-input" type="number" id="edit-amount" inputmode="numeric"></div>
     <div class="form-group">
       <label class="form-label">カテゴリ</label>
       <select class="form-select" id="edit-cat">
@@ -227,14 +234,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto S
         <option>固定資産税積立</option><option>自動車保険積立</option>
       </select>
     </div>
-    <div class="form-group">
-      <label class="form-label">詳細</label>
-      <input class="form-input" type="text" id="edit-detail">
-    </div>
-    <div class="form-group">
-      <label class="form-label">日付</label>
-      <input class="form-input" type="date" id="edit-date">
-    </div>
+    <div class="form-group"><label class="form-label">詳細</label><input class="form-input" type="text" id="edit-detail"></div>
+    <div class="form-group"><label class="form-label">日付</label><input class="form-input" type="date" id="edit-date"></div>
     <div class="btn-row">
       <button class="btn-danger" onclick="deleteExpense()">削除</button>
       <button class="btn-secondary" onclick="closeModal('edit')">キャンセル</button>
@@ -246,12 +247,10 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto S
 <!-- 収入編集モーダル -->
 <div class="modal-overlay" id="modal-edit-income">
   <div class="modal">
+    <div class="modal-handle"></div>
     <div class="modal-title">収入を編集</div>
     <input type="hidden" id="edit-inc-idx">
-    <div class="form-group">
-      <label class="form-label">金額</label>
-      <input class="form-input" type="number" id="edit-inc-amount" inputmode="numeric">
-    </div>
+    <div class="form-group"><label class="form-label">金額</label><input class="form-input" type="number" id="edit-inc-amount" inputmode="numeric"></div>
     <div class="form-group">
       <label class="form-label">入金先</label>
       <select class="form-select" id="edit-inc-cat">
@@ -263,14 +262,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto S
         <option>固定資産税積立</option><option>自動車保険積立</option>
       </select>
     </div>
-    <div class="form-group">
-      <label class="form-label">詳細</label>
-      <input class="form-input" type="text" id="edit-inc-detail">
-    </div>
-    <div class="form-group">
-      <label class="form-label">日付</label>
-      <input class="form-input" type="date" id="edit-inc-date">
-    </div>
+    <div class="form-group"><label class="form-label">詳細</label><input class="form-input" type="text" id="edit-inc-detail"></div>
+    <div class="form-group"><label class="form-label">日付</label><input class="form-input" type="date" id="edit-inc-date"></div>
     <div class="btn-row">
       <button class="btn-danger" onclick="deleteIncome()">削除</button>
       <button class="btn-secondary" onclick="closeModal('edit-income')">キャンセル</button>
@@ -282,33 +275,55 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto S
 <!-- 資産入力・編集モーダル -->
 <div class="modal-overlay" id="modal-asset">
   <div class="modal">
+    <div class="modal-handle"></div>
     <div class="modal-title" id="asset-modal-title">資産を記録</div>
     <input type="hidden" id="asset-edit-idx">
-    <div class="form-group">
-      <label class="form-label">記録日</label>
-      <input class="form-input" type="date" id="asset-date">
-    </div>
-    <div id="asset-fields" style="background:var(--bg3);border-radius:12px;padding:12px;margin-bottom:12px"></div>
+    <div class="form-group"><label class="form-label">記録日</label><input class="form-input" type="date" id="asset-date"></div>
+    <div id="asset-fields" style="background:var(--bg3);border-radius:14px;padding:12px;margin-bottom:12px"></div>
     <div class="btn-row" id="asset-btn-row"></div>
   </div>
 </div>
 
-<script>
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbxKuVAihUFNSCI1LxTIssawJDJ1NnaA3Kw5FNguS8cA6oyRxQEN2IKV6DVDS4nHSKe3/exec';
-const RESERVE = 20000;
-const BUDGET = {食料費:83500,生活費:13000,その他:60000,通信費:10000,光熱費:38000,保険費:12000,住居費:22000,教育費:20000};
-const FIXED_AMOUNTS = {貯蓄:99000,生命保険積立:64000,IDECO:10000,自動車税積立:3500,車検積立:7000,固定資産税積立:10500,自動車保険積立:2500};
-const FIXED_CATS = Object.keys(FIXED_AMOUNTS);
-const ASSET_KEYS = ['現金','貯蓄','生命保険積立','自動車税積立','車検積立','固定資産税積立','自動車保険積立','史絵梨貯金','涼介貯金','き貯金','よ確定拠出年金','き確定拠出年金','生保解約返戻金'];
+<!-- 比較月選択モーダル -->
+<div class="modal-overlay" id="modal-compare">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">比較する月を選択</div>
+    <div style="margin-bottom:12px">
+      <div class="form-label">基準月</div>
+      <select class="form-select" id="compare-base"></select>
+    </div>
+    <div style="margin-bottom:16px">
+      <div class="form-label" style="margin-bottom:8px">比較月（複数選択可）</div>
+      <div id="compare-checks" style="background:var(--bg3);border-radius:14px;padding:12px;max-height:280px;overflow-y:auto"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="closeModal('compare')">キャンセル</button>
+      <button class="btn-primary" onclick="applyCompare()">適用</button>
+    </div>
+  </div>
+</div>
 
-let expenses = JSON.parse(localStorage.getItem('kk_expenses')||'[]');
-let incomes = JSON.parse(localStorage.getItem('kk_incomes')||'[]');
-let assets = JSON.parse(localStorage.getItem('kk_assets')||'[]');
-let lastSync = localStorage.getItem('kk_last_sync')||'未同期';
-let currentMonth = new Date();
-let currentTab = 'home';
-let editingOldEntry = null;
-let editingOldIncome = null;
+<script>
+const GAS_URL='https://script.google.com/macros/s/AKfycbxKuVAihUFNSCI1LxTIssawJDJ1NnaA3Kw5FNguS8cA6oyRxQEN2IKV6DVDS4nHSKe3/exec';
+const RESERVE=20000;
+const BUDGET={食料費:83500,生活費:13000,その他:60000,通信費:10000,光熱費:38000,保険費:12000,住居費:22000,教育費:20000};
+const FIXED_AMOUNTS={貯蓄:99000,生命保険積立:64000,IDECO:10000,自動車税積立:3500,車検積立:7000,固定資産税積立:10500,自動車保険積立:2500};
+const FIXED_CATS=Object.keys(FIXED_AMOUNTS);
+const ASSET_KEYS=['現金','貯蓄','生命保険積立','自動車税積立','車検積立','固定資産税積立','自動車保険積立','史絵梨貯金','涼介貯金','き貯金','よ確定拠出年金','き確定拠出年金','生保解約返戻金'];
+
+let expenses=JSON.parse(localStorage.getItem('kk_expenses')||'[]');
+let incomes=JSON.parse(localStorage.getItem('kk_incomes')||'[]');
+let assets=JSON.parse(localStorage.getItem('kk_assets')||'[]');
+let lastSync=localStorage.getItem('kk_last_sync')||'未同期';
+let currentMonth=new Date();
+let currentTab='home';
+let editingOldEntry=null;
+let editingOldIncome=null;
+let assetPageIdx=0;
+let assetMode='slide';
+let compareBaseDate='';
+let compareDates=[];
 
 function fmtYen(n){return '¥'+Math.round(n).toLocaleString('ja-JP')}
 function fmtDate(s){const d=new Date(s);return(d.getMonth()+1)+'/'+(d.getDate())}
@@ -367,8 +382,7 @@ async function syncFromSheet(){
     if(data['収入']){incomes=data['収入'].filter(e=>e.date&&e.amount>0);localStorage.setItem('kk_incomes',JSON.stringify(incomes));}
     if(data['資産']){assets=data['資産'].filter(e=>e.date);localStorage.setItem('kk_assets',JSON.stringify(assets));}
     const now=new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
-    lastSync=now;
-    localStorage.setItem('kk_last_sync',now);
+    lastSync=now;localStorage.setItem('kk_last_sync',now);
     setSyncStatus('ok','最終同期 '+now);
     renderCurrent();
   }catch(err){setSyncStatus('error','同期失敗');}
@@ -393,8 +407,7 @@ function renderHome(){
   const recent=getMonthData(expenses).sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,5);
 
   document.getElementById('view-home').innerHTML=`
-    <div class="header">
-      <h1>家計簿</h1>
+    <div class="header"><h1>家計簿</h1>
       <div class="month-nav">
         <button onclick="changeMonth(-1)">‹</button>
         <span>${currentMonth.getFullYear()}.${(currentMonth.getMonth()+1).toString().padStart(2,'0')}</span>
@@ -402,11 +415,13 @@ function renderHome(){
       </div>
     </div>
     ${syncBarHTML()}
-    <div class="hero-card">
+    <div class="hero-card accent">
       <div class="hero-label">残り予算（2万円控除後）</div>
-      <div class="hero-amount ${remainAfterReserve<0?'over':remainAfterReserve<10000?'warn':''}">${fmtYen(remainAfterReserve)}</div>
-      <div class="hero-sub">1日あたり ${fmtYen(dailyRemain)} · 予算 ${fmtYen(totalBudget)} · 使用 ${fmtYen(budgetUsed)} · 控除 ${fmtYen(RESERVE)}</div>
-      <div class="progress-track"><div class="progress-fill ${cls}-bar" style="width:${pct}%"></div></div>
+      <div class="hero-amount ${remainAfterReserve<0?'over':remainAfterReserve<10000?'warn':''}" style="${remainAfterReserve>=0?'color:#fb923c':'color:#f87171'}">${fmtYen(remainAfterReserve)}</div>
+      <div class="hero-sub">1日あたり ${fmtYen(dailyRemain)} · 予算 ${fmtYen(totalBudget)} · 使用 ${fmtYen(budgetUsed)}</div>
+      <div class="progress-track" style="background:rgba(255,255,255,.15)">
+        <div class="progress-fill" style="width:${pct}%;background:${pct<=0?'#f87171':pct<30?'#fbbf24':'#fb923c'}"></div>
+      </div>
     </div>
     <div class="cards-row">
       <div class="mini-card">
@@ -421,15 +436,14 @@ function renderHome(){
     <div class="section-title">カテゴリ別残高</div>
     <div class="budget-grid">
       ${Object.entries(BUDGET).map(([cat,budget])=>{
-        const u=used[cat]||0;
-        const r=budget-u;
-        const pct=r<=0?0:Math.min(100,Math.round(r/budget*100));
-        const c=r<=0?'over':pct<30?'warn':'ok';
+        const u=used[cat]||0;const r=budget-u;
+        const p=r<=0?0:Math.min(100,Math.round(r/budget*100));
+        const c=r<=0?'over':p<30?'warn':'ok';
         return`<div class="budget-item">
           <div class="bname">${cat}</div>
           <div class="bremain ${c}">${fmtYen(r)}</div>
           <div class="btotal">残 / ${fmtYen(budget)}</div>
-          <div class="bbar"><div class="bbar-fill ${c}-bar" style="width:${pct}%"></div></div>
+          <div class="bbar"><div class="bbar-fill ${c}-bar" style="width:${p}%"></div></div>
         </div>`;
       }).join('')}
     </div>
@@ -437,25 +451,17 @@ function renderHome(){
     <div class="list-card">
       ${recent.length===0?'<div class="empty-msg">まだ入力がありません</div>':
         recent.map(e=>`<div class="list-item" onclick="openEdit(${expenses.indexOf(e)})">
-          <div class="item-left">
-            <div class="iname">${e.detail||e.cat}</div>
-            <div class="icat">${e.cat}</div>
-          </div>
-          <div class="item-right">
-            <div class="iamt expense">-${fmtYen(e.amount)}</div>
-            <div class="idate">${fmtDate(e.date)}</div>
-          </div>
+          <div class="item-left"><div class="iname">${e.detail||e.cat}</div><div class="icat">${e.cat}</div></div>
+          <div class="item-right"><div class="iamt expense">-${fmtYen(e.amount)}</div><div class="idate">${fmtDate(e.date)}</div></div>
         </div>`).join('')}
-    </div>
-  `;
+    </div>`;
 }
 
 function renderHistory(){
   const exps=getMonthData(expenses).sort((a,b)=>new Date(b.date)-new Date(a.date));
   const incs=getMonthData(incomes).sort((a,b)=>new Date(b.date)-new Date(a.date));
   document.getElementById('view-history').innerHTML=`
-    <div class="header">
-      <h1>履歴</h1>
+    <div class="header"><h1>履歴</h1>
       <div class="month-nav">
         <button onclick="changeMonth(-1)">‹</button>
         <span>${currentMonth.getFullYear()}.${(currentMonth.getMonth()+1).toString().padStart(2,'0')}</span>
@@ -467,41 +473,23 @@ function renderHistory(){
     <div class="list-card">
       ${exps.length===0?'<div class="empty-msg">支出がありません</div>':
         exps.map(e=>`<div class="list-item" onclick="openEdit(${expenses.indexOf(e)})">
-          <div class="item-left">
-            <div class="iname">${e.detail||e.cat}</div>
-            <div class="icat">${e.cat}</div>
-          </div>
-          <div class="item-right">
-            <div class="iamt expense">-${fmtYen(e.amount)}</div>
-            <div class="idate">${fmtDate(e.date)}</div>
-          </div>
+          <div class="item-left"><div class="iname">${e.detail||e.cat}</div><div class="icat">${e.cat}</div></div>
+          <div class="item-right"><div class="iamt expense">-${fmtYen(e.amount)}</div><div class="idate">${fmtDate(e.date)}</div></div>
         </div>`).join('')}
     </div>
     <div class="section-title">収入 · タップで編集</div>
     <div class="list-card">
       ${incs.length===0?'<div class="empty-msg">収入がありません</div>':
         incs.map(e=>`<div class="list-item" onclick="openEditIncome(${incomes.indexOf(e)})">
-          <div class="item-left">
-            <div class="iname">${e.detail||e.cat}</div>
-            <div class="icat">${e.cat}</div>
-          </div>
-          <div class="item-right">
-            <div class="iamt income">+${fmtYen(e.amount)}</div>
-            <div class="idate">${fmtDate(e.date)}</div>
-          </div>
+          <div class="item-left"><div class="iname">${e.detail||e.cat}</div><div class="icat">${e.cat}</div></div>
+          <div class="item-right"><div class="iamt income">+${fmtYen(e.amount)}</div><div class="idate">${fmtDate(e.date)}</div></div>
         </div>`).join('')}
-    </div>
-  `;
+    </div>`;
 }
-
-let assetPageIdx = 0;
-let assetMode = 'slide'; // 'slide' or 'compare'
-let assetCompareCols = 3; // 比較モードの表示月数
 
 function renderAsset(){
   const sorted=[...assets].sort((a,b)=>new Date(b.date)-new Date(a.date));
-  if(assetPageIdx >= sorted.length) assetPageIdx = Math.max(0, sorted.length-1);
-
+  if(assetPageIdx>=sorted.length)assetPageIdx=Math.max(0,sorted.length-1);
   document.getElementById('view-asset').innerHTML=`
     <div class="header"><h1>資産</h1></div>
     ${syncBarHTML()}
@@ -509,40 +497,37 @@ function renderAsset(){
       <button class="btn-primary" style="width:100%" onclick="openAssetModal(-1)">＋ 資産を記録</button>
     </div>
     ${sorted.length===0?'<div class="empty-msg">資産記録がありません<br>同期ボタンを押してください</div>':`
-    <div class="mode-tabs" style="margin-bottom:12px">
+    <div class="mode-tabs">
       <div class="mode-tab ${assetMode==='slide'?'active':''}" onclick="setAssetMode('slide')">単体表示</div>
       <div class="mode-tab ${assetMode==='compare'?'active':''}" onclick="setAssetMode('compare')">比較表示</div>
     </div>
-    <div id="asset-content"></div>`}
-  `;
-
-  if(sorted.length > 0){
-    if(assetMode==='slide') renderAssetSlide(sorted);
+    <div id="asset-content"></div>`}`;
+  if(sorted.length>0){
+    if(assetMode==='slide')renderAssetSlide(sorted);
     else renderAssetCompare(sorted);
   }
 }
 
 function renderAssetSlide(sorted){
-  const rec = sorted[assetPageIdx];
-  const prevRec = sorted[assetPageIdx+1];
-  const total = ASSET_KEYS.reduce((a,k)=>a+Number(rec[k]||0),0);
-  const prevTotal = prevRec ? ASSET_KEYS.reduce((a,k)=>a+Number(prevRec[k]||0),0) : null;
-  const diff = prevTotal!==null ? total-prevTotal : null;
-  const idx = assets.indexOf(rec);
-
+  const rec=sorted[assetPageIdx];
+  const prevRec=sorted[assetPageIdx+1];
+  const total=ASSET_KEYS.reduce((a,k)=>a+Number(rec[k]||0),0);
+  const prevTotal=prevRec?ASSET_KEYS.reduce((a,k)=>a+Number(prevRec[k]||0),0):null;
+  const diff=prevTotal!==null?total-prevTotal:null;
+  const idx=assets.indexOf(rec);
   document.getElementById('asset-content').innerHTML=`
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-      <button onclick="assetSlide(1)" style="background:var(--bg3);border:none;color:var(--text2);width:36px;height:36px;border-radius:10px;cursor:pointer;font-size:18px;${assetPageIdx>=sorted.length-1?'opacity:0.3;pointer-events:none':''}">‹</button>
+      <button onclick="assetSlide(1)" style="background:var(--bg2);border:1px solid var(--border);color:var(--text2);width:36px;height:36px;border-radius:12px;cursor:pointer;font-size:18px;box-shadow:var(--shadow);${assetPageIdx>=sorted.length-1?'opacity:0.3;pointer-events:none':''}">‹</button>
       <div style="text-align:center">
-        <div style="font-size:14px;font-weight:500">${rec.date}</div>
+        <div style="font-size:15px;font-weight:700">${rec.date}</div>
         <div style="font-size:11px;color:var(--text3)">${assetPageIdx+1} / ${sorted.length}件</div>
       </div>
-      <button onclick="assetSlide(-1)" style="background:var(--bg3);border:none;color:var(--text2);width:36px;height:36px;border-radius:10px;cursor:pointer;font-size:18px;${assetPageIdx<=0?'opacity:0.3;pointer-events:none':''}">›</button>
+      <button onclick="assetSlide(-1)" style="background:var(--bg2);border:1px solid var(--border);color:var(--text2);width:36px;height:36px;border-radius:12px;cursor:pointer;font-size:18px;box-shadow:var(--shadow);${assetPageIdx<=0?'opacity:0.3;pointer-events:none':''}">›</button>
     </div>
-    <div class="hero-card" style="margin-bottom:12px">
+    <div class="hero-card accent" style="margin-bottom:12px">
       <div class="hero-label">資産合計</div>
-      <div class="hero-amount">${fmtYen(total)}</div>
-      ${diff!==null?`<div class="hero-sub">前回比 <span style="color:${diff>=0?'var(--green)':'var(--red)'}">${diff>=0?'+':''}${fmtYen(diff)}</span></div>`:''}
+      <div style="font-family:'DM Mono',monospace;font-size:28px;font-weight:500;color:#fb923c">${fmtYen(total)}</div>
+      ${diff!==null?`<div class="hero-sub">前回比 <span style="color:${diff>=0?'#4ade80':'#f87171'}">${diff>=0?'+':''}${fmtYen(diff)}</span></div>`:''}
     </div>
     <div class="list-card">
       ${ASSET_KEYS.map(k=>{
@@ -560,108 +545,90 @@ function renderAssetSlide(sorted){
     </div>
     <div style="margin-top:8px">
       <button class="btn-secondary" style="width:100%" onclick="openAssetModal(${idx})">この記録を編集</button>
-    </div>
-  `;
-
-  const content = document.getElementById('asset-content');
-  let startX = 0;
-  content.ontouchstart = e => { startX = e.touches[0].clientX; };
-  content.ontouchend = e => {
-    const d = startX - e.changedTouches[0].clientX;
-    if(Math.abs(d) > 50) assetSlide(d > 0 ? -1 : 1);
-  };
+    </div>`;
+  const content=document.getElementById('asset-content');
+  let startX=0;
+  content.ontouchstart=e=>{startX=e.touches[0].clientX;};
+  content.ontouchend=e=>{const d=startX-e.changedTouches[0].clientX;if(Math.abs(d)>50)assetSlide(d>0?-1:1);};
 }
 
 function renderAssetCompare(sorted){
-  const colOptions = [
-    {label:'1ヶ月', val:1},
-    {label:'3ヶ月', val:3},
-    {label:'6ヶ月', val:6},
-    {label:'1年', val:12},
-    {label:'3年', val:36},
-    {label:'5年', val:60},
-    {label:'10年', val:120},
-  ];
-
-  // 表示する記録を選択（最新からn件、等間隔に近い形で）
-  function pickRecords(sorted, n){
-    if(sorted.length <= n) return [...sorted].reverse();
-    // 最新1件は必ず含める、あとは等間隔
-    const step = (sorted.length-1) / (n-1);
-    const picks = [];
-    for(let i=0; i<n; i++){
-      const idx = Math.round(i * step);
-      picks.push(sorted[Math.min(idx, sorted.length-1)]);
-    }
-    return picks.reverse(); // 古い順
-  }
-
-  const cols = pickRecords(sorted, assetCompareCols);
-  const colW = 90;
+  const baseDateToUse=compareBaseDate||sorted[0].date;
+  const baseRec=sorted.find(r=>r.date===baseDateToUse)||sorted[0];
+  const compareDatesList=compareDates.length>0?compareDates:[sorted[Math.min(1,sorted.length-1)]?.date].filter(Boolean);
+  const compareRecs=compareDatesList.map(d=>sorted.find(r=>r.date===d)).filter(Boolean);
+  const cols=[...compareRecs,baseRec];
 
   document.getElementById('asset-content').innerHTML=`
-    <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
-      ${colOptions.map(o=>`
-        <div class="mode-tab ${assetCompareCols===o.val?'active':''}"
-             onclick="setAssetCols(${o.val})"
-             style="flex:none;padding:6px 10px;font-size:11px">
-          ${o.label}
-        </div>`).join('')}
+    <div style="margin-bottom:12px">
+      <button class="btn-secondary" style="width:100%;margin-bottom:8px" onclick="openCompareModal()">📅 比較する月を選択</button>
+      <div style="font-size:12px;color:var(--text3);text-align:center">基準：${baseDateToUse} ／ 比較：${compareDatesList.length}件</div>
     </div>
     <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -16px;padding:0 16px">
-      <table style="border-collapse:collapse;width:100%;min-width:${120+colW*cols.length}px">
+      <table style="border-collapse:collapse;width:100%;min-width:${100+90*cols.length}px">
         <thead>
-          <tr>
-            <th style="text-align:left;padding:6px 8px;font-size:11px;color:var(--text3);font-weight:400;position:sticky;left:0;background:var(--bg);min-width:90px">項目</th>
-            ${cols.map(r=>`<th style="text-align:right;padding:6px 8px;font-size:11px;color:var(--text2);font-weight:500;min-width:${colW}px">${r.date.substring(0,7)}</th>`).join('')}
+          <tr style="border-bottom:2px solid var(--border)">
+            <th style="text-align:left;padding:6px 8px;font-size:11px;color:var(--text3);font-weight:600;position:sticky;left:0;background:var(--bg);min-width:90px">項目</th>
+            ${cols.map((r,ci)=>`<th style="text-align:right;padding:6px 8px;font-size:11px;color:${ci===cols.length-1?'var(--green)':'var(--text2)'};font-weight:600;min-width:90px">${r.date.substring(0,7)}${ci===cols.length-1?'<br><span style="color:var(--green);font-size:10px">基準</span>':''}</th>`).join('')}
           </tr>
         </thead>
         <tbody>
           ${ASSET_KEYS.map(k=>`
-            <tr style="border-top:0.5px solid var(--border)">
-              <td style="padding:7px 8px;font-size:12px;position:sticky;left:0;background:var(--bg)">${k}</td>
+            <tr style="border-bottom:1px solid var(--border)">
+              <td style="padding:7px 8px;font-size:12px;font-weight:500;position:sticky;left:0;background:var(--bg)">${k}</td>
               ${cols.map((r,ci)=>{
                 const val=Number(r[k]||0);
-                const prevVal=ci>0?Number(cols[ci-1][k]||0):null;
-                const d=prevVal!==null?val-prevVal:null;
+                const baseVal=ci<cols.length-1?Number(baseRec[k]||0):null;
+                const d=baseVal!==null?val-baseVal:null;
                 return`<td style="text-align:right;padding:7px 8px">
                   <div style="font-family:'DM Mono',monospace;font-size:12px;color:var(--text2)">${fmtYen(val)}</div>
                   ${d!==null&&d!==0?`<div style="font-size:10px;color:${d>0?'var(--green)':'var(--red)'}">${d>0?'+':''}${fmtYen(d)}</div>`:''}
                 </td>`;
               }).join('')}
             </tr>`).join('')}
-          <tr style="border-top:1px solid var(--green)">
+          <tr style="border-top:2px solid #1a1a2e">
             <td style="padding:8px;font-size:12px;font-weight:700;position:sticky;left:0;background:var(--bg)">合計</td>
             ${cols.map((r,ci)=>{
               const total=ASSET_KEYS.reduce((a,k)=>a+Number(r[k]||0),0);
-              const prevTotal=ci>0?ASSET_KEYS.reduce((a,k)=>a+Number(cols[ci-1][k]||0),0):null;
-              const d=prevTotal!==null?total-prevTotal:null;
+              const baseTotal=ci<cols.length-1?ASSET_KEYS.reduce((a,k)=>a+Number(baseRec[k]||0),0):null;
+              const d=baseTotal!==null?total-baseTotal:null;
               return`<td style="text-align:right;padding:8px">
-                <div style="font-family:'DM Mono',monospace;font-size:12px;font-weight:700;color:var(--green)">${fmtYen(total)}</div>
+                <div style="font-family:'DM Mono',monospace;font-size:12px;font-weight:700;color:${ci===cols.length-1?'var(--green)':'var(--text)'}">${fmtYen(total)}</div>
                 ${d!==null?`<div style="font-size:10px;color:${d>0?'var(--green)':'var(--red)'}">${d>0?'+':''}${fmtYen(d)}</div>`:''}
               </td>`;
             }).join('')}
           </tr>
         </tbody>
       </table>
-    </div>
-  `;
+    </div>`;
 }
 
-function setAssetMode(mode){
-  assetMode = mode;
-  renderAsset();
+function openCompareModal(){
+  const sorted=[...assets].sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const baseSel=document.getElementById('compare-base');
+  baseSel.innerHTML=sorted.map(r=>`<option value="${r.date}" ${r.date===compareBaseDate?'selected':''}>${r.date}</option>`).join('');
+  const checksDiv=document.getElementById('compare-checks');
+  checksDiv.innerHTML=sorted.map(r=>`
+    <label style="display:flex;align-items:center;gap:8px;padding:7px 4px;border-bottom:1px solid var(--border);cursor:pointer">
+      <input type="checkbox" value="${r.date}" ${compareDates.includes(r.date)?'checked':''} style="width:16px;height:16px;accent-color:var(--green)">
+      <span style="font-size:13px;font-family:'DM Mono',monospace">${r.date}</span>
+    </label>`).join('');
+  document.getElementById('modal-compare').classList.add('open');
 }
 
-function setAssetCols(n){
-  assetCompareCols = n;
+function applyCompare(){
+  compareBaseDate=document.getElementById('compare-base').value;
+  compareDates=Array.from(document.querySelectorAll('#compare-checks input:checked')).map(el=>el.value);
+  closeModal('compare');
   const sorted=[...assets].sort((a,b)=>new Date(b.date)-new Date(a.date));
   renderAssetCompare(sorted);
 }
 
+function setAssetMode(mode){assetMode=mode;renderAsset();}
+
 function assetSlide(dir){
   const sorted=[...assets].sort((a,b)=>new Date(b.date)-new Date(a.date));
-  assetPageIdx = Math.max(0, Math.min(sorted.length-1, assetPageIdx+dir));
+  assetPageIdx=Math.max(0,Math.min(sorted.length-1,assetPageIdx+dir));
   renderAssetSlide(sorted);
 }
 
@@ -672,9 +639,9 @@ function renderFixed(){
   const fixedUsedTotal=FIXED_CATS.reduce((a,k)=>a+(used[k]||0),0);
   document.getElementById('view-fixed').innerHTML=`
     <div class="header"><h1>積立・固定費</h1></div>
-    <div class="hero-card">
+    <div class="hero-card accent">
       <div class="hero-label">今月の積立合計</div>
-      <div class="hero-amount">${fmtYen(fixedTotal)}</div>
+      <div style="font-family:'DM Mono',monospace;font-size:28px;font-weight:500;color:#fb923c">${fmtYen(fixedTotal)}</div>
       <div class="hero-sub">今月の積立支出 ${fmtYen(fixedUsedTotal)}</div>
     </div>
     <div class="section-title">各口座の残高</div>
@@ -692,8 +659,7 @@ function renderFixed(){
         </div>
         <div class="fixed-bar"><div class="fixed-bar-fill ${cls}-bar" style="width:${pct}%"></div></div>
       </div>`;
-    }).join('')}
-  `;
+    }).join('')}`;
 }
 
 function renderCurrent(){
@@ -738,12 +704,9 @@ async function addExpense(){
   const date=document.getElementById('exp-date').value;
   if(!amt||amt<=0){alert('金額を入力してください');return}
   const entry={amount:amt,cat,detail,date};
-  expenses.push(entry);
-  localStorage.setItem('kk_expenses',JSON.stringify(expenses));
-  document.getElementById('exp-amount').value='';
-  document.getElementById('exp-detail').value='';
-  closeModal('input');
-  renderCurrent();
+  expenses.push(entry);localStorage.setItem('kk_expenses',JSON.stringify(expenses));
+  document.getElementById('exp-amount').value='';document.getElementById('exp-detail').value='';
+  closeModal('input');renderCurrent();
   await postToSheet({action:'add',...entry});
 }
 
@@ -754,18 +717,14 @@ async function addIncome(){
   const date=document.getElementById('inc-date').value;
   if(!amt||amt<=0){alert('金額を入力してください');return}
   const entry={amount:amt,cat,detail,date};
-  incomes.push(entry);
-  localStorage.setItem('kk_incomes',JSON.stringify(incomes));
-  document.getElementById('inc-amount').value='';
-  document.getElementById('inc-detail').value='';
-  closeModal('input');
-  renderCurrent();
+  incomes.push(entry);localStorage.setItem('kk_incomes',JSON.stringify(incomes));
+  document.getElementById('inc-amount').value='';document.getElementById('inc-detail').value='';
+  closeModal('input');renderCurrent();
   await postToSheet({action:'addIncome',...entry});
 }
 
 function openEdit(idx){
-  const e=expenses[idx];
-  if(!e)return;
+  const e=expenses[idx];if(!e)return;
   editingOldEntry={...e};
   document.getElementById('edit-idx').value=idx;
   document.getElementById('edit-amount').value=e.amount;
@@ -784,11 +743,9 @@ async function saveEdit(){
   if(!amt||amt<=0){alert('金額を入力してください');return}
   await postToSheet({action:'delete',...editingOldEntry});
   const entry={amount:amt,cat,detail,date};
-  expenses[idx]=entry;
-  localStorage.setItem('kk_expenses',JSON.stringify(expenses));
+  expenses[idx]=entry;localStorage.setItem('kk_expenses',JSON.stringify(expenses));
   await postToSheet({action:'add',...entry});
-  closeModal('edit');
-  renderCurrent();
+  closeModal('edit');renderCurrent();
 }
 
 async function deleteExpense(){
@@ -796,15 +753,12 @@ async function deleteExpense(){
   if(!confirm('この支出を削除しますか？'))return;
   const entry=expenses[idx];
   await postToSheet({action:'delete',...entry});
-  expenses.splice(idx,1);
-  localStorage.setItem('kk_expenses',JSON.stringify(expenses));
-  closeModal('edit');
-  renderCurrent();
+  expenses.splice(idx,1);localStorage.setItem('kk_expenses',JSON.stringify(expenses));
+  closeModal('edit');renderCurrent();
 }
 
 function openEditIncome(idx){
-  const e=incomes[idx];
-  if(!e)return;
+  const e=incomes[idx];if(!e)return;
   editingOldIncome={...e};
   document.getElementById('edit-inc-idx').value=idx;
   document.getElementById('edit-inc-amount').value=e.amount;
@@ -823,11 +777,9 @@ async function saveIncomeEdit(){
   if(!amt||amt<=0){alert('金額を入力してください');return}
   await postToSheet({action:'deleteIncome',...editingOldIncome});
   const entry={amount:amt,cat,detail,date};
-  incomes[idx]=entry;
-  localStorage.setItem('kk_incomes',JSON.stringify(incomes));
+  incomes[idx]=entry;localStorage.setItem('kk_incomes',JSON.stringify(incomes));
   await postToSheet({action:'addIncome',...entry});
-  closeModal('edit-income');
-  renderCurrent();
+  closeModal('edit-income');renderCurrent();
 }
 
 async function deleteIncome(){
@@ -835,10 +787,8 @@ async function deleteIncome(){
   if(!confirm('この収入を削除しますか？'))return;
   const entry=incomes[idx];
   await postToSheet({action:'deleteIncome',...entry});
-  incomes.splice(idx,1);
-  localStorage.setItem('kk_incomes',JSON.stringify(incomes));
-  closeModal('edit-income');
-  renderCurrent();
+  incomes.splice(idx,1);localStorage.setItem('kk_incomes',JSON.stringify(incomes));
+  closeModal('edit-income');renderCurrent();
 }
 
 function openAssetModal(idx){
@@ -867,23 +817,14 @@ async function saveAsset(){
   const idx=parseInt(document.getElementById('asset-edit-idx').value);
   const date=document.getElementById('asset-date').value;
   if(!date){alert('日付を入力してください');return}
-  const record={date};
-  let total=0;
-  ASSET_KEYS.forEach(k=>{
-    const v=parseInt(document.getElementById('assetfield-'+k).value)||0;
-    record[k]=v;total+=v;
-  });
+  const record={date};let total=0;
+  ASSET_KEYS.forEach(k=>{const v=parseInt(document.getElementById('assetfield-'+k).value)||0;record[k]=v;total+=v;});
   record['合計']=total;
   const isEdit=idx>=0;
-  if(isEdit){
-    await postToSheet({action:'deleteAsset',date:assets[idx].date});
-    assets[idx]=record;
-  }else{
-    assets.push(record);
-  }
+  if(isEdit){await postToSheet({action:'deleteAsset',date:assets[idx].date});assets[idx]=record;}
+  else{assets.push(record);}
   localStorage.setItem('kk_assets',JSON.stringify(assets));
-  closeModal('asset');
-  renderAsset();
+  closeModal('asset');renderAsset();
   await postToSheet({action:'saveAsset',...record});
 }
 
@@ -891,10 +832,8 @@ async function deleteAsset(){
   const idx=parseInt(document.getElementById('asset-edit-idx').value);
   if(!confirm('この資産記録を削除しますか？'))return;
   await postToSheet({action:'deleteAsset',date:assets[idx].date});
-  assets.splice(idx,1);
-  localStorage.setItem('kk_assets',JSON.stringify(assets));
-  closeModal('asset');
-  renderAsset();
+  assets.splice(idx,1);localStorage.setItem('kk_assets',JSON.stringify(assets));
+  closeModal('asset');renderAsset();
 }
 
 renderHome();
