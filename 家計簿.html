@@ -494,40 +494,72 @@ function renderHistory(){
   `;
 }
 
+let assetPageIdx = 0; // 0=最新
+
 function renderAsset(){
   const sorted=[...assets].sort((a,b)=>new Date(b.date)-new Date(a.date));
+  if(assetPageIdx >= sorted.length) assetPageIdx = Math.max(0, sorted.length-1);
+
+  const rec = sorted[assetPageIdx];
+  const prevRec = sorted[assetPageIdx+1];
+  const total = rec ? ASSET_KEYS.reduce((a,k)=>a+Number(rec[k]||0),0) : 0;
+  const prevTotal = prevRec ? ASSET_KEYS.reduce((a,k)=>a+Number(prevRec[k]||0),0) : null;
+  const diff = prevTotal!==null ? total-prevTotal : null;
+  const idx = rec ? assets.indexOf(rec) : -1;
+
   document.getElementById('view-asset').innerHTML=`
     <div class="header"><h1>資産</h1></div>
     ${syncBarHTML()}
     <div style="margin-bottom:12px">
       <button class="btn-primary" style="width:100%" onclick="openAssetModal(-1)">＋ 資産を記録</button>
     </div>
-    ${sorted.length===0?'<div class="empty-msg">資産記録がありません<br>同期ボタンを押してください</div>':
-      sorted.map((rec,si)=>{
-        const idx=assets.indexOf(rec);
-        const total=ASSET_KEYS.reduce((a,k)=>a+Number(rec[k]||0),0);
-        const prevRec=sorted[si+1];
-        const prevTotal=prevRec?ASSET_KEYS.reduce((a,k)=>a+Number(prevRec[k]||0),0):null;
-        const diff=prevTotal!==null?total-prevTotal:null;
-        return`<div class="asset-record-item">
-          <div class="asset-record-header">
-            <div>
-              <div class="asset-record-date">${rec.date}</div>
-              ${diff!==null?`<div style="font-size:11px;color:${diff>=0?'var(--green)':'var(--red)'}">${diff>=0?'+':''}${fmtYen(diff)}</div>`:''}
-            </div>
-            <div style="display:flex;align-items:center;gap:8px">
-              <div class="asset-record-total">${fmtYen(total)}</div>
-              <button class="asset-record-edit" onclick="openAssetModal(${idx})">編集</button>
-            </div>
+    ${sorted.length===0?'<div class="empty-msg">資産記録がありません<br>同期ボタンを押してください</div>':`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <button onclick="assetSlide(1)" style="background:var(--bg3);border:none;color:var(--text2);width:36px;height:36px;border-radius:10px;cursor:pointer;font-size:18px;${assetPageIdx>=sorted.length-1?'opacity:0.3;pointer-events:none':''}" >‹</button>
+      <div style="text-align:center">
+        <div style="font-size:14px;font-weight:500">${rec.date}</div>
+        <div style="font-size:11px;color:var(--text3)">${assetPageIdx+1} / ${sorted.length}件</div>
+      </div>
+      <button onclick="assetSlide(-1)" style="background:var(--bg3);border:none;color:var(--text2);width:36px;height:36px;border-radius:10px;cursor:pointer;font-size:18px;${assetPageIdx<=0?'opacity:0.3;pointer-events:none':''}">›</button>
+    </div>
+    <div class="hero-card" style="margin-bottom:12px">
+      <div class="hero-label">資産合計</div>
+      <div class="hero-amount">${fmtYen(total)}</div>
+      ${diff!==null?`<div class="hero-sub">前回比 <span style="color:${diff>=0?'var(--green)':'var(--red)'}">${diff>=0?'+':''}${fmtYen(diff)}</span></div>`:''}
+    </div>
+    <div class="list-card">
+      ${ASSET_KEYS.map(k=>{
+        const val=Number(rec[k]||0);
+        const prevVal=prevRec?Number(prevRec[k]||0):null;
+        const d=prevVal!==null?val-prevVal:null;
+        return`<div class="list-item" style="cursor:default">
+          <div class="item-left"><div class="iname">${k}</div></div>
+          <div class="item-right">
+            <div class="iamt" style="color:var(--text2)">${fmtYen(val)}</div>
+            ${d!==null&&d!==0?`<div style="font-size:10px;color:${d>0?'var(--green)':'var(--red)'}">${d>0?'+':''}${fmtYen(d)}</div>`:''}
           </div>
-          ${ASSET_KEYS.map(k=>`
-          <div class="list-item" style="cursor:default">
-            <div class="item-left"><div class="iname">${k}</div></div>
-            <div class="item-right"><div class="iamt" style="color:var(--text2)">${fmtYen(Number(rec[k]||0))}</div></div>
-          </div>`).join('')}
         </div>`;
       }).join('')}
+    </div>
+    <div style="margin-top:8px">
+      <button class="btn-secondary" style="width:100%" onclick="openAssetModal(${idx})">この記録を編集</button>
+    </div>`}
   `;
+
+  // スワイプ対応
+  const view = document.getElementById('view-asset');
+  let startX = 0;
+  view.ontouchstart = e => { startX = e.touches[0].clientX; };
+  view.ontouchend = e => {
+    const diff = startX - e.changedTouches[0].clientX;
+    if(Math.abs(diff) > 50) assetSlide(diff > 0 ? -1 : 1);
+  };
+}
+
+function assetSlide(dir){
+  const sorted=[...assets].sort((a,b)=>new Date(b.date)-new Date(a.date));
+  assetPageIdx = Math.max(0, Math.min(sorted.length-1, assetPageIdx+dir));
+  renderAsset();
 }
 
 function renderFixed(){
