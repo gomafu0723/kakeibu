@@ -384,8 +384,8 @@ function renderHome(){
   const totalBudget=Object.values(BUDGET).reduce((a,b)=>a+b,0);
   const remain=totalBudget-budgetUsed;
   const remainAfterReserve=remain-RESERVE;
-  const pct=Math.min(100,Math.round(remain/totalBudget*100));
-  const cls=pct<10?'over':pct<30?'warn':'ok';
+  const pct=remain<=0?0:Math.min(100,Math.round(remain/totalBudget*100));
+  const cls=pct<=0?'over':pct<30?'warn':'ok';
   const today2=new Date();
   const daysLeft=new Date(today2.getFullYear(),today2.getMonth()+1,0).getDate()-today2.getDate()+1;
   const dailyRemain=Math.round(remainAfterReserve/Math.max(1,daysLeft));
@@ -423,8 +423,8 @@ function renderHome(){
       ${Object.entries(BUDGET).map(([cat,budget])=>{
         const u=used[cat]||0;
         const r=budget-u;
-        const pct=Math.min(100,Math.round(r/budget*100));
-        const c=pct<10?'over':pct<30?'warn':'ok';
+        const pct=r<=0?0:Math.min(100,Math.round(r/budget*100));
+        const c=r<=0?'over':pct<30?'warn':'ok';
         return`<div class="budget-item">
           <div class="bname">${cat}</div>
           <div class="bremain ${c}">${fmtYen(r)}</div>
@@ -547,7 +547,7 @@ function renderFixed(){
       const monthly=FIXED_AMOUNTS[cat];
       const bal=balance[cat]||0;
       const spent=used[cat]||0;
-      const pct=monthly>0?Math.min(100,Math.round((monthly-spent)/monthly*100)):100;
+      const pct=monthly>0?Math.max(0,Math.min(100,Math.round((monthly-spent)/monthly*100))):0;
       const cls=bal<0?'over':bal<monthly?'warn':'ok';
       return`<div class="fixed-balance-item">
         <div class="fixed-balance-name">${cat}</div>
