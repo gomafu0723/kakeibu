@@ -494,18 +494,13 @@ function renderHistory(){
   `;
 }
 
-let assetPageIdx = 0; // 0=最新
+let assetPageIdx = 0;
+let assetMode = 'slide'; // 'slide' or 'compare'
+let assetCompareCols = 3; // 比較モードの表示月数
 
 function renderAsset(){
   const sorted=[...assets].sort((a,b)=>new Date(b.date)-new Date(a.date));
   if(assetPageIdx >= sorted.length) assetPageIdx = Math.max(0, sorted.length-1);
-
-  const rec = sorted[assetPageIdx];
-  const prevRec = sorted[assetPageIdx+1];
-  const total = rec ? ASSET_KEYS.reduce((a,k)=>a+Number(rec[k]||0),0) : 0;
-  const prevTotal = prevRec ? ASSET_KEYS.reduce((a,k)=>a+Number(prevRec[k]||0),0) : null;
-  const diff = prevTotal!==null ? total-prevTotal : null;
-  const idx = rec ? assets.indexOf(rec) : -1;
 
   document.getElementById('view-asset').innerHTML=`
     <div class="header"><h1>資産</h1></div>
@@ -514,8 +509,30 @@ function renderAsset(){
       <button class="btn-primary" style="width:100%" onclick="openAssetModal(-1)">＋ 資産を記録</button>
     </div>
     ${sorted.length===0?'<div class="empty-msg">資産記録がありません<br>同期ボタンを押してください</div>':`
+    <div class="mode-tabs" style="margin-bottom:12px">
+      <div class="mode-tab ${assetMode==='slide'?'active':''}" onclick="setAssetMode('slide')">単体表示</div>
+      <div class="mode-tab ${assetMode==='compare'?'active':''}" onclick="setAssetMode('compare')">比較表示</div>
+    </div>
+    <div id="asset-content"></div>`}
+  `;
+
+  if(sorted.length > 0){
+    if(assetMode==='slide') renderAssetSlide(sorted);
+    else renderAssetCompare(sorted);
+  }
+}
+
+function renderAssetSlide(sorted){
+  const rec = sorted[assetPageIdx];
+  const prevRec = sorted[assetPageIdx+1];
+  const total = ASSET_KEYS.reduce((a,k)=>a+Number(rec[k]||0),0);
+  const prevTotal = prevRec ? ASSET_KEYS.reduce((a,k)=>a+Number(prevRec[k]||0),0) : null;
+  const diff = prevTotal!==null ? total-prevTotal : null;
+  const idx = assets.indexOf(rec);
+
+  document.getElementById('asset-content').innerHTML=`
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-      <button onclick="assetSlide(1)" style="background:var(--bg3);border:none;color:var(--text2);width:36px;height:36px;border-radius:10px;cursor:pointer;font-size:18px;${assetPageIdx>=sorted.length-1?'opacity:0.3;pointer-events:none':''}" >‹</button>
+      <button onclick="assetSlide(1)" style="background:var(--bg3);border:none;color:var(--text2);width:36px;height:36px;border-radius:10px;cursor:pointer;font-size:18px;${assetPageIdx>=sorted.length-1?'opacity:0.3;pointer-events:none':''}">‹</button>
       <div style="text-align:center">
         <div style="font-size:14px;font-weight:500">${rec.date}</div>
         <div style="font-size:11px;color:var(--text3)">${assetPageIdx+1} / ${sorted.length}件</div>
@@ -543,23 +560,109 @@ function renderAsset(){
     </div>
     <div style="margin-top:8px">
       <button class="btn-secondary" style="width:100%" onclick="openAssetModal(${idx})">この記録を編集</button>
-    </div>`}
+    </div>
   `;
 
-  // スワイプ対応
-  const view = document.getElementById('view-asset');
+  const content = document.getElementById('asset-content');
   let startX = 0;
-  view.ontouchstart = e => { startX = e.touches[0].clientX; };
-  view.ontouchend = e => {
-    const diff = startX - e.changedTouches[0].clientX;
-    if(Math.abs(diff) > 50) assetSlide(diff > 0 ? -1 : 1);
+  content.ontouchstart = e => { startX = e.touches[0].clientX; };
+  content.ontouchend = e => {
+    const d = startX - e.changedTouches[0].clientX;
+    if(Math.abs(d) > 50) assetSlide(d > 0 ? -1 : 1);
   };
+}
+
+function renderAssetCompare(sorted){
+  const colOptions = [
+    {label:'1ヶ月', val:1},
+    {label:'3ヶ月', val:3},
+    {label:'6ヶ月', val:6},
+    {label:'1年', val:12},
+    {label:'3年', val:36},
+    {label:'5年', val:60},
+    {label:'10年', val:120},
+  ];
+
+  // 表示する記録を選択（最新からn件、等間隔に近い形で）
+  function pickRecords(sorted, n){
+    if(sorted.length <= n) return [...sorted].reverse();
+    // 最新1件は必ず含める、あとは等間隔
+    const step = (sorted.length-1) / (n-1);
+    const picks = [];
+    for(let i=0; i<n; i++){
+      const idx = Math.round(i * step);
+      picks.push(sorted[Math.min(idx, sorted.length-1)]);
+    }
+    return picks.reverse(); // 古い順
+  }
+
+  const cols = pickRecords(sorted, assetCompareCols);
+  const colW = 90;
+
+  document.getElementById('asset-content').innerHTML=`
+    <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+      ${colOptions.map(o=>`
+        <div class="mode-tab ${assetCompareCols===o.val?'active':''}"
+             onclick="setAssetCols(${o.val})"
+             style="flex:none;padding:6px 10px;font-size:11px">
+          ${o.label}
+        </div>`).join('')}
+    </div>
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -16px;padding:0 16px">
+      <table style="border-collapse:collapse;width:100%;min-width:${120+colW*cols.length}px">
+        <thead>
+          <tr>
+            <th style="text-align:left;padding:6px 8px;font-size:11px;color:var(--text3);font-weight:400;position:sticky;left:0;background:var(--bg);min-width:90px">項目</th>
+            ${cols.map(r=>`<th style="text-align:right;padding:6px 8px;font-size:11px;color:var(--text2);font-weight:500;min-width:${colW}px">${r.date.substring(0,7)}</th>`).join('')}
+          </tr>
+        </thead>
+        <tbody>
+          ${ASSET_KEYS.map(k=>`
+            <tr style="border-top:0.5px solid var(--border)">
+              <td style="padding:7px 8px;font-size:12px;position:sticky;left:0;background:var(--bg)">${k}</td>
+              ${cols.map((r,ci)=>{
+                const val=Number(r[k]||0);
+                const prevVal=ci>0?Number(cols[ci-1][k]||0):null;
+                const d=prevVal!==null?val-prevVal:null;
+                return`<td style="text-align:right;padding:7px 8px">
+                  <div style="font-family:'DM Mono',monospace;font-size:12px;color:var(--text2)">${fmtYen(val)}</div>
+                  ${d!==null&&d!==0?`<div style="font-size:10px;color:${d>0?'var(--green)':'var(--red)'}">${d>0?'+':''}${fmtYen(d)}</div>`:''}
+                </td>`;
+              }).join('')}
+            </tr>`).join('')}
+          <tr style="border-top:1px solid var(--green)">
+            <td style="padding:8px;font-size:12px;font-weight:700;position:sticky;left:0;background:var(--bg)">合計</td>
+            ${cols.map((r,ci)=>{
+              const total=ASSET_KEYS.reduce((a,k)=>a+Number(r[k]||0),0);
+              const prevTotal=ci>0?ASSET_KEYS.reduce((a,k)=>a+Number(cols[ci-1][k]||0),0):null;
+              const d=prevTotal!==null?total-prevTotal:null;
+              return`<td style="text-align:right;padding:8px">
+                <div style="font-family:'DM Mono',monospace;font-size:12px;font-weight:700;color:var(--green)">${fmtYen(total)}</div>
+                ${d!==null?`<div style="font-size:10px;color:${d>0?'var(--green)':'var(--red)'}">${d>0?'+':''}${fmtYen(d)}</div>`:''}
+              </td>`;
+            }).join('')}
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function setAssetMode(mode){
+  assetMode = mode;
+  renderAsset();
+}
+
+function setAssetCols(n){
+  assetCompareCols = n;
+  const sorted=[...assets].sort((a,b)=>new Date(b.date)-new Date(a.date));
+  renderAssetCompare(sorted);
 }
 
 function assetSlide(dir){
   const sorted=[...assets].sort((a,b)=>new Date(b.date)-new Date(a.date));
   assetPageIdx = Math.max(0, Math.min(sorted.length-1, assetPageIdx+dir));
-  renderAsset();
+  renderAssetSlide(sorted);
 }
 
 function renderFixed(){
