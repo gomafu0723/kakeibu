@@ -117,14 +117,60 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto S
 .asset-record-edit{background:var(--bg3);border:1px solid var(--border);color:var(--text2);padding:6px 14px;border-radius:8px;font-size:12px;cursor:pointer;font-family:'Noto Sans JP',sans-serif;font-weight:600}
 .compare-btn{padding:7px 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--bg2);color:var(--text2);font-size:13px;cursor:pointer;font-family:'Noto Sans JP',sans-serif;font-weight:500;transition:all .15s}
 .compare-btn.active{border-color:var(--green);color:var(--green);background:var(--green-light)}
+
+.budget-grid-compact{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.budget-item-compact{background:var(--bg2);border-radius:12px;padding:10px 12px;border:1px solid var(--border);box-shadow:var(--shadow)}
+.bname-compact{font-size:11px;color:var(--text3);font-weight:600}
+.bremain-compact{font-family:'DM Mono',monospace;font-size:14px;font-weight:700}
 </style>
 </head>
 <body>
+
+<script>
+(function(){
+  const PW = '0517mitoma';
+  const KEY = 'kk_auth';
+  if(localStorage.getItem(KEY) !== PW){
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:#f5f0e8;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:"Noto Sans JP",sans-serif;';
+    overlay.innerHTML = `
+      <div style="text-align:center;padding:32px;max-width:320px;width:100%">
+        <div style="font-size:40px;margin-bottom:16px">🔐</div>
+        <div style="font-size:20px;font-weight:700;color:#1c1917;margin-bottom:8px">家計簿</div>
+        <div style="font-size:13px;color:#78716c;margin-bottom:24px">パスワードを入力してください</div>
+        <input id="pw-input" type="password" placeholder="パスワード"
+          style="width:100%;padding:14px;border-radius:14px;border:1.5px solid #d6d0c7;background:#fdf9f3;font-size:16px;font-family:'Noto Sans JP',sans-serif;outline:none;text-align:center;margin-bottom:12px;box-sizing:border-box;">
+        <div id="pw-error" style="color:#b91c1c;font-size:13px;margin-bottom:12px;min-height:18px"></div>
+        <button id="pw-btn"
+          style="width:100%;padding:15px;border-radius:14px;border:none;background:#44301e;color:#f5f0e8;font-size:16px;font-weight:700;font-family:'Noto Sans JP',sans-serif;cursor:pointer;">
+          ログイン
+        </button>
+      </div>`;
+    document.body.appendChild(overlay);
+    const input = overlay.querySelector('#pw-input');
+    const btn = overlay.querySelector('#pw-btn');
+    const err = overlay.querySelector('#pw-error');
+    function check(){
+      if(input.value === PW){
+        localStorage.setItem(KEY, PW);
+        overlay.remove();
+      } else {
+        err.textContent = 'パスワードが違います';
+        input.value = '';
+        input.focus();
+      }
+    }
+    btn.onclick = check;
+    input.addEventListener('keydown', e=>{ if(e.key==='Enter') check(); });
+    input.focus();
+  }
+})();
+</script>
+
 <div class="app">
   <div id="view-home"></div>
   <div id="view-history" style="display:none"></div>
   <div id="view-asset" style="display:none"></div>
-  <div id="view-fixed" style="display:none"></div>
 </div>
 
 <div class="tab-bar">
@@ -137,9 +183,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto S
   <button class="tab" onclick="switchTab('asset')" id="tab-asset">
     <span class="tab-icon">◈</span><span class="tab-label">資産</span>
   </button>
-  <button class="tab" onclick="switchTab('fixed')" id="tab-fixed">
-    <span class="tab-icon">☰</span><span class="tab-label">積立</span>
-  </button>
+
 </div>
 
 <button class="fab" onclick="openModal('input')">＋</button>
@@ -348,12 +392,25 @@ function calcCatUsed(){
 function calcFixedBalance(){
   const balance={};
   const now=new Date();
-  const startYear=2024;
+  // 2026年5月時点の実際の残高を基準とする
+  const BASE_DATE = new Date(2026, 4, 1); // 2026/05
+  const BASE_BALANCE = {
+    貯蓄: 7374283,
+    生命保険積立: 129479,
+    自動車税積立: 27556,
+    車検積立: 14000,
+    固定資産税積立: 52400,
+    自動車保険積立: 6000,
+    IDECO: 520000,
+  };
   FIXED_CATS.forEach(cat=>{
-    const totalIncome=incomes.filter(e=>e.cat===cat).reduce((a,e)=>a+Number(e.amount),0);
-    const totalExpense=expenses.filter(e=>e.cat===cat).reduce((a,e)=>a+Number(e.amount),0);
-    const monthsElapsed=(now.getFullYear()-startYear)*12+now.getMonth()+1;
-    balance[cat]=(FIXED_AMOUNTS[cat]||0)*monthsElapsed+totalIncome-totalExpense;
+    // 基準日以降の収支のみ反映
+    const baseDate = '2026-05-01';
+    const totalIncome=incomes.filter(e=>e.cat===cat&&e.date>=baseDate).reduce((a,e)=>a+Number(e.amount),0);
+    const totalExpense=expenses.filter(e=>e.cat===cat&&e.date>=baseDate).reduce((a,e)=>a+Number(e.amount),0);
+    // 基準月以降の積立累計（基準月含まず翌月から）
+    const monthsElapsed=Math.max(0,(now.getFullYear()-2026)*12+(now.getMonth()-4));
+    balance[cat]=(BASE_BALANCE[cat]||0)+(FIXED_AMOUNTS[cat]||0)*monthsElapsed+totalIncome-totalExpense;
   });
   return balance;
 }
@@ -404,7 +461,20 @@ function renderHome(){
   const daysLeft=new Date(today2.getFullYear(),today2.getMonth()+1,0).getDate()-today2.getDate()+1;
   const dailyRemain=Math.round(remainAfterReserve/Math.max(1,daysLeft));
   const monthIncome=getMonthData(incomes).reduce((a,e)=>a+Number(e.amount),0);
-  const recent=getMonthData(expenses).sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,5);
+
+  // リアルタイム残高（今日以前の支出・収入のみ）
+  const todayStr=today();
+  const rtExpenses=getMonthData(expenses).filter(e=>e.date<=todayStr);
+  const rtIncomes=getMonthData(incomes).filter(e=>e.date<=todayStr);
+  const rtBudgetUsed=Object.keys(BUDGET).reduce((a,k)=>{
+    return a+rtExpenses.filter(e=>e.cat===k).reduce((s,e)=>s+Number(e.amount),0);
+  },0);
+  const rtIncome=rtIncomes.reduce((a,e)=>a+Number(e.amount),0);
+  const rtRemain=totalBudget-rtBudgetUsed-RESERVE;
+
+  // 積立残高
+  const balance=calcFixedBalance();
+  const fixedUsed=calcCatUsed();
 
   document.getElementById('view-home').innerHTML=`
     <div class="header"><h1>家計簿</h1>
@@ -417,7 +487,7 @@ function renderHome(){
     ${syncBarHTML()}
     <div class="hero-card accent">
       <div class="hero-label">残り予算（2万円控除後）</div>
-      <div class="hero-amount ${remainAfterReserve<0?'over':remainAfterReserve<10000?'warn':''}" style="${remainAfterReserve>=0?'color:#fb923c':'color:#f87171'}">${fmtYen(remainAfterReserve)}</div>
+      <div style="font-family:'DM Mono',monospace;font-size:34px;font-weight:500;color:${remainAfterReserve<0?'#f87171':'#fb923c'}">${fmtYen(remainAfterReserve)}</div>
       <div class="hero-sub">1日あたり ${fmtYen(dailyRemain)} · 予算 ${fmtYen(totalBudget)} · 使用 ${fmtYen(budgetUsed)}</div>
       <div class="progress-track" style="background:rgba(255,255,255,.15)">
         <div class="progress-fill" style="width:${pct}%;background:${pct<=0?'#f87171':pct<30?'#fbbf24':'#fb923c'}"></div>
@@ -433,28 +503,46 @@ function renderHome(){
         <div class="mini-val">${daysLeft}日</div>
       </div>
     </div>
-    <div class="section-title">カテゴリ別残高</div>
-    <div class="budget-grid">
+
+    <div class="section-title">変動費 残高</div>
+    <div class="budget-grid-compact">
       ${Object.entries(BUDGET).map(([cat,budget])=>{
         const u=used[cat]||0;const r=budget-u;
         const p=r<=0?0:Math.min(100,Math.round(r/budget*100));
         const c=r<=0?'over':p<30?'warn':'ok';
-        return`<div class="budget-item">
-          <div class="bname">${cat}</div>
-          <div class="bremain ${c}">${fmtYen(r)}</div>
-          <div class="btotal">残 / ${fmtYen(budget)}</div>
+        return`<div class="budget-item-compact">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
+            <div class="bname-compact">${cat}</div>
+            <div class="bremain-compact ${c}">${fmtYen(r)}</div>
+          </div>
           <div class="bbar"><div class="bbar-fill ${c}-bar" style="width:${p}%"></div></div>
         </div>`;
       }).join('')}
     </div>
-    <div class="section-title">直近の支出</div>
-    <div class="list-card">
-      ${recent.length===0?'<div class="empty-msg">まだ入力がありません</div>':
-        recent.map(e=>`<div class="list-item" onclick="openEdit(${expenses.indexOf(e)})">
-          <div class="item-left"><div class="iname">${e.detail||e.cat}</div><div class="icat">${e.cat}</div></div>
-          <div class="item-right"><div class="iamt expense">-${fmtYen(e.amount)}</div><div class="idate">${fmtDate(e.date)}</div></div>
-        </div>`).join('')}
-    </div>`;
+
+    <div class="section-title">積立 残高</div>
+    <div class="budget-grid-compact">
+      ${FIXED_CATS.map(cat=>{
+        const bal=balance[cat]||0;
+        const monthly=FIXED_AMOUNTS[cat];
+        const spent=fixedUsed[cat]||0;
+        const c=bal<0?'over':bal<monthly?'warn':'ok';
+        return`<div class="budget-item-compact" style="border-left:3px solid var(--${c==='ok'?'green':c==='warn'?'amber':'red'})">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
+            <div class="bname-compact">${cat}</div>
+            <div class="bremain-compact ${c}">${fmtYen(bal)}</div>
+          </div>
+          <div style="font-size:10px;color:var(--text3)">月額 ${fmtYen(monthly)} · 今月支出 ${fmtYen(spent)}</div>
+        </div>`;
+      }).join('')}
+    </div>
+
+    <div class="hero-card" style="margin-top:8px;border-left:4px solid var(--green)">
+      <div class="hero-label">リアルタイム残高（${todayStr}時点）</div>
+      <div style="font-family:'DM Mono',monospace;font-size:26px;font-weight:500;color:${rtRemain<0?'var(--red)':rtRemain<10000?'var(--amber)':'var(--green)'}">${fmtYen(rtRemain)}</div>
+      <div style="font-size:12px;color:var(--text3);margin-top:4px">今日までの支出 ${fmtYen(rtBudgetUsed)} · 今日までの収入 ${fmtYen(rtIncome)}</div>
+    </div>
+  `;
 }
 
 function renderHistory(){
@@ -632,46 +720,16 @@ function assetSlide(dir){
   renderAssetSlide(sorted);
 }
 
-function renderFixed(){
-  const balance=calcFixedBalance();
-  const used=calcCatUsed();
-  const fixedTotal=Object.values(FIXED_AMOUNTS).reduce((a,b)=>a+b,0);
-  const fixedUsedTotal=FIXED_CATS.reduce((a,k)=>a+(used[k]||0),0);
-  document.getElementById('view-fixed').innerHTML=`
-    <div class="header"><h1>積立・固定費</h1></div>
-    <div class="hero-card accent">
-      <div class="hero-label">今月の積立合計</div>
-      <div style="font-family:'DM Mono',monospace;font-size:28px;font-weight:500;color:#fb923c">${fmtYen(fixedTotal)}</div>
-      <div class="hero-sub">今月の積立支出 ${fmtYen(fixedUsedTotal)}</div>
-    </div>
-    <div class="section-title">各口座の残高</div>
-    ${FIXED_CATS.map(cat=>{
-      const monthly=FIXED_AMOUNTS[cat];
-      const bal=balance[cat]||0;
-      const spent=used[cat]||0;
-      const pct=monthly>0?Math.max(0,Math.min(100,Math.round((monthly-spent)/monthly*100))):0;
-      const cls=bal<0?'over':bal<monthly?'warn':'ok';
-      return`<div class="fixed-balance-item">
-        <div class="fixed-balance-name">${cat}</div>
-        <div class="fixed-balance-row">
-          <div class="fixed-balance-remain ${cls}">${fmtYen(bal)}</div>
-          <div class="fixed-balance-detail">月額 ${fmtYen(monthly)} · 今月支出 ${fmtYen(spent)}</div>
-        </div>
-        <div class="fixed-bar"><div class="fixed-bar-fill ${cls}-bar" style="width:${pct}%"></div></div>
-      </div>`;
-    }).join('')}`;
-}
-
 function renderCurrent(){
   if(currentTab==='home')renderHome();
   if(currentTab==='history')renderHistory();
   if(currentTab==='asset')renderAsset();
-  if(currentTab==='fixed')renderFixed();
+  
 }
 
 function switchTab(t){
   currentTab=t;
-  ['home','history','asset','fixed'].forEach(v=>{
+  ['home','history','asset'].forEach(v=>{
     document.getElementById('view-'+v).style.display=v===t?'block':'none';
     document.getElementById('tab-'+v).classList.toggle('active',v===t);
   });
