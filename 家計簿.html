@@ -212,6 +212,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto S
           <option>貯蓄</option><option>生命保険積立</option><option>IDECO</option>
           <option>自動車税積立</option><option>車検積立</option>
           <option>固定資産税積立</option><option>自動車保険積立</option>
+          <option>史絵梨貯金</option><option>涼介貯金</option>
         </select>
       </div>
       <div class="form-group">
@@ -241,6 +242,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto S
           <option>貯蓄</option><option>生命保険積立</option><option>IDECO</option>
           <option>自動車税積立</option><option>車検積立</option>
           <option>固定資産税積立</option><option>自動車保険積立</option>
+          <option>史絵梨貯金</option><option>涼介貯金</option>
         </select>
       </div>
       <div class="form-group">
@@ -276,6 +278,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto S
         <option>貯蓄</option><option>生命保険積立</option><option>IDECO</option>
         <option>自動車税積立</option><option>車検積立</option>
         <option>固定資産税積立</option><option>自動車保険積立</option>
+        <option>史絵梨貯金</option><option>涼介貯金</option>
       </select>
     </div>
     <div class="form-group"><label class="form-label">詳細</label><input class="form-input" type="text" id="edit-detail"></div>
@@ -304,6 +307,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto S
         <option>貯蓄</option><option>生命保険積立</option><option>IDECO</option>
         <option>自動車税積立</option><option>車検積立</option>
         <option>固定資産税積立</option><option>自動車保険積立</option>
+        <option>史絵梨貯金</option><option>涼介貯金</option>
       </select>
     </div>
     <div class="form-group"><label class="form-label">詳細</label><input class="form-input" type="text" id="edit-inc-detail"></div>
@@ -352,7 +356,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto S
 const GAS_URL='https://script.google.com/macros/s/AKfycbxKuVAihUFNSCI1LxTIssawJDJ1NnaA3Kw5FNguS8cA6oyRxQEN2IKV6DVDS4nHSKe3/exec';
 const RESERVE=20000;
 const BUDGET={食料費:83500,生活費:13000,その他:60000,通信費:10000,光熱費:38000,保険費:12000,住居費:22000,教育費:20000};
-const FIXED_AMOUNTS={貯蓄:99000,生命保険積立:64000,IDECO:10000,自動車税積立:3500,車検積立:7000,固定資産税積立:10500,自動車保険積立:2500};
+const FIXED_AMOUNTS={貯蓄:99000,生命保険積立:64000,自動車税積立:3500,車検積立:7000,固定資産税積立:10500,自動車保険積立:2500,史絵梨貯金:20000,涼介貯金:20000};
 const FIXED_CATS=Object.keys(FIXED_AMOUNTS);
 const ASSET_KEYS=['現金','貯蓄','生命保険積立','自動車税積立','車検積立','固定資産税積立','自動車保険積立','史絵梨貯金','涼介貯金','き貯金','よ確定拠出年金','き確定拠出年金','生保解約返戻金'];
 
@@ -401,7 +405,8 @@ function calcFixedBalance(){
     車検積立: 14000,
     固定資産税積立: 52400,
     自動車保険積立: 6000,
-    IDECO: 520000,
+    史絵梨貯金: 1088237,
+    涼介貯金: 409959,
   };
   FIXED_CATS.forEach(cat=>{
     // 基準日以降の収支のみ反映
@@ -509,13 +514,16 @@ function renderHome(){
       ${Object.entries(BUDGET).map(([cat,budget])=>{
         const u=used[cat]||0;const r=budget-u;
         const p=r<=0?0:Math.min(100,Math.round(r/budget*100));
-        const c=r<=0?'over':p<30?'warn':'ok';
+        const cl=r<=0?'over':p<30?'warn':'ok';
         return`<div class="budget-item-compact">
-          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
             <div class="bname-compact">${cat}</div>
-            <div class="bremain-compact ${c}">${fmtYen(r)}</div>
+            <div>
+              <span class="bremain-compact ${cl}">${fmtYen(r)}</span>
+              <span style="font-size:10px;color:var(--text3);margin-left:3px">/${fmtYen(budget)}</span>
+            </div>
           </div>
-          <div class="bbar"><div class="bbar-fill ${c}-bar" style="width:${p}%"></div></div>
+          <div class="bbar"><div class="bbar-fill ${cl}-bar" style="width:${p}%"></div></div>
         </div>`;
       }).join('')}
     </div>
@@ -526,21 +534,36 @@ function renderHome(){
         const bal=balance[cat]||0;
         const monthly=FIXED_AMOUNTS[cat];
         const spent=fixedUsed[cat]||0;
-        const c=bal<0?'over':bal<monthly?'warn':'ok';
-        return`<div class="budget-item-compact" style="border-left:3px solid var(--${c==='ok'?'green':c==='warn'?'amber':'red'})">
-          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
+        const cl=bal<0?'over':bal<monthly?'warn':'ok';
+        return`<div class="budget-item-compact" style="border-left:3px solid var(--${cl==='ok'?'green':cl==='warn'?'amber':'red'})">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
             <div class="bname-compact">${cat}</div>
-            <div class="bremain-compact ${c}">${fmtYen(bal)}</div>
+            <div class="bremain-compact ${cl}">${fmtYen(bal)}</div>
           </div>
-          <div style="font-size:10px;color:var(--text3)">月額 ${fmtYen(monthly)} · 今月支出 ${fmtYen(spent)}</div>
+          <div style="font-size:10px;color:var(--text3)">月額 ${fmtYen(monthly)} · 支出 ${fmtYen(spent)}</div>
         </div>`;
       }).join('')}
     </div>
 
-    <div class="hero-card" style="margin-top:8px;border-left:4px solid var(--green)">
-      <div class="hero-label">リアルタイム残高（${todayStr}時点）</div>
-      <div style="font-family:'DM Mono',monospace;font-size:26px;font-weight:500;color:${rtRemain<0?'var(--red)':rtRemain<10000?'var(--amber)':'var(--green)'}">${fmtYen(rtRemain)}</div>
-      <div style="font-size:12px;color:var(--text3);margin-top:4px">今日までの支出 ${fmtYen(rtBudgetUsed)} · 今日までの収入 ${fmtYen(rtIncome)}</div>
+    <div class="section-title">リアルタイム残高（${todayStr}時点）</div>
+    <div class="list-card" style="margin-bottom:16px">
+      <div class="list-item" style="cursor:default">
+        <div class="item-left"><div class="iname" style="color:var(--text)">現金（変動費）</div></div>
+        <div class="item-right"><div class="iamt" style="color:${rtRemain<0?'var(--red)':rtRemain<10000?'var(--amber)':'var(--green)'};">${fmtYen(rtRemain)}</div></div>
+      </div>
+      ${['貯蓄','生命保険積立','自動車税積立','車検積立','固定資産税積立','自動車保険積立','史絵梨貯金','涼介貯金'].map(cat=>{
+        const baseDate='2026-05-01';
+        const baseBal={貯蓄:7374283,生命保険積立:129479,自動車税積立:27556,車検積立:14000,固定資産税積立:52400,自動車保険積立:6000,史絵梨貯金:1088237,涼介貯金:409959}[cat]||0;
+        const rtInc=incomes.filter(e=>e.cat===cat&&e.date>=baseDate&&e.date<=todayStr).reduce((a,e)=>a+Number(e.amount),0);
+        const rtExp=expenses.filter(e=>e.cat===cat&&e.date>=baseDate&&e.date<=todayStr).reduce((a,e)=>a+Number(e.amount),0);
+        const monthly=FIXED_AMOUNTS[cat]||0;
+        const monthsElapsed=Math.max(0,(new Date().getFullYear()-2026)*12+(new Date().getMonth()-4));
+        const rtBal=baseBal+monthly*monthsElapsed+rtInc-rtExp;
+        return`<div class="list-item" style="cursor:default">
+          <div class="item-left"><div class="iname">${cat}</div></div>
+          <div class="item-right"><div class="iamt" style="color:${rtBal<0?'var(--red)':'var(--text2)'};">${fmtYen(rtBal)}</div></div>
+        </div>`;
+      }).join('')}
     </div>
   `;
 }
