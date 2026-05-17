@@ -122,6 +122,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto S
 .budget-item-compact{background:var(--bg2);border-radius:12px;padding:10px 12px;border:1px solid var(--border);box-shadow:var(--shadow)}
 .bname-compact{font-size:11px;color:var(--text3);font-weight:600}
 .bremain-compact{font-family:'DM Mono',monospace;font-size:14px;font-weight:700}
+.budget-item-compact .bbar{background:var(--bg4);border-radius:3px;height:4px;margin-top:6px;overflow:hidden;display:block}
+.budget-item-compact .bbar-fill{height:100%;border-radius:3px;display:block}
 </style>
 </head>
 <body>
@@ -498,14 +500,18 @@ function renderHome(){
         <div class="progress-fill" style="width:${pct}%;background:${pct<=0?'#f87171':pct<30?'#fbbf24':'#fb923c'}"></div>
       </div>
     </div>
-    <div class="cards-row">
-      <div class="mini-card">
-        <div class="mini-label">今月の収入</div>
-        <div class="mini-val" style="color:var(--green)">${fmtYen(monthIncome)}</div>
-      </div>
-      <div class="mini-card">
-        <div class="mini-label">残り日数</div>
-        <div class="mini-val">${daysLeft}日</div>
+    <div class="list-card" style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px">
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:12px;color:var(--text3);font-weight:600">今月の収入</span>
+          <span style="font-family:'DM Mono',monospace;font-size:15px;font-weight:500;color:var(--green)">${fmtYen(monthIncome)}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:12px;color:var(--text3);font-weight:600">残り</span>
+          <span style="font-family:'DM Mono',monospace;font-size:15px;font-weight:500;color:var(--text)">${daysLeft}日</span>
+          <span style="font-size:12px;color:var(--text3);font-weight:600">1日あたり</span>
+          <span style="font-family:'DM Mono',monospace;font-size:15px;font-weight:500;color:var(--text)">${fmtYen(dailyRemain)}</span>
+        </div>
       </div>
     </div>
 
