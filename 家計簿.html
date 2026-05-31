@@ -410,8 +410,8 @@ function calcFixedBalance(){
     史絵梨貯金: 1088237,
     涼介貯金: 409959,
   };
-  // 表示月の年月
-  const dispY=now.getFullYear(), dispM=now.getMonth()+1;
+  // 表示月の年月（currentMonthを使用）
+  const dispY=currentMonth.getFullYear(), dispM=currentMonth.getMonth()+1;
   // 表示月末日まで
   const dispEnd=`${dispY}-${String(dispM).padStart(2,'0')}-31`;
   const baseDate='2026-05-01';
