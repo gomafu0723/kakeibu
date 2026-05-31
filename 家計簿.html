@@ -412,15 +412,16 @@ function calcFixedBalance(){
   };
   // 表示月の年月
   const dispY=now.getFullYear(), dispM=now.getMonth()+1;
-  const dispStart=`${dispY}-${String(dispM).padStart(2,'0')}-01`;
+  // 表示月末日まで
   const dispEnd=`${dispY}-${String(dispM).padStart(2,'0')}-31`;
+  const baseDate='2026-05-01';
 
   FIXED_CATS.forEach(cat=>{
-    // 基準月（2026/05）から表示月前月までの積立累計
-    const monthsElapsed=Math.max(0,(dispY-2026)*12+(dispM-1-4));
-    // 表示月内の収支のみ反映
-    const totalIncome=incomes.filter(e=>e.cat===cat&&e.date>=dispStart&&e.date<=dispEnd).reduce((a,e)=>a+Number(e.amount),0);
-    const totalExpense=expenses.filter(e=>e.cat===cat&&e.date>=dispStart&&e.date<=dispEnd).reduce((a,e)=>a+Number(e.amount),0);
+    // 基準月（2026/05）から表示月末までの積立累計
+    const monthsElapsed=Math.max(0,(dispY-2026)*12+(dispM-4));
+    // 基準日以降・表示月末までの全収支を累計
+    const totalIncome=incomes.filter(e=>e.cat===cat&&e.date>=baseDate&&e.date<=dispEnd).reduce((a,e)=>a+Number(e.amount),0);
+    const totalExpense=expenses.filter(e=>e.cat===cat&&e.date>=baseDate&&e.date<=dispEnd).reduce((a,e)=>a+Number(e.amount),0);
     balance[cat]=(BASE_BALANCE[cat]||0)+(FIXED_AMOUNTS[cat]||0)*monthsElapsed+totalIncome-totalExpense;
   });
   return balance;
@@ -563,12 +564,12 @@ function renderHome(){
         const baseBal={貯蓄:7374283,生命保険積立:129479,自動車税積立:27556,車検積立:14000,固定資産税積立:52400,自動車保険積立:6000,史絵梨貯金:1088237,涼介貯金:409959}[cat]||0;
         const nowD=new Date();
         const nowY=nowD.getFullYear(), nowM=nowD.getMonth()+1;
-        const monthStart=`${nowY}-${String(nowM).padStart(2,'0')}-01`;
-        // 基準月から今月前月までの積立累計
-        const monthsElapsed=Math.max(0,(nowY-2026)*12+(nowM-1-4));
-        // 今月内かつ今日以前の収支のみ
-        const rtInc=incomes.filter(e=>e.cat===cat&&e.date>=monthStart&&e.date<=todayStr).reduce((a,e)=>a+Number(e.amount),0);
-        const rtExp=expenses.filter(e=>e.cat===cat&&e.date>=monthStart&&e.date<=todayStr).reduce((a,e)=>a+Number(e.amount),0);
+        const rtBaseDate='2026-05-01';
+        // 基準月から今日までの積立累計（今日が属する月まで）
+        const monthsElapsed=Math.max(0,(nowY-2026)*12+(nowM-4));
+        // 基準日以降・今日以前の全収支を累計
+        const rtInc=incomes.filter(e=>e.cat===cat&&e.date>=rtBaseDate&&e.date<=todayStr).reduce((a,e)=>a+Number(e.amount),0);
+        const rtExp=expenses.filter(e=>e.cat===cat&&e.date>=rtBaseDate&&e.date<=todayStr).reduce((a,e)=>a+Number(e.amount),0);
         const monthly=FIXED_AMOUNTS[cat]||0;
         const rtBal=baseBal+monthly*monthsElapsed+rtInc-rtExp;
         return`<div class="list-item" style="cursor:default">
