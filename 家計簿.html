@@ -173,6 +173,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto S
   <div id="view-home"></div>
   <div id="view-history" style="display:none"></div>
   <div id="view-asset" style="display:none"></div>
+  <div id="view-settings" style="display:none"></div>
 </div>
 
 <div class="tab-bar">
@@ -185,7 +186,9 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto S
   <button class="tab" onclick="switchTab('asset')" id="tab-asset">
     <span class="tab-icon">◈</span><span class="tab-label">資産</span>
   </button>
-
+  <button class="tab" onclick="switchTab('settings')" id="tab-settings">
+    <span class="tab-icon">⚙</span><span class="tab-label">設定</span>
+  </button>
 </div>
 
 <button class="fab" onclick="openModal('input')">＋</button>
@@ -358,9 +361,17 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto S
 const GAS_URL='https://script.google.com/macros/s/AKfycbxKuVAihUFNSCI1LxTIssawJDJ1NnaA3Kw5FNguS8cA6oyRxQEN2IKV6DVDS4nHSKe3/exec';
 const RESERVE=20000;
 const BUDGET={食料費:83500,生活費:13000,その他:60000,通信費:10000,光熱費:38000,保険費:12000,住居費:22000,教育費:20000};
-const FIXED_AMOUNTS={貯蓄:99000,生命保険積立:64000,自動車税積立:3500,車検積立:7000,固定資産税積立:10500,自動車保険積立:2500,史絵梨貯金:20000,涼介貯金:20000};
+const FIXED_AMOUNTS={貯蓄:99000,生命保険積立:64000,自動車税積立:3500,車検積立:7000,固定資産税積立:10500,自動車保険積立:2500,史絵梨貯金:0,涼介貯金:0};
 const FIXED_CATS=Object.keys(FIXED_AMOUNTS);
 const ASSET_KEYS=['現金','貯蓄','生命保険積立','自動車税積立','車検積立','固定資産税積立','自動車保険積立','史絵梨貯金','涼介貯金','き貯金','よ確定拠出年金','き確定拠出年金','生保解約返戻金'];
+
+// 設定をlocalStorageから読み込み（スプシ同期で上書きされる）
+const _savedBudget = JSON.parse(localStorage.getItem('kk_budget')||'null');
+const _savedFixed = JSON.parse(localStorage.getItem('kk_fixed')||'null');
+const _savedBase = JSON.parse(localStorage.getItem('kk_base_balance')||'null');
+if(_savedBudget) Object.assign(BUDGET, _savedBudget);
+if(_savedFixed) Object.assign(FIXED_AMOUNTS, _savedFixed);
+const BASE_BALANCE_OBJ = _savedBase || {貯蓄:7374283,生命保険積立:129479,自動車税積立:27556,車検積立:14000,固定資産税積立:52400,自動車保険積立:6000,史絵梨貯金:1088237,涼介貯金:409959};
 
 let expenses=JSON.parse(localStorage.getItem('kk_expenses')||'[]');
 let incomes=JSON.parse(localStorage.getItem('kk_incomes')||'[]');
@@ -400,7 +411,7 @@ function calcFixedBalance(){
   const now=new Date();
   // 2026年5月時点の実際の残高を基準とする
   const BASE_DATE = new Date(2026, 4, 1); // 2026/05
-  const BASE_BALANCE = {
+  const BASE_BALANCE_DEF = {
     貯蓄: 7374283,
     生命保険積立: 129479,
     自動車税積立: 27556,
@@ -422,7 +433,7 @@ function calcFixedBalance(){
     // 基準日以降・表示月末までの全収支を累計
     const totalIncome=incomes.filter(e=>e.cat===cat&&e.date>=baseDate&&e.date<=dispEnd).reduce((a,e)=>a+Number(e.amount),0);
     const totalExpense=expenses.filter(e=>e.cat===cat&&e.date>=baseDate&&e.date<=dispEnd).reduce((a,e)=>a+Number(e.amount),0);
-    balance[cat]=(BASE_BALANCE[cat]||0)+(FIXED_AMOUNTS[cat]||0)*monthsElapsed+totalIncome-totalExpense;
+    balance[cat]=(BASE_BALANCE_OBJ[cat]||0)+(FIXED_AMOUNTS[cat]||0)*monthsElapsed+totalIncome-totalExpense;
   });
   return balance;
 }
@@ -450,6 +461,20 @@ async function syncFromSheet(){
     if(data['支出']){expenses=data['支出'].filter(e=>e.date&&e.amount>0);localStorage.setItem('kk_expenses',JSON.stringify(expenses));}
     if(data['収入']){incomes=data['収入'].filter(e=>e.date&&e.amount>0);localStorage.setItem('kk_incomes',JSON.stringify(incomes));}
     if(data['資産']){assets=data['資産'].filter(e=>e.date);localStorage.setItem('kk_assets',JSON.stringify(assets));}
+    if(data['設定']){
+      if(data['設定']['budget']){
+        Object.assign(BUDGET, data['設定']['budget']);
+        localStorage.setItem('kk_budget', JSON.stringify(BUDGET));
+      }
+      if(data['設定']['fixed']){
+        Object.assign(FIXED_AMOUNTS, data['設定']['fixed']);
+        localStorage.setItem('kk_fixed', JSON.stringify(FIXED_AMOUNTS));
+      }
+      if(data['設定']['baseBalance']){
+        Object.assign(BASE_BALANCE, data['設定']['baseBalance']);
+        localStorage.setItem('kk_base_balance', JSON.stringify(BASE_BALANCE));
+      }
+    }
     const now=new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
     lastSync=now;localStorage.setItem('kk_last_sync',now);
     setSyncStatus('ok','最終同期 '+now);
@@ -756,16 +781,98 @@ function assetSlide(dir){
   renderAssetSlide(sorted);
 }
 
+
+function renderSettings(){
+  document.getElementById('view-settings').innerHTML=`
+    <div class="header"><h1>設定</h1></div>
+    ${syncBarHTML()}
+    <div style="background:var(--bg3);border-radius:12px;padding:12px;margin-bottom:8px;font-size:12px;color:var(--text3)">
+      変更後は「保存して同期」を押してください。全端末に反映されます。
+    </div>
+
+    <div class="section-title">変動費 月額予算</div>
+    <div class="list-card" style="margin-bottom:12px">
+      ${Object.entries(BUDGET).map(([cat,amt])=>`
+      <div class="asset-input-row" style="padding:8px 14px">
+        <div class="asset-input-label">${cat}</div>
+        <input class="asset-input-field" type="number" id="setting-budget-${cat}" value="${amt}" inputmode="numeric">
+      </div>`).join('')}
+    </div>
+
+    <div class="section-title">積立 月額</div>
+    <div class="list-card" style="margin-bottom:12px">
+      ${Object.entries(FIXED_AMOUNTS).map(([cat,amt])=>`
+      <div class="asset-input-row" style="padding:8px 14px">
+        <div class="asset-input-label">${cat}</div>
+        <input class="asset-input-field" type="number" id="setting-fixed-${cat}" value="${amt}" inputmode="numeric">
+      </div>`).join('')}
+    </div>
+
+    <div class="section-title">積立 基準残高（2026年5月時点）</div>
+    <div class="list-card" style="margin-bottom:16px">
+      ${Object.entries(BASE_BALANCE_OBJ).map(([cat,amt])=>`
+      <div class="asset-input-row" style="padding:8px 14px">
+        <div class="asset-input-label">${cat}</div>
+        <input class="asset-input-field" type="number" id="setting-base-${cat}" value="${amt}" inputmode="numeric">
+      </div>`).join('')}
+    </div>
+
+    <button class="btn-primary" style="width:100%" onclick="saveSettings()">保存して同期</button>
+  `;
+}
+
+async function saveSettings(){
+  // 変動費予算を取得
+  const newBudget = {};
+  Object.keys(BUDGET).forEach(cat=>{
+    const el = document.getElementById('setting-budget-'+cat);
+    if(el) newBudget[cat] = parseInt(el.value)||0;
+  });
+
+  // 積立月額を取得
+  const newFixed = {};
+  Object.keys(FIXED_AMOUNTS).forEach(cat=>{
+    const el = document.getElementById('setting-fixed-'+cat);
+    if(el) newFixed[cat] = parseInt(el.value)||0;
+  });
+
+  // 基準残高を取得
+  const newBase = {};
+  Object.keys(BASE_BALANCE_OBJ).forEach(cat=>{
+    const el = document.getElementById('setting-base-'+cat);
+    if(el) newBase[cat] = parseInt(el.value)||0;
+  });
+
+  // メモリに反映
+  Object.assign(BUDGET, newBudget);
+  Object.assign(FIXED_AMOUNTS, newFixed);
+  Object.assign(BASE_BALANCE_OBJ, newBase);
+
+  // localStorageに保存
+  localStorage.setItem('kk_budget', JSON.stringify(BUDGET));
+  localStorage.setItem('kk_fixed', JSON.stringify(FIXED_AMOUNTS));
+  localStorage.setItem('kk_base_balance', JSON.stringify(BASE_BALANCE_OBJ));
+
+  // スプレッドシートに保存
+  await postToSheet({action:'saveSettings', key:'budget', value:newBudget});
+  await postToSheet({action:'saveSettings', key:'fixed', value:newFixed});
+  await postToSheet({action:'saveSettings', key:'baseBalance', value:newBase});
+
+  alert('設定を保存しました。同期ボタンで他の端末にも反映されます。');
+  renderSettings();
+}
+
 function renderCurrent(){
   if(currentTab==='home')renderHome();
   if(currentTab==='history')renderHistory();
   if(currentTab==='asset')renderAsset();
+  if(currentTab==='settings')renderSettings();
   
 }
 
 function switchTab(t){
   currentTab=t;
-  ['home','history','asset'].forEach(v=>{
+  ['home','history','asset','settings'].forEach(v=>{
     document.getElementById('view-'+v).style.display=v===t?'block':'none';
     document.getElementById('tab-'+v).classList.toggle('active',v===t);
   });
