@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>ミニウォーズDX</title>
+<style>
+  :root{
+    --bg:#10122a; --panel:#1d2145; --panel2:#2c3a8c;
+    --red:#d04a58; --blue:#3b6fe0; --gold:#ffd76a; --txt:#f4f4f4;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;overflow:hidden;background:var(--bg);
+    font-family:"Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;
+    color:var(--txt);touch-action:manipulation;user-select:none;-webkit-user-select:none;}
+  #app{display:flex;flex-direction:column;height:100%;}
+
+  /* ===== top bar ===== */
+  #topbar{display:flex;justify-content:space-between;align-items:center;gap:8px;
+    padding:8px 12px;background:linear-gradient(180deg,#262b5c,#1d2145);
+    font-size:13px;font-weight:bold;border-bottom:3px solid #000;
+    box-shadow:0 2px 8px rgba(0,0,0,.5);z-index:2;}
+  #turnbadge{padding:3px 12px;border-radius:4px;background:var(--blue);
+    box-shadow:inset 0 -2px 0 rgba(0,0,0,.3);white-space:nowrap;}
+  .funds{color:var(--gold);white-space:nowrap;}
+  #mutebtn{background:none;border:none;font-size:18px;box-shadow:none;padding:2px 4px;}
+
+  /* ===== map ===== */
+  #mapwrap{flex:1;display:flex;justify-content:center;align-items:center;
+    overflow:hidden;background:
+      radial-gradient(ellipse at 50% 30%, #1b1f44 0%, #0c0e22 80%);}
+  canvas{image-rendering:pixelated;}
+
+  /* ===== bottom panel ===== */
+  #bottom{background:linear-gradient(180deg,#262b5c,#181b3a);
+    border-top:3px solid #000;padding:8px 10px;min-height:112px;z-index:2;}
+  #info{font-size:13px;line-height:1.45;min-height:42px;display:flex;
+    align-items:center;gap:10px;}
+  #info b{color:var(--gold);}
+  #info img{height:38px;image-rendering:pixelated;
+    filter:drop-shadow(0 2px 2px rgba(0,0,0,.6));}
+  #btns{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;}
+  button{font-family:inherit;font-weight:bold;font-size:14px;
+    padding:10px 14px;border:none;border-radius:6px;cursor:pointer;
+    background:var(--panel2);color:#fff;box-shadow:0 3px 0 #16205c;}
+  button:active{transform:translateY(2px);box-shadow:0 1px 0 #16205c;}
+  button.warn{background:var(--red);box-shadow:0 3px 0 #6e2230;}
+  button.gold{background:var(--gold);color:#3a2c00;box-shadow:0 3px 0 #b08a3e;}
+  button:disabled{opacity:.35;}
+
+  /* ===== turn banner ===== */
+  #banner{position:fixed;left:0;right:0;top:38%;padding:16px 0;text-align:center;
+    font-size:24px;font-weight:900;color:#fff;letter-spacing:.25em;z-index:9;
+    background:linear-gradient(90deg,transparent 0%,rgba(0,0,0,.88) 18%,rgba(0,0,0,.88) 82%,transparent 100%);
+    text-shadow:0 3px 0 rgba(0,0,0,.6);transform:translateX(-120%);pointer-events:none;}
+
+  /* ===== overlay dialog ===== */
+  #overlay{position:fixed;inset:0;background:rgba(0,0,0,.78);
+    display:flex;justify-content:center;align-items:center;z-index:10;}
+  #overlay.hidden{display:none;}
+  .dialog{background:var(--panel);border:3px solid var(--gold);
+    border-radius:12px;padding:20px;width:min(330px,90vw);text-align:center;
+    box-shadow:0 12px 40px rgba(0,0,0,.7);animation:pop .25s ease;}
+  @keyframes pop{from{transform:scale(.85);opacity:0;}to{transform:scale(1);opacity:1;}}
+  .dialog h2{color:var(--gold);margin-bottom:12px;font-size:21px;letter-spacing:.1em;}
+  .dialog p{font-size:13px;line-height:1.7;margin-bottom:14px;text-align:left;}
+  .dialog .row{display:flex;flex-direction:column;gap:8px;}
+  .dialog button{width:100%;display:flex;align-items:center;gap:10px;justify-content:flex-start;}
+  .dialog button img{height:30px;image-rendering:pixelated;}
+  .dialog button .pr{margin-left:auto;color:var(--gold);}
+  .dialog button.gold .pr{color:#7a5b00;}
+  .dialog button.center{justify-content:center;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="topbar">
+    <span id="turnbadge">DAY 1</span>
+    <span class="funds">💰 <span id="funds">0</span>G ／ 拠点<span id="props">0</span></span>
+    <button id="mutebtn" onclick="toggleMute()">🔊</button>
+  </div>
+  <div id="mapwrap"><canvas id="cv"></canvas></div>
+  <div id="bottom">
+    <div id="info">マスをタップしてください</div>
+    <div id="btns"></div>
+  </div>
+</div>
+
+<div id="banner"></div>
+
+<div id="overlay">
+  <div class="dialog" id="dialog">
+    <h2>ミニウォーズ DX</h2>
+    <p>🔵 青軍（あなた）対 🔴 赤軍（CPU）<br>
+    ・自分のユニットをタップ → 移動先をタップ<br>
+    ・隣接する敵を攻撃（砲兵は2〜3マス先）<br>
+    ・歩兵で都市を占領すると毎ターン収入<br>
+    ・工場やHQをタップでユニット生産<br>
+    ・戦闘で経験値獲得！<b style="color:#ffd76a">★ランクアップ</b>で攻防強化<br>
+    ・<b style="color:#ffd76a">敵HQの占領</b>か敵全滅で勝利！</p>
+    <div class="row"><button class="gold center" onclick="startGame()">▶ ゲーム開始</button></div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ====================================================
+   定数・データ
+==================================================== */
+const COLS=9, ROWS=12;
+const T={PLAIN:0,FOREST:1,MTN:2,ROAD:3,CITY:4,FACTORY:5,HQ:6};
+const TERRAIN_INFO={
+  [T.PLAIN]:{name:"平地",def:0,cost:{inf:1,tank:1,art:1}},
+  [T.FOREST]:{name:"森",def:2,cost:{inf:1,tank:2,art:2}},
+  [T.MTN]:{name:"山",def:4,cost:{inf:2,tank:99,art:99}},
+  [T.ROAD]:{name:"道路",def:0,cost:{inf:1,tank:1,art:1}},
+  [T.CITY]:{name:"都市",def:3,cost:{inf:1,tank:1,art:1}},
+  [T.FACTORY]:{name:"工場",def:3,cost:{inf:1,tank:1,art:1}},
+  [T.HQ]:{name:"HQ",def:4,cost:{inf:1,tank:1,art:1}},
+};
+const UNIT_DEF={
+  inf:{name:"歩兵",move:3,atk:5,range:[1,1],cost:1000,canCapture:true,desc:"占領できる唯一の兵科"},
+  tank:{name:"戦車",move:5,atk:8,range:[1,1],cost:3000,canCapture:false,desc:"高火力・高機動"},
+  art:{name:"砲兵",move:3,atk:7,range:[2,3],cost:2500,canCapture:false,desc:"2〜3マス先を砲撃／反撃なし"},
+};
+const RANKS=[
+  {exp:0,name:"新兵",atk:0,def:0},
+  {exp:20,name:"伍長",atk:1,def:0},
+  {exp:45,name:"軍曹",atk:2,def:1},
+  {exp:80,name:"エース",atk:3,def:2},
+];
+function rankFor(exp){let r=0;for(let i=0;i<RANKS.length;i++)if(exp>=RANKS[i].exp)r=i;return r;}
+function effAtk(u){return UNIT_DEF[u.type].atk+RANKS[u.rank].atk;}
+function gainCaptureExp(u){
+  u.exp+=6;
+  const nr=rankFor(u.exp);
+  if(nr>u.rank){u.rank=nr;rankUpFx(u);}
+}
+function rankUpFx(u){
+  SND.rankup();
+  addPopup(u.x,u.y,"ランクアップ！","#ffd76a");
+  rings.push({x:u.x+.5,y:u.y+.5,r:.12,life:1});
+  for(let i=0;i<14;i++){
+    const ang=Math.random()*6.28,sp=.5+Math.random()*1.6;
+    particles.push({x:u.x+.5,y:u.y+.5,vx:Math.cos(ang)*sp,vy:Math.sin(ang)*sp-1.2,
+      life:.5+Math.random()*.4,maxLife:1,size:.07+Math.random()*.1,color:"#ffd76a"});
+  }
+}
+const BLUE=0, RED=1;
+const PLAYER_NAME=["青軍","赤軍"];
+const PLAYER_COLOR=["#3b6fe0","#e04a55"];
+const PLAYER_DARK=["#24489e","#9c2c38"];
+
+const MAP_BASE=[
+ [2,2,1,4,0,0,1,2,2],
+ [2,1,0,3,0,4,0,1,2],
+ [1,0,5,3,0,0,0,0,1],
+ [0,0,0,3,3,3,4,0,0],
+ [0,4,0,1,0,3,0,0,0],
+ [1,0,0,0,2,3,0,4,1],
+ [1,4,0,3,2,0,0,0,1],
+ [0,0,0,3,0,1,0,8,0],
+ [0,0,4,3,3,3,0,0,0],
+ [1,0,0,0,0,3,5,0,1],
+ [2,1,0,4,0,3,0,1,2],
+ [2,2,1,0,0,4,1,2,2],
+];
+const HQ_POS=[{x:4,y:11},{x:4,y:0}];
+
+/* ====================================================
+   ピクセルアート・スプライト
+==================================================== */
+const PX={
+  inf:[
+  "....KKKK....",
+  "...KTTTTK...",
+  "..KTTTTTTK..",
+  "..KKKKKKKK..",
+  "..KSSSSSSK..",
+  "..KSKSSKSK..",
+  "...KSSSSK...",
+  "..KKKKKKKK..",
+  ".KTKTTTTKTK.",
+  ".KSKTTTTKSK.",
+  "..KKTTTTKK..",
+  "...KTKKTK...",
+  "...KTK.KTK..",
+  "..KKK...KKK.",
+  ],
+  tank:[
+  "................",
+  "....KKKK........",
+  "...KTtTTKKKKKKK.",
+  "...KTTTTK.......",
+  ".KKKKKKKKKKKK...",
+  "KTTTTTTTTTTTTK..",
+  "KTtTTTTTTTTtTK..",
+  "KKKKKKKKKKKKKK..",
+  "KGKGGKGGKGGKGK..",
+  ".KGGKGGKGGKGGK..",
+  ".KKKKKKKKKKKK...",
+  "................",
+  ],
+  art:[
+  "..........KK....",
+  ".........KTTK...",
+  "........KTTK....",
+  ".......KTTK.....",
+  "......KTTK......",
+  ".KKKKKTTKK......",
+  "KTTTTTTTKK......",
+  "KTtTTTTTTK......",
+  "KKKKKKKKKK......",
+  ".KWWK..KWWK.....",
+  ".KWWK..KWWK.....",
+  "..KK....KK......",
+  ],
+};
+const sprCv={}, sprUrl={};
+function buildSprites(){
+  const SC=6;
+  for(const type in PX){
+    sprCv[type]=[]; sprUrl[type]=[];
+    for(let pid=0;pid<2;pid++){
+      const pal={K:"#16161c",S:"#e8b88a",G:"#aeb4bc",W:"#e8e8ee",
+        T:PLAYER_COLOR[pid],t:PLAYER_DARK[pid]};
+      const rows=PX[type];
+      const c=document.createElement("canvas");
+      c.width=rows[0].length*SC; c.height=rows.length*SC;
+      const g=c.getContext("2d");
+      for(let y=0;y<rows.length;y++)for(let x=0;x<rows[y].length;x++){
+        const ch=rows[y][x];
+        if(ch==="."||!pal[ch])continue;
+        g.fillStyle=pal[ch];
+        g.fillRect(x*SC,y*SC,SC,SC);
+      }
+      sprCv[type][pid]=c;
+      sprUrl[type][pid]=c.toDataURL();
+    }
+  }
+}
+
+/* ====================================================
+   状態
+==================================================== */
+let map=[], owner={}, units=[], turn=BLUE, turnCount=1;
+let funds=[0,0];
+let sel=null, moveData=null, mode="idle", attackTargets=[];
+let captureProgress={};
+let ended=false, turnBusy=true;
+let anims=[], particles=[], popups=[], rings=[], shake=0;
+let terrainDirty=true;
+let timeNow=0;
+
+const cv=document.getElementById("cv");
+const ctx=cv.getContext("2d");
+let TILE=36, DPR=1;
+const terrCv=document.createElement("canvas");
+
+function key(x,y){return x+","+y;}
+function setOwner(x,y,p){owner[key(x,y)]=p;terrainDirty=true;}
+function getOwner(x,y){const v=owner[key(x,y)];return v===undefined?null:v;}
+function mkUnit(type,pid,x,y){return{type,pid,x,y,px:x,py:y,hp:10,acted:false,flash:0,exp:0,rank:0};}
+function unitAt(x,y){return units.find(u=>u.x===x&&u.y===y&&u.hp>0);}
+function isProp(t){return t===T.CITY||t===T.FACTORY||t===T.HQ;}
+function busy(){return anims.length>0||turnBusy||ended||turn!==BLUE;}
+
+/* ====================================================
+   サウンド（WebAudio 簡易シンセ）
+==================================================== */
+let audio=null, muted=false;
+function toggleMute(){muted=!muted;
+  document.getElementById("mutebtn").textContent=muted?"🔇":"🔊";}
+function ac(){if(!audio){const A=window.AudioContext||window.webkitAudioContext;
+  try{audio=new A();}catch(e){}}return audio;}
+function tone(freq,dur,type,vol,when){
+  const a=ac();if(!a||muted)return;
+  const t=a.currentTime+(when||0);
+  const o=a.createOscillator(),g=a.createGain();
+  o.type=type||"square";o.frequency.value=freq;
+  g.gain.setValueAtTime(vol||.12,t);
+  g.gain.exponentialRampToValueAtTime(.001,t+dur);
+  o.connect(g);g.connect(a.destination);
+  o.start(t);o.stop(t+dur+.02);
+}
+function noise(dur,vol,fStart,fEnd){
+  const a=ac();if(!a||muted)return;
+  const t=a.currentTime;
+  const len=a.sampleRate*dur;
+  const buf=a.createBuffer(1,len,a.sampleRate);
+  const d=buf.getChannelData(0);
+  for(let i=0;i<len;i++)d[i]=Math.random()*2-1;
+  const src=a.createBufferSource();src.buffer=buf;
+  const f=a.createBiquadFilter();f.type="lowpass";
+  f.frequency.setValueAtTime(fStart||2000,t);
+  f.frequency.exponentialRampToValueAtTime(fEnd||200,t+dur);
+  const g=a.createGain();
+  g.gain.setValueAtTime(vol||.2,t);
+  g.gain.exponentialRampToValueAtTime(.001,t+dur);
+  src.connect(f);f.connect(g);g.connect(a.destination);
+  src.start(t);
+}
+const SND={
+  select(){tone(660,.07,"square",.08);},
+  step(){tone(330,.04,"triangle",.07);},
+  shot(){noise(.12,.18,3000,500);tone(180,.1,"sawtooth",.1);},
+  boom(){noise(.4,.3,1200,80);tone(70,.35,"sine",.2);},
+  capture(){tone(523,.09,"triangle",.12);tone(659,.09,"triangle",.12,.09);
+    tone(784,.14,"triangle",.12,.18);},
+  coin(){tone(988,.07,"square",.1);tone(1319,.12,"square",.1,.07);},
+  rankup(){tone(523,.08,"square",.12);tone(659,.08,"square",.12,.08);
+    tone(784,.08,"square",.12,.16);tone(1047,.22,"square",.12,.24);},
+  turn(){tone(392,.1,"square",.1);tone(523,.16,"square",.1,.1);},
+  cancel(){tone(220,.08,"square",.07);},
+};
+
+/* ====================================================
+   アニメーション・ランナー
+==================================================== */
+function pushAnim(steps,done){anims.push({steps,idx:-1,t:0,done});}
+function runAnims(dt){
+  if(!anims.length)return;
+  const a=anims[0];
+  if(a.idx<0){a.idx=0;a.t=0;
+    if(a.steps.length){const s=a.steps[0];s.onStart&&s.onStart();}}
+  while(a.idx<a.steps.length){
+    const s=a.steps[a.idx];
+    a.t+=dt;
+    const p=s.dur>0?Math.min(1,a.t/s.dur):1;
+    s.update&&s.update(p);
+    if(a.t>=s.dur){a.idx++;a.t=0;
+      if(a.idx<a.steps.length){const n=a.steps[a.idx];n.onStart&&n.onStart();}
+      continue;}
+    break;
+  }
+  if(a.idx>=a.steps.length){anims.shift();a.done&&a.done();}
+}
+function addPopup(x,y,text,color){
+  popups.push({x,y,text,color:color||"#fff",life:1});
+}
+function explode(x,y,color){
+  for(let i=0;i<22;i++){
+    const ang=Math.random()*6.28,sp=(.6+Math.random()*2.4);
+    particles.push({x:x+.5,y:y+.5,
+      vx:Math.cos(ang)*sp,vy:Math.sin(ang)*sp-1,
+      life:.5+Math.random()*.45,maxLife:1,
+      size:.08+Math.random()*.14,
+      color:i%3===0?"#ffd76a":i%3===1?"#ff7a45":(color||"#aaa")});
+  }
+  shake=7;SND.boom();
+}
+
+/* ====================================================
+   ゲーム初期化
+==================================================== */
+function startGame(){
+  document.getElementById("overlay").classList.add("hidden");
+  ac(); // ユーザー操作でオーディオ起動
+  map=MAP_BASE.map(r=>r.map(v=>v===8?T.CITY:v));
+  map[HQ_POS[BLUE].y][HQ_POS[BLUE].x]=T.HQ;
+  map[HQ_POS[RED].y][HQ_POS[RED].x]=T.HQ;
+  owner={};
+  setOwner(HQ_POS[BLUE].x,HQ_POS[BLUE].y,BLUE);
+  setOwner(HQ_POS[RED].x,HQ_POS[RED].y,RED);
+  setOwner(6,9,BLUE);
+  setOwner(2,2,RED);
+  units=[
+    mkUnit("inf",BLUE,3,10),mkUnit("inf",BLUE,5,10),mkUnit("tank",BLUE,4,10),
+    mkUnit("inf",RED,3,1),mkUnit("inf",RED,5,1),mkUnit("tank",RED,4,1),
+  ];
+  funds=[3000,3000];
+  turn=BLUE;turnCount=1;sel=null;mode="idle";captureProgress={};
+  ended=false;particles=[];popups=[];rings=[];anims=[];shake=0;
+  beginTurn(BLUE);
+  resize();terrainDirty=true;
+  updateTop();setBtns([]);
+  updateUI("あなたのターンです。ユニットをタップ！");
+  turnBusy=true;
+  showBanner("DAY 1 ─ 青軍ターン",PLAYER_COLOR[BLUE],()=>{turnBusy=false;});
+}
+
+/* ====================================================
+   移動範囲（ダイクストラ＋経路復元）
+==================================================== */
+function calcMove(u){
+  const def=UNIT_DEF[u.type];
+  const dist=new Map(),parent=new Map();
+  dist.set(key(u.x,u.y),0);
+  const q=[{x:u.x,y:u.y,c:0}];
+  while(q.length){
+    q.sort((a,b)=>a.c-b.c);
+    const cur=q.shift();
+    if(cur.c>dist.get(key(cur.x,cur.y)))continue;
+    for(const[dx,dy]of[[1,0],[-1,0],[0,1],[0,-1]]){
+      const nx=cur.x+dx,ny=cur.y+dy;
+      if(nx<0||ny<0||nx>=COLS||ny>=ROWS)continue;
+      const occ=unitAt(nx,ny);
+      if(occ&&occ.pid!==u.pid)continue;
+      const c=cur.c+TERRAIN_INFO[map[ny][nx]].cost[u.type];
+      if(c>def.move)continue;
+      const k=key(nx,ny);
+      if(dist.has(k)&&dist.get(k)<=c)continue;
+      dist.set(k,c);parent.set(k,key(cur.x,cur.y));
+      q.push({x:nx,y:ny,c});
+    }
+  }
+  const reach=new Set();
+  for(const k of dist.keys()){
+    const[x,y]=k.split(",").map(Number);
+    const occ=unitAt(x,y);
+    if(occ&&occ!==u)continue;
+    reach.add(k);
+  }
+  return{reach,parent,origin:key(u.x,u.y)};
+}
+function buildPath(md,destKey){
+  const path=[];let k=destKey;
+  while(k){const[x,y]=k.split(",").map(Number);
+    path.unshift({x,y});
+    if(k===md.origin)break;
+    k=md.parent.get(k);}
+  return path;
+}
+function enemiesInRange(u){
+  const[mn,mx]=UNIT_DEF[u.type].range;
+  return units.filter(e=>e.hp>0&&e.pid!==u.pid&&(()=>{
+    const d=Math.abs(e.x-u.x)+Math.abs(e.y-u.y);
+    return d>=mn&&d<=mx;})());
+}
+
+/* ====================================================
+   移動・戦闘・占領（アニメーション付き）
+==================================================== */
+function animateMove(u,path,after){
+  if(path.length<2){u.px=u.x;u.py=u.y;after&&after();return;}
+  const steps=[];
+  for(let i=1;i<path.length;i++){
+    const a=path[i-1],b=path[i];
+    steps.push({dur:105,onStart:()=>SND.step(),
+      update:p=>{u.px=a.x+(b.x-a.x)*p;u.py=a.y+(b.y-a.y)*p;}});
+  }
+  pushAnim(steps,()=>{u.px=u.x;u.py=u.y;after&&after();});
+}
+function calcDmg(a,d,aHp){
+  return Math.max(1,Math.round(effAtk(a)*(aHp/10)
+    -(TERRAIN_INFO[map[d.y][d.x]].def+RANKS[d.rank].def)*0.5));
+}
+function performAttack(a,d,after){
+  const dmg=calcDmg(a,d,a.hp);
+  const dHpAfter=d.hp-dmg;
+  let counter=0;
+  if(dHpAfter>0&&UNIT_DEF[d.type].range[0]===1&&UNIT_DEF[a.type].range[1]===1){
+    counter=Math.max(1,Math.round(effAtk(d)*(dHpAfter/10)*0.7
+      -(TERRAIN_INFO[map[a.y][a.x]].def+RANKS[a.rank].def)*0.5));
+  }
+  const aHpAfter=a.hp-counter;
+  // 経験値（与ダメージ分＋撃破ボーナス8）
+  const aExp=dmg+(dHpAfter<=0?8:0);
+  const dExp=counter>0?counter+(aHpAfter<=0?8:0):0;
+  const aRankUp=aHpAfter>0&&rankFor(a.exp+aExp)>a.rank;
+  const dRankUp=dHpAfter>0&&dExp>0&&rankFor(d.exp+dExp)>d.rank;
+  const dirX=Math.sign(d.x-a.x),dirY=Math.sign(d.y-a.y);
+  const steps=[];
+  // 突進
+  steps.push({dur:150,onStart:()=>SND.shot(),
+    update:p=>{const k=Math.sin(p*Math.PI)*.34;
+      a.px=a.x+dirX*k;a.py=a.y+dirY*k;}});
+  // ヒット
+  steps.push({dur:280,onStart:()=>{
+    a.px=a.x;a.py=a.y;
+    d.hp=dHpAfter;d.flash=1;shake=Math.max(shake,4);
+    addPopup(d.x,d.y,"-"+dmg,"#ff6b5e");
+    if(dHpAfter<=0){delete captureProgress[key(d.x,d.y)];}
+  }});
+  if(dHpAfter<=0){
+    steps.push({dur:420,onStart:()=>{explode(d.x,d.y,PLAYER_COLOR[d.pid]);}});
+  }else if(counter>0){
+    steps.push({dur:150,onStart:()=>SND.shot(),
+      update:p=>{const k=Math.sin(p*Math.PI)*.3;
+        d.px=d.x-dirX*k;d.py=d.y-dirY*k;}});
+    steps.push({dur:280,onStart:()=>{
+      d.px=d.x;d.py=d.y;
+      a.hp=aHpAfter;a.flash=1;shake=Math.max(shake,3);
+      addPopup(a.x,a.y,"-"+counter,"#ff6b5e");
+    }});
+    if(aHpAfter<=0){
+      steps.push({dur:420,onStart:()=>{explode(a.x,a.y,PLAYER_COLOR[a.pid]);}});
+    }
+  }
+  // 経験値付与（生存者のみ）
+  steps.push({dur:180,onStart:()=>{
+    if(aHpAfter>0){a.exp+=aExp;addPopup(a.x,a.y,"EXP+"+aExp,"#9ad6ff");}
+    if(dHpAfter>0&&dExp>0){d.exp+=dExp;addPopup(d.x,d.y,"EXP+"+dExp,"#9ad6ff");}
+  }});
+  // ランクアップ演出
+  if(aRankUp)steps.push({dur:780,onStart:()=>{a.rank=rankFor(a.exp);rankUpFx(a);}});
+  if(dRankUp)steps.push({dur:780,onStart:()=>{d.rank=rankFor(d.exp);rankUpFx(d);}});
+  pushAnim(steps,()=>{
+    units=units.filter(u=>u.hp>0);
+    let msg=`${UNIT_DEF[a.type].name}の攻撃！ <b>${dmg}</b>ダメージ`;
+    if(dHpAfter<=0)msg+=" → 撃破！";
+    else if(counter>0){msg+=`／反撃で<b>${counter}</b>被弾`;
+      if(aHpAfter<=0)msg+=" → 撃破された！";}
+    if(aRankUp)msg+=`<br>🎖️ ${PLAYER_NAME[a.pid]}の${UNIT_DEF[a.type].name}が<b>${RANKS[a.rank].name}</b>に昇格！`;
+    if(dRankUp)msg+=`<br>🎖️ ${PLAYER_NAME[d.pid]}の${UNIT_DEF[d.type].name}が<b>${RANKS[d.rank].name}</b>に昇格！`;
+    after&&after(msg);
+  });
+}
+function tryCapture(u){
+  const t=map[u.y][u.x];
+  if(!UNIT_DEF[u.type].canCapture)return null;
+  if(!isProp(t))return null;
+  if(getOwner(u.x,u.y)===u.pid)return null;
+  const k=key(u.x,u.y);
+  let cp=captureProgress[k];
+  if(!cp||cp.pid!==u.pid)cp={pid:u.pid,amount:0};
+  cp.amount+=u.hp;
+  if(cp.amount>=20){
+    delete captureProgress[k];
+    setOwner(u.x,u.y,u.pid);
+    SND.capture();
+    addPopup(u.x,u.y,"占領！","#ffd76a");
+    gainCaptureExp(u);
+    if(t===T.HQ){gameOver(u.pid);return"HQ占領！";}
+    return TERRAIN_INFO[t].name+"を占領した！";
+  }
+  captureProgress[k]=cp;
+  SND.select();
+  addPopup(u.x,u.y,cp.amount+"/20","#ffd76a");
+  return`占領中… ${cp.amount}/20`;
+}
+
+/* ====================================================
+   ターン管理
+==================================================== */
+function beginTurn(pid){
+  let income=0;
+  for(const k in owner)if(owner[k]===pid)income+=1000;
+  funds[pid]+=income;
+  for(const u of units)if(u.pid===pid)u.acted=false;
+  for(const u of units){
+    if(u.pid!==pid)continue;
+    const t=map[u.y][u.x];
+    if(isProp(t)&&getOwner(u.x,u.y)===pid&&u.hp<10){
+      u.hp=Math.min(10,u.hp+2);
+      addPopup(u.x,u.y,"+2","#7dff9a");
+    }
+  }
+}
+function endTurn(){
+  if(ended)return;
+  sel=null;mode="idle";moveData=null;setBtns([]);
+  if(turn===BLUE){
+    turn=RED;beginTurn(RED);updateTop();turnBusy=true;
+    updateUI("🔴 赤軍のターン…");
+    SND.turn();
+    showBanner("赤軍ターン",PLAYER_COLOR[RED],()=>aiStart());
+  }else{
+    turn=BLUE;turnCount++;beginTurn(BLUE);updateTop();turnBusy=true;
+    SND.turn();
+    showBanner(`DAY ${turnCount} ─ 青軍ターン`,PLAYER_COLOR[BLUE],()=>{
+      turnBusy=false;updateUI("🔵 あなたのターンです");});
+  }
+}
+function showBanner(txt,color,cb){
+  const b=document.getElementById("banner");
+  b.textContent=txt;b.style.color=color||"#fff";
+  b.style.transition="none";b.style.transform="translateX(-120%)";
+  void b.offsetWidth;
+  b.style.transition="transform .3s ease-out";
+  b.style.transform="translateX(0)";
+  setTimeout(()=>{
+    b.style.transition="transform .3s ease-in";
+    b.style.transform="translateX(120%)";
+    setTimeout(()=>cb&&cb(),320);
+  },1000);
+}
+
+/* ====================================================
+   CPU（赤軍）AI
+==================================================== */
+let aiList=[];
+function aiStart(){
+  aiList=units.filter(u=>u.pid===RED&&u.hp>0);
+  aiNext();
+}
+function aiNext(){
+  if(ended)return;
+  const u=aiList.shift();
+  if(!u){aiProduce();return;}
+  if(u.hp<=0){aiNext();return;}
+  aiActUnit(u,()=>setTimeout(aiNext,150));
+}
+function aiActUnit(u,next){
+  let tg=enemiesInRange(u);
+  if(tg.length){
+    tg.sort((a,b)=>a.hp-b.hp);
+    performAttack(u,tg[0],msg=>{u.acted=true;updateUI(msg);
+      if(checkEnded())return;next();});
+    return;
+  }
+  const md=calcMove(u);
+  let best=null,bestScore=-1e9;
+  for(const k of md.reach){
+    const[x,y]=k.split(",").map(Number);
+    let score=0;
+    const t=map[y][x];
+    if(UNIT_DEF[u.type].canCapture&&isProp(t)&&getOwner(x,y)!==RED)score+=200;
+    let nd=99;
+    for(const e of units)if(e.pid===BLUE&&e.hp>0)
+      nd=Math.min(nd,Math.abs(e.x-x)+Math.abs(e.y-y));
+    score-=nd*5;
+    score-=(Math.abs(HQ_POS[BLUE].x-x)+Math.abs(HQ_POS[BLUE].y-y))*2;
+    if(score>bestScore){bestScore=score;best=k;}
+  }
+  const finish=()=>{
+    let tg2=enemiesInRange(u);
+    if(tg2.length){
+      tg2.sort((a,b)=>a.hp-b.hp);
+      performAttack(u,tg2[0],msg=>{u.acted=true;updateUI(msg);
+        if(checkEnded())return;next();});
+    }else{
+      const c=tryCapture(u);
+      if(c)updateUI("赤軍："+c);
+      u.acted=true;
+      if(checkEnded())return;
+      next();
+    }
+  };
+  if(best&&best!==md.origin){
+    const path=buildPath(md,best);
+    const[x,y]=best.split(",").map(Number);
+    u.x=x;u.y=y;
+    animateMove(u,path,finish);
+  }else finish();
+}
+function aiProduce(){
+  if(ended)return;
+  const spots=[];
+  for(const k in owner){
+    if(owner[k]!==RED)continue;
+    const[x,y]=k.split(",").map(Number);
+    const t=map[y][x];
+    if((t===T.FACTORY||t===T.HQ)&&!unitAt(x,y))spots.push({x,y});
+  }
+  for(const s of spots){
+    let type=null;
+    if(funds[RED]>=3000&&Math.random()<0.5)type="tank";
+    else if(funds[RED]>=2500&&Math.random()<0.3)type="art";
+    else if(funds[RED]>=1000)type="inf";
+    if(type){
+      funds[RED]-=UNIT_DEF[type].cost;
+      const nu=mkUnit(type,RED,s.x,s.y);nu.acted=true;units.push(nu);
+      addPopup(s.x,s.y,"生産","#fff");
+    }
+  }
+  setTimeout(()=>{if(!checkEnded())endTurn();},450);
+}
+
+/* ====================================================
+   勝敗
+==================================================== */
+function checkEnded(){
+  if(ended)return true;
+  const blue=units.some(u=>u.pid===BLUE&&u.hp>0);
+  const red=units.some(u=>u.pid===RED&&u.hp>0);
+  const blueCanBuy=funds[BLUE]>=1000&&Object.values(owner).includes(BLUE);
+  const redCanBuy=funds[RED]>=1000&&Object.values(owner).includes(RED);
+  if(!blue&&!blueCanBuy){gameOver(RED);return true;}
+  if(!red&&!redCanBuy){gameOver(BLUE);return true;}
+  return false;
+}
+function gameOver(winner){
+  if(ended)return;ended=true;
+  setTimeout(()=>{
+    const d=document.getElementById("dialog");
+    d.innerHTML=`<h2>${winner===BLUE?"🎉 勝利！":"💀 敗北…"}</h2>
+      <p style="text-align:center">${PLAYER_NAME[winner]}の勝ちです（DAY ${turnCount}）</p>
+      <div class="row"><button class="gold center" onclick="startGame()">もう一度遊ぶ</button></div>`;
+    document.getElementById("overlay").classList.remove("hidden");
+  },900);
+}
+
+/* ====================================================
+   入力
+==================================================== */
+cv.addEventListener("pointerdown",e=>{
+  if(busy())return;
+  const r=cv.getBoundingClientRect();
+  const x=Math.floor((e.clientX-r.left)/TILE);
+  const y=Math.floor((e.clientY-r.top)/TILE);
+  if(x<0||y<0||x>=COLS||y>=ROWS)return;
+  handleTap(x,y);
+});
+function handleTap(x,y){
+  if(mode==="attack"){
+    const t=attackTargets.find(u=>u.x===x&&u.y===y);
+    if(t){
+      const u=sel.unit;
+      mode="anim";setBtns([]);
+      performAttack(u,t,msg=>{u.acted=true;finishAction(msg);});
+    }else{SND.cancel();}
+    return;
+  }
+  if(mode==="move"&&moveData&&moveData.reach.has(key(x,y))){
+    const u=sel.unit;
+    const path=buildPath(moveData,key(x,y));
+    u.x=x;u.y=y;
+    mode="anim";setBtns([]);
+    animateMove(u,path,()=>afterMove(u));
+    return;
+  }
+  const u=unitAt(x,y);
+  if(u&&u.pid===BLUE&&!u.acted){
+    SND.select();
+    sel={unit:u};mode="move";moveData=calcMove(u);
+    const ud=UNIT_DEF[u.type];
+    const rk=RANKS[u.rank],next=RANKS[u.rank+1];
+    const stars=u.rank?` <span style="color:#ffd76a">${"★".repeat(u.rank)}</span>`:"";
+    updateUI(`<img src="${sprUrl[u.type][BLUE]}">
+      <span><b>${ud.name}</b>${stars} HP${u.hp}　攻撃${effAtk(u)}／移動${ud.move}<br>
+      <small>${rk.name}　EXP ${u.exp}${next?`（次のランクまで${next.exp-u.exp}）`:"（最高ランク）"}</small></span>`);
+    setBtns([{label:"ここで行動",fn:()=>{mode="anim";afterMove(u);}},
+             {label:"選択解除",fn:cancelSel}]);
+  }else if(u&&u.pid===RED){
+    SND.select();
+    cancelSel();
+    const ud=UNIT_DEF[u.type];
+    const stars=u.rank?` <span style="color:#ffd76a">${"★".repeat(u.rank)}</span>`:"";
+    updateUI(`<img src="${sprUrl[u.type][RED]}">
+      <span><b style="color:#ff8a92">敵${ud.name}</b>${stars} HP${u.hp}　攻撃${effAtk(u)}／移動${ud.move}</span>`);
+  }else{
+    cancelSel();
+    const t=map[y][x];const ti=TERRAIN_INFO[t];
+    let html=`<span><b>${ti.name}</b>　防御 ★${ti.def}`;
+    const o=getOwner(x,y);
+    if(o!==null)html+=`（${PLAYER_NAME[o]}領）`;
+    html+="</span>";
+    updateUI(html);
+    if((t===T.FACTORY||t===T.HQ)&&o===BLUE&&!unitAt(x,y)){
+      openProduce(x,y);
+    }
+  }
+}
+function afterMove(u){
+  sel={unit:u};moveData=null;
+  attackTargets=enemiesInRange(u);
+  const cap=canCaptureHere(u);
+  const btns=[];
+  if(attackTargets.length)btns.push({label:"⚔️ 攻撃",warn:true,fn:()=>{
+    mode="attack";updateUI("攻撃する敵（赤色のマス）をタップ");setBtns([{label:"やめる",fn:()=>afterMove(u)}]);}});
+  if(cap)btns.push({label:"🚩 占領",gold:true,fn:()=>{
+    const m=tryCapture(u);u.acted=true;finishAction(m||"");}});
+  btns.push({label:"待機",fn:()=>{u.acted=true;finishAction("待機しました");}});
+  mode="acted";
+  updateUI("行動を選んでください");
+  setBtns(btns);
+}
+function canCaptureHere(u){
+  const t=map[u.y][u.x];
+  return UNIT_DEF[u.type].canCapture&&isProp(t)&&getOwner(u.x,u.y)!==u.pid;
+}
+function finishAction(msg){
+  sel=null;mode="idle";moveData=null;attackTargets=[];
+  updateUI(msg);setBtns([]);updateTop();
+  if(ended)return;
+  if(checkEnded())return;
+  // 全ユニット行動済みなら案内
+  const remain=units.filter(u=>u.pid===BLUE&&u.hp>0&&!u.acted).length;
+  if(remain===0)updateUI(msg+"<br><small>全ユニット行動済み。「ターン終了」を押してください</small>");
+}
+function cancelSel(){sel=null;mode="idle";moveData=null;attackTargets=[];
+  setBtns([]);updateUI("マスをタップしてください");}
+
+/* ====================================================
+   生産
+==================================================== */
+function openProduce(x,y){
+  const d=document.getElementById("dialog");
+  let html=`<h2>ユニット生産</h2>
+    <p style="text-align:center">資金：💰${funds[BLUE]}G</p><div class="row">`;
+  for(const k in UNIT_DEF){
+    const ud=UNIT_DEF[k];
+    const dis=funds[BLUE]<ud.cost?"disabled":"";
+    html+=`<button ${dis} onclick="produce('${k}',${x},${y})">
+      <img src="${sprUrl[k][BLUE]}">
+      <span>${ud.name}<br><small style="font-weight:normal">${ud.desc}</small></span>
+      <span class="pr">${ud.cost}G</span></button>`;
+  }
+  html+=`<button class="warn center" onclick="closeOverlay()">やめる</button></div>`;
+  d.innerHTML=html;
+  document.getElementById("overlay").classList.remove("hidden");
+}
+function produce(type,x,y){
+  funds[BLUE]-=UNIT_DEF[type].cost;
+  const u=mkUnit(type,BLUE,x,y);u.acted=true;u.flash=1;units.push(u);
+  SND.coin();
+  addPopup(x,y,"生産！","#7dff9a");
+  closeOverlay();updateTop();
+  updateUI(UNIT_DEF[type].name+"を生産しました（次のターンから行動できます）");
+}
+function closeOverlay(){document.getElementById("overlay").classList.add("hidden");}
+
+/* ====================================================
+   UI
+==================================================== */
+function updateTop(){
+  const tb=document.getElementById("turnbadge");
+  tb.textContent=`DAY ${turnCount}　${PLAYER_NAME[turn]}`;
+  tb.style.background=PLAYER_COLOR[turn];
+  document.getElementById("funds").textContent=funds[BLUE];
+  let p=0;for(const k in owner)if(owner[k]===BLUE)p++;
+  document.getElementById("props").textContent=p;
+}
+function updateUI(html){document.getElementById("info").innerHTML=html;}
+function setBtns(list){
+  const b=document.getElementById("btns");b.innerHTML="";
+  for(const it of list){
+    const btn=document.createElement("button");
+    btn.textContent=it.label;
+    if(it.warn)btn.className="warn";
+    if(it.gold)btn.className="gold";
+    btn.onclick=()=>{if(!ended)it.fn();};
+    b.appendChild(btn);
+  }
+  const end=document.createElement("button");
+  end.textContent="ターン終了";end.className="warn";
+  end.onclick=()=>{if(!busy())endTurn();};
+  b.appendChild(end);
+}
+
+/* ====================================================
+   描画
+==================================================== */
+function resize(){
+  const wrap=document.getElementById("mapwrap");
+  DPR=Math.min(2,window.devicePixelRatio||1);
+  TILE=Math.floor(Math.min(wrap.clientWidth/COLS,wrap.clientHeight/ROWS));
+  cv.width=TILE*COLS*DPR;cv.height=TILE*ROWS*DPR;
+  cv.style.width=TILE*COLS+"px";cv.style.height=TILE*ROWS+"px";
+  terrCv.width=cv.width;terrCv.height=cv.height;
+  terrainDirty=true;
+}
+window.addEventListener("resize",()=>{resize();});
+
+function rseed(x,y){let n=x*374761393+y*668265263;
+  n=(n^(n>>13))*1274126177;return((n^(n>>16))>>>0)/4294967295;}
+
+function renderTerrain(){
+  const g=terrCv.getContext("2d");
+  g.setTransform(DPR,0,0,DPR,0,0);
+  g.imageSmoothingEnabled=false;
+  for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){
+    const t=map[y]?map[y][x]:T.PLAIN;
+    const px=x*TILE,py=y*TILE;
+    // 平地ベース（市松）
+    g.fillStyle=(x+y)%2===0?"#7ec850":"#76bf4a";
+    g.fillRect(px,py,TILE,TILE);
+    // 草むらの点
+    for(let i=0;i<3;i++){
+      const r1=rseed(x*3+i,y),r2=rseed(x,y*3+i);
+      if(rseed(x+i,y+i)<.6){
+        g.fillStyle="#5fa53c";
+        g.fillRect(px+r1*(TILE-4)+1,py+r2*(TILE-4)+1,2,2);
+      }
+    }
+    const S=TILE;
+    if(t===T.ROAD||isProp(t)){
+      // 道路（隣接接続）
+      g.fillStyle="#d8c08a";
+      const conn=(dx,dy)=>{const nx=x+dx,ny=y+dy;
+        if(nx<0||ny<0||nx>=COLS||ny>=ROWS)return false;
+        const nt=map[ny][nx];return nt===T.ROAD||isProp(nt);};
+      if(t===T.ROAD){
+        const w=S*.46,o=(S-w)/2;
+        g.fillRect(px+o,py+o,w,w);
+        if(conn(1,0))g.fillRect(px+o,py+o,S-o,w);
+        if(conn(-1,0))g.fillRect(px,py+o,o+w,w);
+        if(conn(0,1))g.fillRect(px+o,py+o,w,S-o);
+        if(conn(0,-1))g.fillRect(px+o,py,w,o+w);
+        g.fillStyle="#efe2b8";
+        g.fillRect(px+S*.44,py+S*.44,S*.12,S*.12);
+      }
+    }
+    if(t===T.FOREST){
+      drawTree(g,px+S*.14,py+S*.1,S*.5);
+      drawTree(g,px+S*.42,py+S*.32,S*.55);
+    }else if(t===T.MTN){
+      // 山
+      g.fillStyle="rgba(0,0,0,.15)";
+      g.beginPath();g.ellipse(px+S*.5,py+S*.85,S*.38,S*.1,0,0,7);g.fill();
+      g.fillStyle="#8d7458";
+      g.beginPath();g.moveTo(px+S*.5,py+S*.1);
+      g.lineTo(px+S*.92,py+S*.86);g.lineTo(px+S*.08,py+S*.86);
+      g.closePath();g.fill();
+      g.fillStyle="#a98e6e";
+      g.beginPath();g.moveTo(px+S*.5,py+S*.1);
+      g.lineTo(px+S*.92,py+S*.86);g.lineTo(px+S*.5,py+S*.86);
+      g.closePath();g.fill();
+      g.fillStyle="#f2f2f2";
+      g.beginPath();g.moveTo(px+S*.5,py+S*.1);
+      g.lineTo(px+S*.64,py+S*.36);g.lineTo(px+S*.5,py+S*.3);
+      g.lineTo(px+S*.38,py+S*.37);g.closePath();g.fill();
+    }else if(isProp(t)){
+      drawBuilding(g,px,py,S,t,getOwner(x,y));
+    }
+  }
+}
+function drawTree(g,x,y,s){
+  g.fillStyle="rgba(0,0,0,.18)";
+  g.beginPath();g.ellipse(x+s*.5,y+s*.95,s*.4,s*.12,0,0,7);g.fill();
+  g.fillStyle="#6d4c2f";
+  g.fillRect(x+s*.42,y+s*.6,s*.16,s*.35);
+  g.fillStyle="#2e7d32";
+  g.beginPath();g.moveTo(x+s*.5,y);
+  g.lineTo(x+s,y+s*.55);g.lineTo(x,y+s*.55);g.closePath();g.fill();
+  g.fillStyle="#43a047";
+  g.beginPath();g.moveTo(x+s*.5,y+s*.12);
+  g.lineTo(x+s*.82,y+s*.5);g.lineTo(x+s*.18,y+s*.5);g.closePath();g.fill();
+}
+function drawBuilding(g,px,py,S,t,o){
+  const main=o===null?"#969cad":PLAYER_COLOR[o];
+  const dark=o===null?"#6a7080":PLAYER_DARK[o];
+  g.fillStyle="rgba(0,0,0,.2)";
+  g.fillRect(px+S*.12,py+S*.82,S*.76,S*.1);
+  if(t===T.CITY){
+    g.fillStyle="#d6d9e2";
+    g.fillRect(px+S*.18,py+S*.34,S*.64,S*.52);
+    g.fillStyle=main;
+    g.fillRect(px+S*.12,py+S*.2,S*.76,S*.18);
+    g.fillStyle="#4a5168";
+    for(let i=0;i<3;i++)g.fillRect(px+S*(.26+i*.18),py+S*.48,S*.1,S*.12);
+    g.fillStyle="#ffd76a";
+    g.fillRect(px+S*.44,py+S*.48,S*.1,S*.12);
+    g.fillStyle="#4a5168";
+    g.fillRect(px+S*.42,py+S*.68,S*.16,S*.18);
+  }else if(t===T.FACTORY){
+    g.fillStyle="#b8bdc9";
+    g.fillRect(px+S*.14,py+S*.42,S*.72,S*.44);
+    g.fillStyle=dark;
+    g.beginPath();g.moveTo(px+S*.14,py+S*.42);
+    g.lineTo(px+S*.38,py+S*.26);g.lineTo(px+S*.38,py+S*.42);
+    g.lineTo(px+S*.62,py+S*.26);g.lineTo(px+S*.62,py+S*.42);
+    g.lineTo(px+S*.86,py+S*.26);g.lineTo(px+S*.86,py+S*.42);
+    g.closePath();g.fill();
+    g.fillStyle="#6a7080";
+    g.fillRect(px+S*.2,py+S*.14,S*.12,S*.28);
+    g.fillStyle=main;
+    g.fillRect(px+S*.14,py+S*.6,S*.72,S*.1);
+  }else{ // HQ
+    g.fillStyle=main;
+    g.fillRect(px+S*.16,py+S*.36,S*.68,S*.5);
+    g.fillStyle=dark;
+    g.fillRect(px+S*.16,py+S*.36,S*.68,S*.1);
+    g.fillStyle="#fff";
+    g.fillRect(px+S*.42,py+S*.6,S*.16,S*.26);
+    // 旗
+    g.fillStyle="#3a3f55";
+    g.fillRect(px+S*.46,py+S*.04,S*.05,S*.34);
+    g.fillStyle=main;
+    g.beginPath();g.moveTo(px+S*.51,py+S*.06);
+    g.lineTo(px+S*.82,py+S*.14);g.lineTo(px+S*.51,py+S*.24);
+    g.closePath();g.fill();
+    // 星
+    g.fillStyle="#ffd76a";
+    drawStar(g,px+S*.5,py+S*.48,S*.1);
+  }
+}
+function drawStar(g,cx,cy,r){
+  g.beginPath();
+  for(let i=0;i<10;i++){
+    const ang=-Math.PI/2+i*Math.PI/5;
+    const rr=i%2===0?r:r*.45;
+    g.lineTo(cx+Math.cos(ang)*rr,cy+Math.sin(ang)*rr);
+  }
+  g.closePath();g.fill();
+}
+
+function draw(){
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  ctx.imageSmoothingEnabled=false;
+  ctx.clearRect(0,0,TILE*COLS,TILE*ROWS);
+  if(terrainDirty){renderTerrain();terrainDirty=false;}
+  // シェイク
+  let sx=0,sy=0;
+  if(shake>0){sx=(Math.random()-.5)*shake;sy=(Math.random()-.5)*shake;}
+  ctx.save();
+  ctx.translate(sx,sy);
+  ctx.drawImage(terrCv,0,0,TILE*COLS,TILE*ROWS);
+  // 占領ゲージ
+  for(const k in captureProgress){
+    const[x,y]=k.split(",").map(Number);
+    const cp=captureProgress[k];
+    ctx.fillStyle="rgba(0,0,0,.55)";
+    ctx.fillRect(x*TILE+3,y*TILE+TILE-7,TILE-6,5);
+    ctx.fillStyle="#ffd76a";
+    ctx.fillRect(x*TILE+3,y*TILE+TILE-7,(TILE-6)*Math.min(1,cp.amount/20),5);
+  }
+  // 移動範囲
+  if(moveData&&mode==="move"){
+    const pulse=.3+.12*Math.sin(timeNow/220);
+    ctx.fillStyle=`rgba(90,170,255,${pulse})`;
+    for(const k of moveData.reach){
+      const[x,y]=k.split(",").map(Number);
+      ctx.fillRect(x*TILE,y*TILE,TILE,TILE);
+      ctx.strokeStyle="rgba(150,210,255,.7)";
+      ctx.strokeRect(x*TILE+1.5,y*TILE+1.5,TILE-3,TILE-3);
+    }
+  }
+  // 攻撃対象
+  if(mode==="attack"){
+    const pulse=.35+.18*Math.sin(timeNow/140);
+    ctx.fillStyle=`rgba(255,70,70,${pulse})`;
+    for(const u of attackTargets)
+      ctx.fillRect(u.x*TILE,u.y*TILE,TILE,TILE);
+  }
+  // ユニット（下にあるものが手前）
+  const sorted=[...units].sort((a,b)=>a.py-b.py);
+  for(const u of sorted){
+    if(u.hp<=0)continue;
+    const cx=u.px*TILE+TILE/2,cy=u.py*TILE+TILE/2;
+    // 影
+    ctx.fillStyle="rgba(0,0,0,.28)";
+    ctx.beginPath();ctx.ellipse(cx,cy+TILE*.36,TILE*.3,TILE*.09,0,0,7);ctx.fill();
+    const spc=sprCv[u.type][u.pid];
+    const w=TILE*.92,h=w*(spc.height/spc.width);
+    const bob=(u.pid===turn&&!u.acted&&anims.length===0)
+      ?Math.sin(timeNow/260+u.x*2)*TILE*.025:0;
+    const grey=u.acted&&u.pid===turn;
+    ctx.globalAlpha=grey?.55:1;
+    ctx.drawImage(spc,cx-w/2,cy-h/2-TILE*.06+bob,w,h);
+    ctx.globalAlpha=1;
+    // ヒットフラッシュ
+    if(u.flash>0){
+      ctx.globalCompositeOperation="lighter";
+      ctx.fillStyle=`rgba(255,255,255,${u.flash*.85})`;
+      ctx.fillRect(cx-w/2,cy-h/2-TILE*.06,w,h);
+      ctx.globalCompositeOperation="source-over";
+    }
+    // ランク星
+    if(u.rank>0){
+      const ss=TILE*.105;
+      for(let i=0;i<u.rank;i++){
+        const sx2=u.px*TILE+ss+2+i*(ss*2.1),sy2=u.py*TILE+ss+2;
+        ctx.fillStyle="#3a2c00";drawStar(ctx,sx2,sy2,ss+1.3);
+        ctx.fillStyle="#ffd76a";drawStar(ctx,sx2,sy2,ss);
+      }
+    }
+    // HP
+    if(u.hp<10){
+      ctx.font="bold "+Math.floor(TILE*.32)+"px sans-serif";
+      ctx.textAlign="right";ctx.textBaseline="alphabetic";
+      ctx.lineWidth=3;ctx.strokeStyle="#000";
+      ctx.strokeText(u.hp,u.px*TILE+TILE-3,u.py*TILE+TILE-3);
+      ctx.fillStyle="#fff";
+      ctx.fillText(u.hp,u.px*TILE+TILE-3,u.py*TILE+TILE-3);
+    }
+  }
+  // 選択カーソル（四隅ブラケット）
+  if(sel&&sel.unit&&sel.unit.hp>0){
+    const u=sel.unit;
+    const m=2+Math.sin(timeNow/180)*2;
+    drawCursor(u.px*TILE,u.py*TILE,TILE,m,"#ffd76a");
+  }
+  // パーティクル
+  for(const p of particles){
+    ctx.globalAlpha=Math.max(0,p.life/p.maxLife);
+    ctx.fillStyle=p.color;
+    const s=p.size*TILE;
+    ctx.fillRect(p.x*TILE-s/2,p.y*TILE-s/2,s,s);
+  }
+  ctx.globalAlpha=1;
+  // ランクアップリング
+  for(const r of rings){
+    ctx.globalAlpha=Math.max(0,Math.min(1,r.life));
+    ctx.strokeStyle="#ffd76a";ctx.lineWidth=3;
+    ctx.beginPath();ctx.arc(r.x*TILE,r.y*TILE,r.r*TILE,0,7);ctx.stroke();
+  }
+  ctx.globalAlpha=1;
+  // ダメージポップ
+  for(const p of popups){
+    const yo=(1-p.life)*TILE*.8;
+    ctx.font="bold "+Math.floor(TILE*.4)+"px sans-serif";
+    ctx.textAlign="center";ctx.textBaseline="middle";
+    ctx.globalAlpha=Math.min(1,p.life*2);
+    ctx.lineWidth=4;ctx.strokeStyle="#000";
+    ctx.strokeText(p.text,p.x*TILE+TILE/2,p.y*TILE+TILE*.2-yo);
+    ctx.fillStyle=p.color;
+    ctx.fillText(p.text,p.x*TILE+TILE/2,p.y*TILE+TILE*.2-yo);
+    ctx.globalAlpha=1;
+  }
+  ctx.restore();
+}
+function drawCursor(x,y,s,m,color){
+  const L=s*.28;
+  ctx.strokeStyle=color;ctx.lineWidth=3;ctx.lineCap="round";
+  const pts=[
+    [x-m,y-m,1,1],[x+s+m,y-m,-1,1],
+    [x-m,y+s+m,1,-1],[x+s+m,y+s+m,-1,-1]];
+  for(const[px,py,dx,dy]of pts){
+    ctx.beginPath();
+    ctx.moveTo(px+dx*L,py);ctx.lineTo(px,py);ctx.lineTo(px,py+dy*L);
+    ctx.stroke();
+  }
+}
+
+/* ====================================================
+   メインループ
+==================================================== */
+let lastT=0;
+function loop(t){
+  const dt=Math.min(50,t-lastT);lastT=t;timeNow=t;
+  runAnims(dt);
+  // パーティクル更新
+  for(const p of particles){
+    p.x+=p.vx*dt/1000;p.y+=p.vy*dt/1000;
+    p.vy+=4*dt/1000;p.life-=dt/1000;
+  }
+  particles=particles.filter(p=>p.life>0);
+  for(const p of popups)p.life-=dt/900;
+  popups=popups.filter(p=>p.life>0);
+  for(const r of rings){r.r+=dt/380;r.life-=dt/650;}
+  rings=rings.filter(r=>r.life>0);
+  for(const u of units)if(u.flash>0)u.flash=Math.max(0,u.flash-dt/180);
+  if(shake>0)shake=Math.max(0,shake-dt/40);
+  if(map.length)draw();
+  requestAnimationFrame(loop);
+}
+
+buildSprites();
+resize();
+updateTop();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
