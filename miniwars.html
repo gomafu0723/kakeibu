@@ -270,11 +270,44 @@ function busy(){return anims.length>0||turnBusy||ended||turn!==BLUE;}
 /* ====================================================
    サウンド（WebAudio 簡易シンセ）
 ==================================================== */
-let audio=null, muted=false;
+let audio=null, muted=false, unlockEl=null;
 function toggleMute(){muted=!muted;
-  document.getElementById("mutebtn").textContent=muted?"🔇":"🔊";}
+  document.getElementById("mutebtn").textContent=muted?"🔇":"🔊";
+  if(!muted)unlockAudio();}
 function ac(){if(!audio){const A=window.AudioContext||window.webkitAudioContext;
-  try{audio=new A();}catch(e){}}return audio;}
+  try{audio=new A();}catch(e){}}
+  if(audio&&audio.state==="suspended")audio.resume();
+  return audio;}
+/* iPhoneの消音モード（マナーモード）対策：
+   無音のaudio要素をループ再生して「メディア再生」扱いにすると、
+   消音モード中でもWebAudioの効果音が鳴るようになる */
+function silentWavURL(){
+  const n=8000;
+  const buf=new ArrayBuffer(44+n);
+  const v=new DataView(buf);
+  const ws=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i));};
+  ws(0,"RIFF");v.setUint32(4,36+n,true);ws(8,"WAVE");
+  ws(12,"fmt ");v.setUint32(16,16,true);v.setUint16(20,1,true);
+  v.setUint16(22,1,true);v.setUint32(24,8000,true);v.setUint32(28,8000,true);
+  v.setUint16(32,1,true);v.setUint16(34,8,true);
+  ws(36,"data");v.setUint32(40,n,true);
+  for(let i=0;i<n;i++)v.setUint8(44+i,128);
+  return URL.createObjectURL(new Blob([buf],{type:"audio/wav"}));
+}
+function unlockAudio(){
+  const a=ac();
+  if(a&&a.state==="suspended")a.resume();
+  if(!unlockEl){
+    try{
+      unlockEl=document.createElement("audio");
+      unlockEl.setAttribute("playsinline","");
+      unlockEl.loop=true;
+      unlockEl.src=silentWavURL();
+    }catch(e){}
+  }
+  if(unlockEl)unlockEl.play().catch(()=>{});
+}
+document.addEventListener("pointerdown",unlockAudio,{passive:true});
 function tone(freq,dur,type,vol,when){
   const a=ac();if(!a||muted)return;
   const t=a.currentTime+(when||0);
@@ -357,7 +390,7 @@ function explode(x,y,color){
 ==================================================== */
 function startGame(){
   document.getElementById("overlay").classList.add("hidden");
-  ac(); // ユーザー操作でオーディオ起動
+  unlockAudio(); // ユーザー操作でオーディオ起動（消音モード対策込み）
   map=MAP_BASE.map(r=>r.map(v=>v===8?T.CITY:v));
   map[HQ_POS[BLUE].y][HQ_POS[BLUE].x]=T.HQ;
   map[HQ_POS[RED].y][HQ_POS[RED].x]=T.HQ;
