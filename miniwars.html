@@ -17,7 +17,6 @@
     color:var(--txt);touch-action:manipulation;user-select:none;-webkit-user-select:none;}
   #app{display:flex;flex-direction:column;height:100%;}
 
-  /* ===== top bar ===== */
   #topbar{display:flex;justify-content:space-between;align-items:center;gap:8px;
     padding:8px 12px;background:linear-gradient(180deg,#262b5c,#1d2145);
     font-size:13px;font-weight:bold;border-bottom:3px solid #000;
@@ -25,15 +24,13 @@
   #turnbadge{padding:3px 12px;border-radius:4px;background:var(--blue);
     box-shadow:inset 0 -2px 0 rgba(0,0,0,.3);white-space:nowrap;}
   .funds{color:var(--gold);white-space:nowrap;}
-  #mutebtn{background:none;border:none;font-size:18px;box-shadow:none;padding:2px 4px;}
+  #mutebtn,#menubtn{background:none;border:none;font-size:18px;box-shadow:none;padding:2px 4px;}
 
-  /* ===== map ===== */
   #mapwrap{flex:1;display:flex;justify-content:center;align-items:center;
     overflow:hidden;background:
       radial-gradient(ellipse at 50% 30%, #1b1f44 0%, #0c0e22 80%);}
   canvas{image-rendering:pixelated;}
 
-  /* ===== bottom panel ===== */
   #bottom{background:linear-gradient(180deg,#262b5c,#181b3a);
     border-top:3px solid #000;padding:8px 10px;min-height:112px;z-index:2;}
   #info{font-size:13px;line-height:1.45;min-height:42px;display:flex;
@@ -50,40 +47,44 @@
   button.gold{background:var(--gold);color:#3a2c00;box-shadow:0 3px 0 #b08a3e;}
   button:disabled{opacity:.35;}
 
-  /* ===== turn banner ===== */
   #banner{position:fixed;left:0;right:0;top:38%;padding:16px 0;text-align:center;
-    font-size:24px;font-weight:900;color:#fff;letter-spacing:.25em;z-index:9;
+    font-size:23px;font-weight:900;color:#fff;letter-spacing:.2em;z-index:9;
     background:linear-gradient(90deg,transparent 0%,rgba(0,0,0,.88) 18%,rgba(0,0,0,.88) 82%,transparent 100%);
     text-shadow:0 3px 0 rgba(0,0,0,.6);transform:translateX(-120%);pointer-events:none;}
 
-  /* ===== overlay dialog ===== */
   #overlay{position:fixed;inset:0;background:rgba(0,0,0,.78);
     display:flex;justify-content:center;align-items:center;z-index:10;}
   #overlay.hidden{display:none;}
   .dialog{background:var(--panel);border:3px solid var(--gold);
-    border-radius:12px;padding:20px;width:min(330px,90vw);text-align:center;
+    border-radius:12px;padding:18px;width:min(340px,92vw);text-align:center;
+    max-height:86vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
     box-shadow:0 12px 40px rgba(0,0,0,.7);animation:pop .25s ease;}
   @keyframes pop{from{transform:scale(.85);opacity:0;}to{transform:scale(1);opacity:1;}}
   .dialog h2{color:var(--gold);margin-bottom:12px;font-size:21px;letter-spacing:.1em;}
   .dialog p{font-size:13px;line-height:1.7;margin-bottom:14px;text-align:left;}
   .dialog .row{display:flex;flex-direction:column;gap:8px;}
-  .dialog button{width:100%;display:flex;align-items:center;gap:10px;justify-content:flex-start;}
+  .dialog button{width:100%;display:flex;align-items:center;gap:10px;
+    justify-content:flex-start;padding:9px 12px;text-align:left;}
   .dialog button img{height:30px;image-rendering:pixelated;}
-  .dialog button .pr{margin-left:auto;color:var(--gold);}
+  .dialog button .pr{margin-left:auto;color:var(--gold);white-space:nowrap;}
   .dialog button.gold .pr{color:#7a5b00;}
-  .dialog button.center{justify-content:center;}
+  .dialog button.center{justify-content:center;text-align:center;}
+  .dialog small{font-weight:normal;opacity:.85;}
 </style>
 </head>
 <body>
 <div id="app">
   <div id="topbar">
-    <span id="turnbadge">DAY 1</span>
+    <span id="turnbadge">ミニウォーズDX</span>
     <span class="funds">💰 <span id="funds">0</span>G ／ 拠点<span id="props">0</span></span>
-    <button id="mutebtn" onclick="toggleMute()">🔊</button>
+    <span>
+      <button id="menubtn" onclick="openStageSelect(true)">📋</button>
+      <button id="mutebtn" onclick="toggleMute()">🔊</button>
+    </span>
   </div>
   <div id="mapwrap"><canvas id="cv"></canvas></div>
   <div id="bottom">
-    <div id="info">マスをタップしてください</div>
+    <div id="info">「📋」からステージを選んでください</div>
     <div id="btns"></div>
   </div>
 </div>
@@ -95,36 +96,62 @@
     <h2>ミニウォーズ DX</h2>
     <p>🔵 青軍（あなた）対 🔴 赤軍（CPU）<br>
     ・自分のユニットをタップ → 移動先をタップ<br>
-    ・隣接する敵を攻撃（砲兵は2〜3マス先）<br>
-    ・歩兵で都市を占領すると毎ターン収入<br>
+    ・<b>ユニット9種類</b>！兵科の相性が勝敗のカギ<br>
+    　（バズーカ兵→戦車に強い、対空戦車→ヘリに強い…）<br>
+    ・砲兵・ロケット砲は<b>移動したターンは撃てない</b><br>
+    ・歩兵・バズーカ兵で都市を占領 → 毎ターン収入<br>
     ・工場やHQをタップでユニット生産<br>
     ・戦闘で経験値獲得！<b style="color:#ffd76a">★ランクアップ</b>で攻防強化<br>
     ・<b style="color:#ffd76a">敵HQの占領</b>か敵全滅で勝利！</p>
-    <div class="row"><button class="gold center" onclick="startGame()">▶ ゲーム開始</button></div>
+    <div class="row"><button class="gold center" onclick="openStageSelect()">▶ ステージをえらぶ</button></div>
   </div>
 </div>
 
 <script>
 "use strict";
 /* ====================================================
-   定数・データ
+   地形
 ==================================================== */
-const COLS=9, ROWS=12;
-const T={PLAIN:0,FOREST:1,MTN:2,ROAD:3,CITY:4,FACTORY:5,HQ:6};
+const T={PLAIN:0,FOREST:1,MTN:2,ROAD:3,CITY:4,FACTORY:5,HQ:6,RIVER:7};
 const TERRAIN_INFO={
-  [T.PLAIN]:{name:"平地",def:0,cost:{inf:1,tank:1,art:1}},
-  [T.FOREST]:{name:"森",def:2,cost:{inf:1,tank:2,art:2}},
-  [T.MTN]:{name:"山",def:4,cost:{inf:2,tank:99,art:99}},
-  [T.ROAD]:{name:"道路",def:0,cost:{inf:1,tank:1,art:1}},
-  [T.CITY]:{name:"都市",def:3,cost:{inf:1,tank:1,art:1}},
-  [T.FACTORY]:{name:"工場",def:3,cost:{inf:1,tank:1,art:1}},
-  [T.HQ]:{name:"HQ",def:4,cost:{inf:1,tank:1,art:1}},
+  [T.PLAIN]:{name:"平地",def:0,cost:{foot:1,tires:2,tread:1}},
+  [T.FOREST]:{name:"森",def:2,cost:{foot:1,tires:3,tread:2}},
+  [T.MTN]:{name:"山",def:4,cost:{foot:2,tires:99,tread:99}},
+  [T.ROAD]:{name:"道路",def:0,cost:{foot:1,tires:1,tread:1}},
+  [T.CITY]:{name:"都市",def:3,cost:{foot:1,tires:1,tread:1}},
+  [T.FACTORY]:{name:"工場",def:3,cost:{foot:1,tires:1,tread:1}},
+  [T.HQ]:{name:"HQ",def:4,cost:{foot:1,tires:1,tread:1}},
+  [T.RIVER]:{name:"川",def:0,cost:{foot:2,tires:99,tread:99}},
 };
+/* ====================================================
+   ユニット定義（9種）
+   cls: foot=歩兵系 veh=車両 air=航空
+   vs: 相手の兵科ごとのダメージ倍率
+==================================================== */
 const UNIT_DEF={
-  inf:{name:"歩兵",move:3,atk:5,range:[1,1],cost:1000,canCapture:true,desc:"占領できる唯一の兵科"},
-  tank:{name:"戦車",move:5,atk:8,range:[1,1],cost:3000,canCapture:false,desc:"高火力・高機動"},
-  art:{name:"砲兵",move:3,atk:7,range:[2,3],cost:2500,canCapture:false,desc:"2〜3マス先を砲撃／反撃なし"},
+  inf:  {name:"歩兵",      cls:"foot",moveType:"foot", move:3,atk:5, range:[1,1],cost:1000,canCapture:true,
+         vs:{foot:1.0,veh:0.5, air:0.35},desc:"安い・占領できる"},
+  mech: {name:"バズーカ兵",cls:"foot",moveType:"foot", move:2,atk:7, range:[1,1],cost:2500,canCapture:true,
+         vs:{foot:0.9,veh:1.3, air:0.25},desc:"対戦車！占領もできる"},
+  recon:{name:"偵察車",    cls:"veh", moveType:"tires",move:7,atk:5, range:[1,1],cost:2000,canCapture:false,
+         vs:{foot:1.3,veh:0.6, air:0.35},desc:"超高速・歩兵に強い"},
+  tank: {name:"戦車",      cls:"veh", moveType:"tread",move:5,atk:8, range:[1,1],cost:3500,canCapture:false,
+         vs:{foot:1.1,veh:1.0, air:0.25},desc:"バランスのいい主力"},
+  htank:{name:"重戦車",    cls:"veh", moveType:"tread",move:4,atk:11,range:[1,1],cost:6000,canCapture:false,
+         vs:{foot:1.1,veh:1.25,air:0.25},desc:"最強の装甲と火力"},
+  art:  {name:"砲兵",      cls:"veh", moveType:"tread",move:3,atk:7, range:[2,3],cost:3000,canCapture:false,
+         vs:{foot:1.2,veh:1.0, air:0},   desc:"射程2-3／移動後は撃てない"},
+  rocket:{name:"ロケット砲",cls:"veh",moveType:"tires",move:2,atk:9, range:[3,4],cost:6000,canCapture:false,
+         vs:{foot:1.25,veh:1.1,air:0},   desc:"射程3-4／移動後は撃てない"},
+  heli: {name:"攻撃ヘリ",  cls:"air", moveType:"air",  move:6,atk:7, range:[1,1],cost:5500,canCapture:false,
+         vs:{foot:1.2,veh:1.0, air:1.0}, desc:"全地形を飛行／対空に注意"},
+  aa:   {name:"対空戦車",  cls:"veh", moveType:"tread",move:5,atk:6, range:[1,1],cost:4000,canCapture:false,
+         vs:{foot:1.15,veh:0.5,air:2.0}, desc:"ヘリに超強い"},
 };
+function isIndirect(u){return UNIT_DEF[u.type].range[0]>1;}
+/* ====================================================
+   ランク
+==================================================== */
 const RANKS=[
   {exp:0,name:"新兵",atk:0,def:0},
   {exp:20,name:"伍長",atk:1,def:0},
@@ -153,24 +180,8 @@ const PLAYER_NAME=["青軍","赤軍"];
 const PLAYER_COLOR=["#3b6fe0","#e04a55"];
 const PLAYER_DARK=["#24489e","#9c2c38"];
 
-const MAP_BASE=[
- [2,2,1,4,0,0,1,2,2],
- [2,1,0,3,0,4,0,1,2],
- [1,0,5,3,0,0,0,0,1],
- [0,0,0,3,3,3,4,0,0],
- [0,4,0,1,0,3,0,0,0],
- [1,0,0,0,2,3,0,4,1],
- [1,4,0,3,2,0,0,0,1],
- [0,0,0,3,0,1,0,8,0],
- [0,0,4,3,3,3,0,0,0],
- [1,0,0,0,0,3,5,0,1],
- [2,1,0,4,0,3,0,1,2],
- [2,2,1,0,0,4,1,2,2],
-];
-const HQ_POS=[{x:4,y:11},{x:4,y:0}];
-
 /* ====================================================
-   ピクセルアート・スプライト
+   ピクセルアート・スプライト（9種）
 ==================================================== */
 const PX={
   inf:[
@@ -189,6 +200,35 @@ const PX={
   "...KTK.KTK..",
   "..KKK...KKK.",
   ],
+  mech:[
+  "....KKKK....",
+  "...KTTTTK...",
+  "..KTTTTTTK..",
+  "..KKKKKKKK..",
+  "..KSSSSSSK..",
+  "..KSKSSKSK..",
+  "...KSSSSK...",
+  "KKKKKKKKKK..",
+  "KGGKTTTTKTK.",
+  "KKKKTTTTKSK.",
+  "..KKTTTTKK..",
+  "...KTKKTK...",
+  "...KTK.KTK..",
+  "..KKK...KKK.",
+  ],
+  recon:[
+  "................",
+  "....KKKKKK......",
+  "...KTAATTK......",
+  "..KKKKKKKKKKK...",
+  ".KTTTTTTTTTTTK..",
+  ".KTtTTTTTTTtTK..",
+  ".KKKKKKKKKKKKK..",
+  "..KWWK....KWWK..",
+  "..KWWK....KWWK..",
+  "...KK......KK...",
+  "................",
+  ],
   tank:[
   "................",
   "....KKKK........",
@@ -201,6 +241,20 @@ const PX={
   "KGKGGKGGKGGKGK..",
   ".KGGKGGKGGKGGK..",
   ".KKKKKKKKKKKK...",
+  "................",
+  ],
+  htank:[
+  "...KKKKK........",
+  "..KTTTTTKKKKKKK.",
+  "..KTtTTTKKKKKKK.",
+  ".KKKKKKKKKKKK...",
+  "KTTTTTTTTTTTTTK.",
+  "KTtTTTTTTTTTtTK.",
+  "KTTTTTTTTTTTTTK.",
+  "KKKKKKKKKKKKKKK.",
+  "KGKGGKGGKGGKGKK.",
+  ".KGGKGGKGGKGGK..",
+  ".KKKKKKKKKKKKK..",
   "................",
   ],
   art:[
@@ -217,6 +271,48 @@ const PX={
   ".KWWK..KWWK.....",
   "..KK....KK......",
   ],
+  rocket:[
+  "........KKK.....",
+  ".......KTTTK....",
+  "......KTTTK.....",
+  ".....KTTTK......",
+  "....KTTTKK......",
+  "...KKKKKK.......",
+  ".KKKKKKKKKKKK...",
+  ".KTTTTTTTTTTTK..",
+  ".KTtTTTTTTTtTK..",
+  ".KKKKKKKKKKKKK..",
+  "..KWWK....KWWK..",
+  "...KK......KK...",
+  ],
+  heli:[
+  "KKKKKKKKKKKKK...",
+  "......K.........",
+  ".....KKK........",
+  "..KKKTTTTKKKKKK.",
+  ".KTTTTTTTTK..KK.",
+  ".KTtTTTATTK.KK..",
+  ".KTTTTTTTTKKK...",
+  "..KKKKKKKKK.....",
+  "....KK..KK......",
+  "...KKK..KKK.....",
+  "................",
+  "................",
+  ],
+  aa:[
+  "..........KK....",
+  "..........KK....",
+  ".........KKK....",
+  "....KKKKKKK.....",
+  "....KTTTTTK.....",
+  ".KKKKTTTTTKKK...",
+  "KTTTTTTTTTTTTK..",
+  "KTtTTTTTTTTtTK..",
+  "KKKKKKKKKKKKKK..",
+  "KGKGGKGGKGGKGK..",
+  ".KGGKGGKGGKGGK..",
+  ".KKKKKKKKKKKK...",
+  ],
 };
 const sprCv={}, sprUrl={};
 function buildSprites(){
@@ -224,7 +320,7 @@ function buildSprites(){
   for(const type in PX){
     sprCv[type]=[]; sprUrl[type]=[];
     for(let pid=0;pid<2;pid++){
-      const pal={K:"#16161c",S:"#e8b88a",G:"#aeb4bc",W:"#e8e8ee",
+      const pal={K:"#16161c",S:"#e8b88a",G:"#aeb4bc",W:"#e8e8ee",A:"#9adcf0",
         T:PLAYER_COLOR[pid],t:PLAYER_DARK[pid]};
       const rows=PX[type];
       const c=document.createElement("canvas");
@@ -243,8 +339,146 @@ function buildSprites(){
 }
 
 /* ====================================================
+   ステージデータ
+   map: 0平 1森 2山 3道 4都市 5工場 6HQ 7川
+   units: [種類, 軍, x, y]　owners: [x, y, 軍]
+==================================================== */
+/*STAGES_START*/
+const STAGES=[
+{name:"はじまりの草原",diff:1,desc:"基本操作をおぼえよう",
+ map:[
+ "222000222",
+ "210040012",
+ "100000001",
+ "004030400",
+ "000131000",
+ "000131000",
+ "004030400",
+ "100000001",
+ "210040012",
+ "222000222",
+ ],
+ hq:[{x:4,y:9},{x:4,y:0}],
+ owners:[],
+ units:[["inf",0,3,8],["inf",0,5,8],["tank",0,4,8],
+        ["inf",1,3,1],["inf",1,5,1]],
+ funds:[2500,2500]},
+
+{name:"わかれ道",diff:2,desc:"3本の道をめぐる攻防",
+ map:[
+ "221400122",
+ "210304012",
+ "105300001",
+ "000333400",
+ "040103000",
+ "100023041",
+ "140320001",
+ "000301040",
+ "004333000",
+ "100003501",
+ "210403012",
+ "221004122",
+ ],
+ hq:[{x:4,y:11},{x:4,y:0}],
+ owners:[[6,9,0],[2,2,1]],
+ units:[["inf",0,3,10],["inf",0,5,10],["tank",0,4,10],
+        ["inf",1,3,1],["inf",1,5,1],["tank",1,4,1]],
+ funds:[3000,3000]},
+
+{name:"山岳のとりで",diff:3,desc:"細い山道に重戦車が立ちはだかる",
+ map:[
+ "122000221",
+ "104050401",
+ "100030001",
+ "222030222",
+ "100030001",
+ "004030400",
+ "004030400",
+ "100030001",
+ "222030222",
+ "100030001",
+ "104050401",
+ "122000221",
+ ],
+ hq:[{x:4,y:11},{x:4,y:0}],
+ owners:[[4,1,1],[4,10,0]],
+ units:[["inf",0,3,9],["inf",0,5,9],["tank",0,4,9],["mech",0,2,9],
+        ["inf",1,3,2],["inf",1,5,2],["htank",1,4,2]],
+ funds:[3500,4500]},
+
+{name:"大河のたたかい",diff:3,desc:"橋をわたるか、川をこえるか。敵ヘリ出現！",
+ map:[
+ "122000221",
+ "100040001",
+ "004050400",
+ "000030000",
+ "000030000",
+ "777737777",
+ "777737777",
+ "000030000",
+ "000030000",
+ "004050400",
+ "100040001",
+ "122000221",
+ ],
+ hq:[{x:4,y:11},{x:4,y:0}],
+ owners:[[4,2,1],[4,9,0]],
+ units:[["inf",0,3,9],["inf",0,5,9],["tank",0,4,8],["aa",0,3,10],
+        ["inf",1,3,2],["inf",1,5,2],["tank",1,4,3],["heli",1,4,1]],
+ funds:[4000,5000]},
+
+{name:"こうぎょう地帯",diff:4,desc:"中央の工場群をうばいあう経済戦",
+ map:[
+ "1004004001",
+ "0050000500",
+ "0033333300",
+ "0430000340",
+ "1030440301",
+ "0030550300",
+ "0030550300",
+ "1030440301",
+ "0430000340",
+ "0033333300",
+ "0050000500",
+ "1004004001",
+ ],
+ hq:[{x:4,y:11},{x:4,y:0}],
+ owners:[[2,1,1],[2,10,0]],
+ units:[["inf",0,3,10],["inf",0,5,10],["recon",0,6,10],["tank",0,4,10],
+        ["inf",1,3,1],["inf",1,5,1],["recon",1,6,1],["tank",1,4,1]],
+ funds:[4000,5500]},
+
+{name:"さいしゅう決戦",diff:5,desc:"全兵科入り乱れる総力戦。敵は大軍！",
+ map:[
+ "2210000122",
+ "2104004012",
+ "1050330501",
+ "0003003000",
+ "0403003040",
+ "0003003000",
+ "0073773700",
+ "0473773740",
+ "0073773700",
+ "0403003040",
+ "0003003000",
+ "1050330501",
+ "2104004012",
+ "2210000122",
+ ],
+ hq:[{x:4,y:13},{x:4,y:0}],
+ owners:[[2,2,1],[7,2,1],[2,11,0],[7,11,0]],
+ units:[["inf",0,3,12],["inf",0,6,12],["tank",0,4,12],["mech",0,5,12],["aa",0,4,11],
+        ["inf",1,2,1],["inf",1,7,1],["tank",1,4,1],["tank",1,6,1],
+        ["htank",1,5,1],["heli",1,3,1],["art",1,5,2]],
+ funds:[5000,8000]},
+];
+/*STAGES_END*/
+
+/* ====================================================
    状態
 ==================================================== */
+let COLS=9, ROWS=12;
+let HQ_POS=[{x:4,y:11},{x:4,y:0}];
 let map=[], owner={}, units=[], turn=BLUE, turnCount=1;
 let funds=[0,0];
 let sel=null, moveData=null, mode="idle", attackTargets=[];
@@ -253,6 +487,8 @@ let ended=false, turnBusy=true;
 let anims=[], particles=[], popups=[], rings=[], shake=0;
 let terrainDirty=true;
 let timeNow=0;
+let currentStage=0;
+const cleared=new Set();
 
 const cv=document.getElementById("cv");
 const ctx=cv.getContext("2d");
@@ -268,7 +504,7 @@ function isProp(t){return t===T.CITY||t===T.FACTORY||t===T.HQ;}
 function busy(){return anims.length>0||turnBusy||ended||turn!==BLUE;}
 
 /* ====================================================
-   サウンド（WebAudio 簡易シンセ）
+   サウンド（WebAudio）＋iPhone消音モード対策
 ==================================================== */
 let audio=null, muted=false, unlockEl=null;
 function toggleMute(){muted=!muted;
@@ -278,9 +514,6 @@ function ac(){if(!audio){const A=window.AudioContext||window.webkitAudioContext;
   try{audio=new A();}catch(e){}}
   if(audio&&audio.state==="suspended")audio.resume();
   return audio;}
-/* iPhoneの消音モード（マナーモード）対策：
-   無音のaudio要素をループ再生して「メディア再生」扱いにすると、
-   消音モード中でもWebAudioの効果音が鳴るようになる */
 function silentWavURL(){
   const n=8000;
   const buf=new ArrayBuffer(44+n);
@@ -308,6 +541,7 @@ function unlockAudio(){
   if(unlockEl)unlockEl.play().catch(()=>{});
 }
 document.addEventListener("pointerdown",unlockAudio,{passive:true});
+
 function tone(freq,dur,type,vol,when){
   const a=ac();if(!a||muted)return;
   const t=a.currentTime+(when||0);
@@ -350,7 +584,7 @@ const SND={
 };
 
 /* ====================================================
-   アニメーション・ランナー
+   アニメーション・エフェクト
 ==================================================== */
 function pushAnim(steps,done){anims.push({steps,idx:-1,t:0,done});}
 function runAnims(dt){
@@ -386,24 +620,26 @@ function explode(x,y,color){
 }
 
 /* ====================================================
-   ゲーム初期化
+   ステージ読み込み・ゲーム開始
 ==================================================== */
-function startGame(){
-  document.getElementById("overlay").classList.add("hidden");
-  unlockAudio(); // ユーザー操作でオーディオ起動（消音モード対策込み）
-  map=MAP_BASE.map(r=>r.map(v=>v===8?T.CITY:v));
-  map[HQ_POS[BLUE].y][HQ_POS[BLUE].x]=T.HQ;
-  map[HQ_POS[RED].y][HQ_POS[RED].x]=T.HQ;
+function loadStage(s){
+  COLS=s.map[0].length;ROWS=s.map.length;
+  map=s.map.map(r=>[...r].map(Number));
+  HQ_POS=s.hq;
+  map[s.hq[0].y][s.hq[0].x]=T.HQ;
+  map[s.hq[1].y][s.hq[1].x]=T.HQ;
   owner={};
-  setOwner(HQ_POS[BLUE].x,HQ_POS[BLUE].y,BLUE);
-  setOwner(HQ_POS[RED].x,HQ_POS[RED].y,RED);
-  setOwner(6,9,BLUE);
-  setOwner(2,2,RED);
-  units=[
-    mkUnit("inf",BLUE,3,10),mkUnit("inf",BLUE,5,10),mkUnit("tank",BLUE,4,10),
-    mkUnit("inf",RED,3,1),mkUnit("inf",RED,5,1),mkUnit("tank",RED,4,1),
-  ];
-  funds=[3000,3000];
+  setOwner(s.hq[0].x,s.hq[0].y,BLUE);
+  setOwner(s.hq[1].x,s.hq[1].y,RED);
+  (s.owners||[]).forEach(o=>setOwner(o[0],o[1],o[2]));
+  units=(s.units||[]).map(a=>mkUnit(a[0],a[1],a[2],a[3]));
+  funds=[s.funds[0],s.funds[1]];
+}
+function startGame(idx){
+  currentStage=idx;
+  document.getElementById("overlay").classList.add("hidden");
+  unlockAudio();
+  loadStage(STAGES[idx]);
   turn=BLUE;turnCount=1;sel=null;mode="idle";captureProgress={};
   ended=false;particles=[];popups=[];rings=[];anims=[];shake=0;
   beginTurn(BLUE);
@@ -411,12 +647,19 @@ function startGame(){
   updateTop();setBtns([]);
   updateUI("あなたのターンです。ユニットをタップ！");
   turnBusy=true;
-  showBanner("DAY 1 ─ 青軍ターン",PLAYER_COLOR[BLUE],()=>{turnBusy=false;});
+  showBanner(`STAGE ${idx+1}　${STAGES[idx].name}`,"#ffd76a",()=>{
+    showBanner("DAY 1 ─ 青軍ターン",PLAYER_COLOR[BLUE],()=>{turnBusy=false;});
+  });
 }
 
 /* ====================================================
    移動範囲（ダイクストラ＋経路復元）
 ==================================================== */
+function moveCost(u,t){
+  const mt=UNIT_DEF[u.type].moveType;
+  if(mt==="air")return 1;
+  return TERRAIN_INFO[t].cost[mt];
+}
 function calcMove(u){
   const def=UNIT_DEF[u.type];
   const dist=new Map(),parent=new Map();
@@ -431,7 +674,7 @@ function calcMove(u){
       if(nx<0||ny<0||nx>=COLS||ny>=ROWS)continue;
       const occ=unitAt(nx,ny);
       if(occ&&occ.pid!==u.pid)continue;
-      const c=cur.c+TERRAIN_INFO[map[ny][nx]].cost[u.type];
+      const c=cur.c+moveCost(u,map[ny][nx]);
       if(c>def.move)continue;
       const k=key(nx,ny);
       if(dist.has(k)&&dist.get(k)<=c)continue;
@@ -458,35 +701,33 @@ function buildPath(md,destKey){
 }
 function enemiesInRange(u){
   const[mn,mx]=UNIT_DEF[u.type].range;
-  return units.filter(e=>e.hp>0&&e.pid!==u.pid&&(()=>{
+  return units.filter(e=>{
+    if(e.hp<=0||e.pid===u.pid)return false;
+    if(UNIT_DEF[u.type].vs[UNIT_DEF[e.type].cls]<=0)return false;
     const d=Math.abs(e.x-u.x)+Math.abs(e.y-u.y);
-    return d>=mn&&d<=mx;})());
+    return d>=mn&&d<=mx;
+  });
 }
 
 /* ====================================================
-   移動・戦闘・占領（アニメーション付き）
+   戦闘（兵科相性＋ランク補正＋アニメーション）
 ==================================================== */
-function animateMove(u,path,after){
-  if(path.length<2){u.px=u.x;u.py=u.y;after&&after();return;}
-  const steps=[];
-  for(let i=1;i<path.length;i++){
-    const a=path[i-1],b=path[i];
-    steps.push({dur:105,onStart:()=>SND.step(),
-      update:p=>{u.px=a.x+(b.x-a.x)*p;u.py=a.y+(b.y-a.y)*p;}});
-  }
-  pushAnim(steps,()=>{u.px=u.x;u.py=u.y;after&&after();});
-}
 function calcDmg(a,d,aHp){
-  return Math.max(1,Math.round(effAtk(a)*(aHp/10)
-    -(TERRAIN_INFO[map[d.y][d.x]].def+RANKS[d.rank].def)*0.5));
+  const mult=UNIT_DEF[a.type].vs[UNIT_DEF[d.type].cls];
+  const tdef=UNIT_DEF[d.type].cls==="air"?0:TERRAIN_INFO[map[d.y][d.x]].def;
+  return Math.max(1,Math.round(effAtk(a)*mult*(aHp/10)
+    -(tdef+RANKS[d.rank].def)*0.5));
 }
 function performAttack(a,d,after){
   const dmg=calcDmg(a,d,a.hp);
   const dHpAfter=d.hp-dmg;
+  const dist=Math.abs(a.x-d.x)+Math.abs(a.y-d.y);
   let counter=0;
-  if(dHpAfter>0&&UNIT_DEF[d.type].range[0]===1&&UNIT_DEF[a.type].range[1]===1){
-    counter=Math.max(1,Math.round(effAtk(d)*(dHpAfter/10)*0.7
-      -(TERRAIN_INFO[map[a.y][a.x]].def+RANKS[a.rank].def)*0.5));
+  const cm=UNIT_DEF[d.type].vs[UNIT_DEF[a.type].cls];
+  if(dHpAfter>0&&dist===1&&UNIT_DEF[d.type].range[0]===1&&cm>0){
+    const atdef=UNIT_DEF[a.type].cls==="air"?0:TERRAIN_INFO[map[a.y][a.x]].def;
+    counter=Math.max(1,Math.round(effAtk(d)*cm*(dHpAfter/10)*0.7
+      -(atdef+RANKS[a.rank].def)*0.5));
   }
   const aHpAfter=a.hp-counter;
   // 経験値（与ダメージ分＋撃破ボーナス8）
@@ -496,11 +737,9 @@ function performAttack(a,d,after){
   const dRankUp=dHpAfter>0&&dExp>0&&rankFor(d.exp+dExp)>d.rank;
   const dirX=Math.sign(d.x-a.x),dirY=Math.sign(d.y-a.y);
   const steps=[];
-  // 突進
   steps.push({dur:150,onStart:()=>SND.shot(),
     update:p=>{const k=Math.sin(p*Math.PI)*.34;
       a.px=a.x+dirX*k;a.py=a.y+dirY*k;}});
-  // ヒット
   steps.push({dur:280,onStart:()=>{
     a.px=a.x;a.py=a.y;
     d.hp=dHpAfter;d.flash=1;shake=Math.max(shake,4);
@@ -522,17 +761,17 @@ function performAttack(a,d,after){
       steps.push({dur:420,onStart:()=>{explode(a.x,a.y,PLAYER_COLOR[a.pid]);}});
     }
   }
-  // 経験値付与（生存者のみ）
   steps.push({dur:180,onStart:()=>{
     if(aHpAfter>0){a.exp+=aExp;addPopup(a.x,a.y,"EXP+"+aExp,"#9ad6ff");}
     if(dHpAfter>0&&dExp>0){d.exp+=dExp;addPopup(d.x,d.y,"EXP+"+dExp,"#9ad6ff");}
   }});
-  // ランクアップ演出
   if(aRankUp)steps.push({dur:780,onStart:()=>{a.rank=rankFor(a.exp);rankUpFx(a);}});
   if(dRankUp)steps.push({dur:780,onStart:()=>{d.rank=rankFor(d.exp);rankUpFx(d);}});
   pushAnim(steps,()=>{
     units=units.filter(u=>u.hp>0);
+    const m=UNIT_DEF[a.type].vs[UNIT_DEF[d.type].cls];
     let msg=`${UNIT_DEF[a.type].name}の攻撃！ <b>${dmg}</b>ダメージ`;
+    if(m>=1.2)msg+="（効果バツグン！）";
     if(dHpAfter<=0)msg+=" → 撃破！";
     else if(counter>0){msg+=`／反撃で<b>${counter}</b>被弾`;
       if(aHpAfter<=0)msg+=" → 撃破された！";}
@@ -629,12 +868,13 @@ function aiNext(){
 function aiActUnit(u,next){
   let tg=enemiesInRange(u);
   if(tg.length){
-    tg.sort((a,b)=>a.hp-b.hp);
+    tg.sort((a,b)=>(calcDmg(u,b,u.hp)-b.hp*0.5)-(calcDmg(u,a,u.hp)-a.hp*0.5));
     performAttack(u,tg[0],msg=>{u.acted=true;updateUI(msg);
       if(checkEnded())return;next();});
     return;
   }
   const md=calcMove(u);
+  const rng=UNIT_DEF[u.type].range;
   let best=null,bestScore=-1e9;
   for(const k of md.reach){
     const[x,y]=k.split(",").map(Number);
@@ -644,23 +884,32 @@ function aiActUnit(u,next){
     let nd=99;
     for(const e of units)if(e.pid===BLUE&&e.hp>0)
       nd=Math.min(nd,Math.abs(e.x-x)+Math.abs(e.y-y));
-    score-=nd*5;
+    if(isIndirect(u)){
+      if(nd>=rng[0]&&nd<=rng[1])score+=80;
+      else if(nd<rng[0])score-=30;
+      else score-=nd*5;
+    }else{
+      score-=nd*5;
+    }
     score-=(Math.abs(HQ_POS[BLUE].x-x)+Math.abs(HQ_POS[BLUE].y-y))*2;
     if(score>bestScore){bestScore=score;best=k;}
   }
   const finish=()=>{
-    let tg2=enemiesInRange(u);
-    if(tg2.length){
-      tg2.sort((a,b)=>a.hp-b.hp);
-      performAttack(u,tg2[0],msg=>{u.acted=true;updateUI(msg);
-        if(checkEnded())return;next();});
-    }else{
-      const c=tryCapture(u);
-      if(c)updateUI("赤軍："+c);
-      u.acted=true;
-      if(checkEnded())return;
-      next();
+    // 移動後攻撃は直接攻撃ユニットのみ
+    if(!isIndirect(u)){
+      let tg2=enemiesInRange(u);
+      if(tg2.length){
+        tg2.sort((a,b)=>(calcDmg(u,b,u.hp)-b.hp*0.5)-(calcDmg(u,a,u.hp)-a.hp*0.5));
+        performAttack(u,tg2[0],msg=>{u.acted=true;updateUI(msg);
+          if(checkEnded())return;next();});
+        return;
+      }
     }
+    const c=tryCapture(u);
+    if(c)updateUI("赤軍："+c);
+    u.acted=true;
+    if(checkEnded())return;
+    next();
   };
   if(best&&best!==md.origin){
     const path=buildPath(md,best);
@@ -668,6 +917,16 @@ function aiActUnit(u,next){
     u.x=x;u.y=y;
     animateMove(u,path,finish);
   }else finish();
+}
+function aiPickType(){
+  const blueHasAir=units.some(u=>u.pid===BLUE&&u.hp>0&&UNIT_DEF[u.type].cls==="air");
+  const pool=[];
+  const add=(t,w)=>{if(funds[RED]>=UNIT_DEF[t].cost)for(let i=0;i<w;i++)pool.push(t);};
+  if(blueHasAir)add("aa",6);
+  add("tank",4);add("mech",3);add("inf",3);add("recon",2);
+  add("art",2);add("heli",2);add("htank",2);add("rocket",1);
+  if(!pool.length&&funds[RED]>=1000)pool.push("inf");
+  return pool.length?pool[Math.floor(Math.random()*pool.length)]:null;
 }
 function aiProduce(){
   if(ended)return;
@@ -679,10 +938,7 @@ function aiProduce(){
     if((t===T.FACTORY||t===T.HQ)&&!unitAt(x,y))spots.push({x,y});
   }
   for(const s of spots){
-    let type=null;
-    if(funds[RED]>=3000&&Math.random()<0.5)type="tank";
-    else if(funds[RED]>=2500&&Math.random()<0.3)type="art";
-    else if(funds[RED]>=1000)type="inf";
+    const type=aiPickType();
     if(type){
       funds[RED]-=UNIT_DEF[type].cost;
       const nu=mkUnit(type,RED,s.x,s.y);nu.acted=true;units.push(nu);
@@ -707,13 +963,41 @@ function checkEnded(){
 }
 function gameOver(winner){
   if(ended)return;ended=true;
+  if(winner===BLUE)cleared.add(currentStage);
   setTimeout(()=>{
     const d=document.getElementById("dialog");
+    let btns="";
+    if(winner===BLUE){
+      if(currentStage+1<STAGES.length)
+        btns+=`<button class="gold center" onclick="startGame(${currentStage+1})">▶ 次のステージへ</button>`;
+      btns+=`<button class="center" onclick="startGame(${currentStage})">もう一度遊ぶ</button>`;
+    }else{
+      btns+=`<button class="gold center" onclick="startGame(${currentStage})">🔁 再挑戦</button>`;
+    }
+    btns+=`<button class="center" onclick="openStageSelect()">ステージ選択へ</button>`;
     d.innerHTML=`<h2>${winner===BLUE?"🎉 勝利！":"💀 敗北…"}</h2>
       <p style="text-align:center">${PLAYER_NAME[winner]}の勝ちです（DAY ${turnCount}）</p>
-      <div class="row"><button class="gold center" onclick="startGame()">もう一度遊ぶ</button></div>`;
+      <div class="row">${btns}</div>`;
     document.getElementById("overlay").classList.remove("hidden");
   },900);
+}
+
+/* ====================================================
+   ステージ選択
+==================================================== */
+function openStageSelect(allowClose){
+  const d=document.getElementById("dialog");
+  let html=`<h2>ステージ選択</h2><div class="row">`;
+  STAGES.forEach((s,i)=>{
+    html+=`<button onclick="startGame(${i})">
+      <span>STAGE ${i+1}　${s.name}${cleared.has(i)?" ✅":""}<br>
+      <small>${"★".repeat(s.diff)}${"☆".repeat(5-s.diff)}　${s.map[0].length}×${s.map.length}マス<br>${s.desc}</small></span></button>`;
+  });
+  if(allowClose&&map.length&&!ended)
+    html+=`<button class="warn center" onclick="closeOverlay()">とじる（ゲームに戻る）</button>`;
+  html+=`</div>`;
+  d.innerHTML=html;
+  document.getElementById("overlay").classList.remove("hidden");
 }
 
 /* ====================================================
@@ -739,10 +1023,11 @@ function handleTap(x,y){
   }
   if(mode==="move"&&moveData&&moveData.reach.has(key(x,y))){
     const u=sel.unit;
+    const moved=key(x,y)!==moveData.origin;
     const path=buildPath(moveData,key(x,y));
     u.x=x;u.y=y;
     mode="anim";setBtns([]);
-    animateMove(u,path,()=>afterMove(u));
+    animateMove(u,path,()=>afterMove(u,moved));
     return;
   }
   const u=unitAt(x,y);
@@ -752,18 +1037,21 @@ function handleTap(x,y){
     const ud=UNIT_DEF[u.type];
     const rk=RANKS[u.rank],next=RANKS[u.rank+1];
     const stars=u.rank?` <span style="color:#ffd76a">${"★".repeat(u.rank)}</span>`:"";
+    const rngTxt=isIndirect(u)?`／射程${ud.range[0]}-${ud.range[1]}`:"";
     updateUI(`<img src="${sprUrl[u.type][BLUE]}">
-      <span><b>${ud.name}</b>${stars} HP${u.hp}　攻撃${effAtk(u)}／移動${ud.move}<br>
+      <span><b>${ud.name}</b>${stars} HP${u.hp}　攻撃${effAtk(u)}${rngTxt}／移動${ud.move}<br>
       <small>${rk.name}　EXP ${u.exp}${next?`（次のランクまで${next.exp-u.exp}）`:"（最高ランク）"}</small></span>`);
-    setBtns([{label:"ここで行動",fn:()=>{mode="anim";afterMove(u);}},
+    setBtns([{label:"ここで行動",fn:()=>{mode="anim";afterMove(u,false);}},
              {label:"選択解除",fn:cancelSel}]);
   }else if(u&&u.pid===RED){
     SND.select();
     cancelSel();
     const ud=UNIT_DEF[u.type];
     const stars=u.rank?` <span style="color:#ffd76a">${"★".repeat(u.rank)}</span>`:"";
+    const rngTxt=isIndirect(u)?`／射程${ud.range[0]}-${ud.range[1]}`:"";
     updateUI(`<img src="${sprUrl[u.type][RED]}">
-      <span><b style="color:#ff8a92">敵${ud.name}</b>${stars} HP${u.hp}　攻撃${effAtk(u)}／移動${ud.move}</span>`);
+      <span><b style="color:#ff8a92">敵${ud.name}</b>${stars} HP${u.hp}　攻撃${effAtk(u)}${rngTxt}／移動${ud.move}<br>
+      <small>${ud.desc}</small></span>`);
   }else{
     cancelSel();
     const t=map[y][x];const ti=TERRAIN_INFO[t];
@@ -777,18 +1065,32 @@ function handleTap(x,y){
     }
   }
 }
-function afterMove(u){
+function animateMove(u,path,after){
+  if(path.length<2){u.px=u.x;u.py=u.y;after&&after();return;}
+  const steps=[];
+  for(let i=1;i<path.length;i++){
+    const a=path[i-1],b=path[i];
+    steps.push({dur:105,onStart:()=>SND.step(),
+      update:p=>{u.px=a.x+(b.x-a.x)*p;u.py=a.y+(b.y-a.y)*p;}});
+  }
+  pushAnim(steps,()=>{u.px=u.x;u.py=u.y;after&&after();});
+}
+function afterMove(u,moved){
   sel={unit:u};moveData=null;
-  attackTargets=enemiesInRange(u);
+  const canFire=!isIndirect(u)||!moved;
+  attackTargets=canFire?enemiesInRange(u):[];
   const cap=canCaptureHere(u);
   const btns=[];
   if(attackTargets.length)btns.push({label:"⚔️ 攻撃",warn:true,fn:()=>{
-    mode="attack";updateUI("攻撃する敵（赤色のマス）をタップ");setBtns([{label:"やめる",fn:()=>afterMove(u)}]);}});
+    mode="attack";updateUI("攻撃する敵（赤色のマス）をタップ");
+    setBtns([{label:"やめる",fn:()=>{mode="acted";afterMove(u,moved);}}]);}});
   if(cap)btns.push({label:"🚩 占領",gold:true,fn:()=>{
     const m=tryCapture(u);u.acted=true;finishAction(m||"");}});
   btns.push({label:"待機",fn:()=>{u.acted=true;finishAction("待機しました");}});
   mode="acted";
-  updateUI("行動を選んでください");
+  let hint="行動を選んでください";
+  if(isIndirect(u)&&moved)hint+="<br><small>（移動したターンは砲撃できません）</small>";
+  updateUI(hint);
   setBtns(btns);
 }
 function canCaptureHere(u){
@@ -800,7 +1102,6 @@ function finishAction(msg){
   updateUI(msg);setBtns([]);updateTop();
   if(ended)return;
   if(checkEnded())return;
-  // 全ユニット行動済みなら案内
   const remain=units.filter(u=>u.pid===BLUE&&u.hp>0&&!u.acted).length;
   if(remain===0)updateUI(msg+"<br><small>全ユニット行動済み。「ターン終了」を押してください</small>");
 }
@@ -813,13 +1114,13 @@ function cancelSel(){sel=null;mode="idle";moveData=null;attackTargets=[];
 function openProduce(x,y){
   const d=document.getElementById("dialog");
   let html=`<h2>ユニット生産</h2>
-    <p style="text-align:center">資金：💰${funds[BLUE]}G</p><div class="row">`;
+    <p style="text-align:center;margin-bottom:8px">資金：💰${funds[BLUE]}G</p><div class="row">`;
   for(const k in UNIT_DEF){
     const ud=UNIT_DEF[k];
     const dis=funds[BLUE]<ud.cost?"disabled":"";
     html+=`<button ${dis} onclick="produce('${k}',${x},${y})">
       <img src="${sprUrl[k][BLUE]}">
-      <span>${ud.name}<br><small style="font-weight:normal">${ud.desc}</small></span>
+      <span>${ud.name}<br><small>${ud.desc}</small></span>
       <span class="pr">${ud.cost}G</span></button>`;
   }
   html+=`<button class="warn center" onclick="closeOverlay()">やめる</button></div>`;
@@ -841,7 +1142,7 @@ function closeOverlay(){document.getElementById("overlay").classList.add("hidden
 ==================================================== */
 function updateTop(){
   const tb=document.getElementById("turnbadge");
-  tb.textContent=`DAY ${turnCount}　${PLAYER_NAME[turn]}`;
+  tb.textContent=`S${currentStage+1} DAY ${turnCount}　${PLAYER_NAME[turn]}`;
   tb.style.background=PLAYER_COLOR[turn];
   document.getElementById("funds").textContent=funds[BLUE];
   let p=0;for(const k in owner)if(owner[k]===BLUE)p++;
@@ -880,48 +1181,74 @@ window.addEventListener("resize",()=>{resize();});
 
 function rseed(x,y){let n=x*374761393+y*668265263;
   n=(n^(n>>13))*1274126177;return((n^(n>>16))>>>0)/4294967295;}
+function inMap(x,y){return x>=0&&y>=0&&x<COLS&&y<ROWS;}
+function tileAt(x,y){return inMap(x,y)?map[y][x]:-1;}
 
 function renderTerrain(){
   const g=terrCv.getContext("2d");
   g.setTransform(DPR,0,0,DPR,0,0);
   g.imageSmoothingEnabled=false;
   for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){
-    const t=map[y]?map[y][x]:T.PLAIN;
-    const px=x*TILE,py=y*TILE;
-    // 平地ベース（市松）
+    const t=map[y][x];
+    const px=x*TILE,py=y*TILE,S=TILE;
+    // ベース
+    if(t===T.RIVER){
+      g.fillStyle=(x+y)%2===0?"#4a8fd4":"#458ace";
+      g.fillRect(px,py,S,S);
+      // 波
+      g.fillStyle="#8cc4ee";
+      for(let i=0;i<3;i++){
+        const r1=rseed(x*5+i,y*3),r2=rseed(x*2,y*7+i);
+        g.fillRect(px+r1*(S-8)+2,py+r2*(S-6)+3,S*.2,2);
+      }
+      // 岸辺
+      g.fillStyle="#bfe2f5";
+      if(tileAt(x,y-1)!==T.RIVER)g.fillRect(px,py,S,2);
+      if(tileAt(x,y+1)!==T.RIVER)g.fillRect(px,py+S-2,S,2);
+      if(tileAt(x-1,y)!==T.RIVER)g.fillRect(px,py,2,S);
+      if(tileAt(x+1,y)!==T.RIVER)g.fillRect(px+S-2,py,2,S);
+      continue;
+    }
     g.fillStyle=(x+y)%2===0?"#7ec850":"#76bf4a";
-    g.fillRect(px,py,TILE,TILE);
-    // 草むらの点
+    g.fillRect(px,py,S,S);
     for(let i=0;i<3;i++){
       const r1=rseed(x*3+i,y),r2=rseed(x,y*3+i);
       if(rseed(x+i,y+i)<.6){
         g.fillStyle="#5fa53c";
-        g.fillRect(px+r1*(TILE-4)+1,py+r2*(TILE-4)+1,2,2);
+        g.fillRect(px+r1*(S-4)+1,py+r2*(S-4)+1,2,2);
       }
     }
-    const S=TILE;
-    if(t===T.ROAD||isProp(t)){
-      // 道路（隣接接続）
+    if(t===T.ROAD){
+      const isRiv=(dx,dy)=>tileAt(x+dx,y+dy)===T.RIVER;
+      const vBridge=isRiv(-1,0)&&isRiv(1,0);
+      const hBridge=isRiv(0,-1)&&isRiv(0,1);
+      if(vBridge||hBridge){
+        // 橋：下に水を敷く
+        g.fillStyle="#4a8fd4";g.fillRect(px,py,S,S);
+        g.fillStyle="#c9a86b";
+        if(vBridge){g.fillRect(px+S*.18,py,S*.64,S);
+          g.fillStyle="#8a6f44";
+          g.fillRect(px+S*.18,py,3,S);g.fillRect(px+S*.82-3,py,3,S);}
+        else{g.fillRect(px,py+S*.18,S,S*.64);
+          g.fillStyle="#8a6f44";
+          g.fillRect(px,py+S*.18,S,3);g.fillRect(px,py+S*.82-3,S,3);}
+        continue;
+      }
+      const conn=(dx,dy)=>{const nt=tileAt(x+dx,y+dy);
+        return nt===T.ROAD||isProp(nt);};
       g.fillStyle="#d8c08a";
-      const conn=(dx,dy)=>{const nx=x+dx,ny=y+dy;
-        if(nx<0||ny<0||nx>=COLS||ny>=ROWS)return false;
-        const nt=map[ny][nx];return nt===T.ROAD||isProp(nt);};
-      if(t===T.ROAD){
-        const w=S*.46,o=(S-w)/2;
-        g.fillRect(px+o,py+o,w,w);
-        if(conn(1,0))g.fillRect(px+o,py+o,S-o,w);
-        if(conn(-1,0))g.fillRect(px,py+o,o+w,w);
-        if(conn(0,1))g.fillRect(px+o,py+o,w,S-o);
-        if(conn(0,-1))g.fillRect(px+o,py,w,o+w);
-        g.fillStyle="#efe2b8";
-        g.fillRect(px+S*.44,py+S*.44,S*.12,S*.12);
-      }
-    }
-    if(t===T.FOREST){
+      const w=S*.46,o=(S-w)/2;
+      g.fillRect(px+o,py+o,w,w);
+      if(conn(1,0))g.fillRect(px+o,py+o,S-o,w);
+      if(conn(-1,0))g.fillRect(px,py+o,o+w,w);
+      if(conn(0,1))g.fillRect(px+o,py+o,w,S-o);
+      if(conn(0,-1))g.fillRect(px+o,py,w,o+w);
+      g.fillStyle="#efe2b8";
+      g.fillRect(px+S*.44,py+S*.44,S*.12,S*.12);
+    }else if(t===T.FOREST){
       drawTree(g,px+S*.14,py+S*.1,S*.5);
       drawTree(g,px+S*.42,py+S*.32,S*.55);
     }else if(t===T.MTN){
-      // 山
       g.fillStyle="rgba(0,0,0,.15)";
       g.beginPath();g.ellipse(px+S*.5,py+S*.85,S*.38,S*.1,0,0,7);g.fill();
       g.fillStyle="#8d7458";
@@ -982,21 +1309,19 @@ function drawBuilding(g,px,py,S,t,o){
     g.fillRect(px+S*.2,py+S*.14,S*.12,S*.28);
     g.fillStyle=main;
     g.fillRect(px+S*.14,py+S*.6,S*.72,S*.1);
-  }else{ // HQ
+  }else{
     g.fillStyle=main;
     g.fillRect(px+S*.16,py+S*.36,S*.68,S*.5);
     g.fillStyle=dark;
     g.fillRect(px+S*.16,py+S*.36,S*.68,S*.1);
     g.fillStyle="#fff";
     g.fillRect(px+S*.42,py+S*.6,S*.16,S*.26);
-    // 旗
     g.fillStyle="#3a3f55";
     g.fillRect(px+S*.46,py+S*.04,S*.05,S*.34);
     g.fillStyle=main;
     g.beginPath();g.moveTo(px+S*.51,py+S*.06);
     g.lineTo(px+S*.82,py+S*.14);g.lineTo(px+S*.51,py+S*.24);
     g.closePath();g.fill();
-    // 星
     g.fillStyle="#ffd76a";
     drawStar(g,px+S*.5,py+S*.48,S*.1);
   }
@@ -1016,13 +1341,11 @@ function draw(){
   ctx.imageSmoothingEnabled=false;
   ctx.clearRect(0,0,TILE*COLS,TILE*ROWS);
   if(terrainDirty){renderTerrain();terrainDirty=false;}
-  // シェイク
   let sx=0,sy=0;
   if(shake>0){sx=(Math.random()-.5)*shake;sy=(Math.random()-.5)*shake;}
   ctx.save();
   ctx.translate(sx,sy);
   ctx.drawImage(terrCv,0,0,TILE*COLS,TILE*ROWS);
-  // 占領ゲージ
   for(const k in captureProgress){
     const[x,y]=k.split(",").map(Number);
     const cp=captureProgress[k];
@@ -1031,7 +1354,6 @@ function draw(){
     ctx.fillStyle="#ffd76a";
     ctx.fillRect(x*TILE+3,y*TILE+TILE-7,(TILE-6)*Math.min(1,cp.amount/20),5);
   }
-  // 移動範囲
   if(moveData&&mode==="move"){
     const pulse=.3+.12*Math.sin(timeNow/220);
     ctx.fillStyle=`rgba(90,170,255,${pulse})`;
@@ -1042,37 +1364,34 @@ function draw(){
       ctx.strokeRect(x*TILE+1.5,y*TILE+1.5,TILE-3,TILE-3);
     }
   }
-  // 攻撃対象
   if(mode==="attack"){
     const pulse=.35+.18*Math.sin(timeNow/140);
     ctx.fillStyle=`rgba(255,70,70,${pulse})`;
     for(const u of attackTargets)
       ctx.fillRect(u.x*TILE,u.y*TILE,TILE,TILE);
   }
-  // ユニット（下にあるものが手前）
   const sorted=[...units].sort((a,b)=>a.py-b.py);
   for(const u of sorted){
     if(u.hp<=0)continue;
+    const isAir=UNIT_DEF[u.type].cls==="air";
     const cx=u.px*TILE+TILE/2,cy=u.py*TILE+TILE/2;
-    // 影
-    ctx.fillStyle="rgba(0,0,0,.28)";
-    ctx.beginPath();ctx.ellipse(cx,cy+TILE*.36,TILE*.3,TILE*.09,0,0,7);ctx.fill();
+    ctx.fillStyle=isAir?"rgba(0,0,0,.18)":"rgba(0,0,0,.28)";
+    ctx.beginPath();ctx.ellipse(cx,cy+TILE*.36,TILE*.28,TILE*.08,0,0,7);ctx.fill();
     const spc=sprCv[u.type][u.pid];
     const w=TILE*.92,h=w*(spc.height/spc.width);
     const bob=(u.pid===turn&&!u.acted&&anims.length===0)
       ?Math.sin(timeNow/260+u.x*2)*TILE*.025:0;
+    const airLift=isAir?-TILE*.16+Math.sin(timeNow/300+u.x)*TILE*.03:0;
     const grey=u.acted&&u.pid===turn;
     ctx.globalAlpha=grey?.55:1;
-    ctx.drawImage(spc,cx-w/2,cy-h/2-TILE*.06+bob,w,h);
+    ctx.drawImage(spc,cx-w/2,cy-h/2-TILE*.06+bob+airLift,w,h);
     ctx.globalAlpha=1;
-    // ヒットフラッシュ
     if(u.flash>0){
       ctx.globalCompositeOperation="lighter";
       ctx.fillStyle=`rgba(255,255,255,${u.flash*.85})`;
-      ctx.fillRect(cx-w/2,cy-h/2-TILE*.06,w,h);
+      ctx.fillRect(cx-w/2,cy-h/2-TILE*.06+airLift,w,h);
       ctx.globalCompositeOperation="source-over";
     }
-    // ランク星
     if(u.rank>0){
       const ss=TILE*.105;
       for(let i=0;i<u.rank;i++){
@@ -1081,7 +1400,6 @@ function draw(){
         ctx.fillStyle="#ffd76a";drawStar(ctx,sx2,sy2,ss);
       }
     }
-    // HP
     if(u.hp<10){
       ctx.font="bold "+Math.floor(TILE*.32)+"px sans-serif";
       ctx.textAlign="right";ctx.textBaseline="alphabetic";
@@ -1091,13 +1409,11 @@ function draw(){
       ctx.fillText(u.hp,u.px*TILE+TILE-3,u.py*TILE+TILE-3);
     }
   }
-  // 選択カーソル（四隅ブラケット）
   if(sel&&sel.unit&&sel.unit.hp>0){
     const u=sel.unit;
     const m=2+Math.sin(timeNow/180)*2;
     drawCursor(u.px*TILE,u.py*TILE,TILE,m,"#ffd76a");
   }
-  // パーティクル
   for(const p of particles){
     ctx.globalAlpha=Math.max(0,p.life/p.maxLife);
     ctx.fillStyle=p.color;
@@ -1105,14 +1421,12 @@ function draw(){
     ctx.fillRect(p.x*TILE-s/2,p.y*TILE-s/2,s,s);
   }
   ctx.globalAlpha=1;
-  // ランクアップリング
   for(const r of rings){
     ctx.globalAlpha=Math.max(0,Math.min(1,r.life));
     ctx.strokeStyle="#ffd76a";ctx.lineWidth=3;
     ctx.beginPath();ctx.arc(r.x*TILE,r.y*TILE,r.r*TILE,0,7);ctx.stroke();
   }
   ctx.globalAlpha=1;
-  // ダメージポップ
   for(const p of popups){
     const yo=(1-p.life)*TILE*.8;
     ctx.font="bold "+Math.floor(TILE*.4)+"px sans-serif";
@@ -1146,7 +1460,6 @@ let lastT=0;
 function loop(t){
   const dt=Math.min(50,t-lastT);lastT=t;timeNow=t;
   runAnims(dt);
-  // パーティクル更新
   for(const p of particles){
     p.x+=p.vx*dt/1000;p.y+=p.vy*dt/1000;
     p.vy+=4*dt/1000;p.life-=dt/1000;
@@ -1164,7 +1477,6 @@ function loop(t){
 
 buildSprites();
 resize();
-updateTop();
 requestAnimationFrame(loop);
 </script>
 </body>
