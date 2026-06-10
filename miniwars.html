@@ -32,8 +32,8 @@
   canvas{image-rendering:pixelated;}
 
   #bottom{background:linear-gradient(180deg,#262b5c,#181b3a);
-    border-top:3px solid #000;padding:8px 10px;min-height:112px;z-index:2;}
-  #info{font-size:13px;line-height:1.45;min-height:42px;display:flex;
+    border-top:3px solid #000;padding:8px 10px;min-height:118px;z-index:2;}
+  #info{font-size:13px;line-height:1.45;min-height:48px;display:flex;
     align-items:center;gap:10px;}
   #info b{color:var(--gold);}
   #info img{height:38px;image-rendering:pixelated;
@@ -95,13 +95,13 @@
   <div class="dialog" id="dialog">
     <h2>ミニウォーズ DX</h2>
     <p>🔵 青軍（あなた）対 🔴 赤軍（CPU）<br>
-    ・自分のユニットをタップ → 移動先をタップ<br>
-    ・<b>ユニット9種類</b>！兵科の相性が勝敗のカギ<br>
-    　（バズーカ兵→戦車に強い、対空戦車→ヘリに強い…）<br>
-    ・砲兵・ロケット砲は<b>移動したターンは撃てない</b><br>
+    ・<b>全50ステージ</b>！後半ほど敵が強大に<br>
+    ・ユニット9種類、兵科の相性が勝敗のカギ<br>
+    ・ダメージには運がからむ。<b style="color:#ffd76a">クリティカル</b>もあり！<br>
+    ・同じ種類の味方に重なると<b>合流</b>してHP回復<br>
+    ・砲兵・ロケット砲は移動したターンは撃てない<br>
     ・歩兵・バズーカ兵で都市を占領 → 毎ターン収入<br>
-    ・工場やHQをタップでユニット生産<br>
-    ・戦闘で経験値獲得！<b style="color:#ffd76a">★ランクアップ</b>で攻防強化<br>
+    ・戦闘で経験値！<b style="color:#ffd76a">★ランクアップ</b>で攻防強化<br>
     ・<b style="color:#ffd76a">敵HQの占領</b>か敵全滅で勝利！</p>
     <div class="row"><button class="gold center" onclick="openStageSelect()">▶ ステージをえらぶ</button></div>
   </div>
@@ -109,6 +109,8 @@
 
 <script>
 "use strict";
+const MAX_HP=20;
+const CAPTURE_NEED=40;
 /* ====================================================
    地形
 ==================================================== */
@@ -125,8 +127,6 @@ const TERRAIN_INFO={
 };
 /* ====================================================
    ユニット定義（9種）
-   cls: foot=歩兵系 veh=車両 air=航空
-   vs: 相手の兵科ごとのダメージ倍率
 ==================================================== */
 const UNIT_DEF={
   inf:  {name:"歩兵",      cls:"foot",moveType:"foot", move:3,atk:5, range:[1,1],cost:1000,canCapture:true,
@@ -154,9 +154,9 @@ function isIndirect(u){return UNIT_DEF[u.type].range[0]>1;}
 ==================================================== */
 const RANKS=[
   {exp:0,name:"新兵",atk:0,def:0},
-  {exp:20,name:"伍長",atk:1,def:0},
-  {exp:45,name:"軍曹",atk:2,def:1},
-  {exp:80,name:"エース",atk:3,def:2},
+  {exp:30,name:"伍長",atk:1,def:0},
+  {exp:65,name:"軍曹",atk:2,def:1},
+  {exp:110,name:"エース",atk:3,def:2},
 ];
 function rankFor(exp){let r=0;for(let i=0;i<RANKS.length;i++)if(exp>=RANKS[i].exp)r=i;return r;}
 function effAtk(u){return UNIT_DEF[u.type].atk+RANKS[u.rank].atk;}
@@ -181,7 +181,7 @@ const PLAYER_COLOR=["#3b6fe0","#e04a55"];
 const PLAYER_DARK=["#24489e","#9c2c38"];
 
 /* ====================================================
-   ピクセルアート・スプライト（9種）
+   ピクセルアート・スプライト
 ==================================================== */
 const PX={
   inf:[
@@ -339,9 +339,8 @@ function buildSprites(){
 }
 
 /* ====================================================
-   ステージデータ
+   ステージデータ（手作り6＋自動生成44＝全50）
    map: 0平 1森 2山 3道 4都市 5工場 6HQ 7川
-   units: [種類, 軍, x, y]　owners: [x, y, 軍]
 ==================================================== */
 /*STAGES_START*/
 const STAGES=[
@@ -472,6 +471,123 @@ const STAGES=[
         ["htank",1,5,1],["heli",1,3,1],["art",1,5,2]],
  funds:[5000,8000]},
 ];
+/* ---- 自動生成ステージ（7〜50） ---- */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;
+  let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;
+  return((t^t>>>14)>>>0)/4294967296;};}
+const NAME_A=["北の","南の","東の","西の","霧の","紅の","鋼の","風の","雷の","氷の","炎の","影の"];
+const NAME_B=["平原","渓谷","回廊","戦線","荒野","河畔","高地","十字路","国境","要衝","湿原","丘陵"];
+function genStage(i){
+  const rnd=mulberry32(20260611+i*7919);
+  const d=Math.min(5,2+Math.floor((i-6)/9));
+  const C=9+(i%2)+(i>=30?1:0);
+  const R=12+(i%3)+(i>=24?1:0);
+  const mid=Math.floor(C/2);
+  const half=Math.floor(R/2);
+  const g=Array.from({length:R},()=>Array(C).fill(0));
+  // 上半分の地形
+  for(let y=0;y<half;y++)for(let x=0;x<C;x++){
+    const r=rnd();
+    if(y>=2){
+      if(r<0.10)g[y][x]=2;
+      else if(r<0.26)g[y][x]=1;
+    }else if(r<0.15)g[y][x]=1;
+  }
+  // HQ周辺を確保
+  for(let x=mid-2;x<=mid+2;x++)if(x>=0&&x<C&&g[1][x]===2)g[1][x]=0;
+  if(g[2][mid]===2)g[2][mid]=0;
+  // 川
+  const hasRiver=rnd()<0.45&&R>=13;
+  const wide=hasRiver&&rnd()<0.5;
+  if(hasRiver){
+    if(R%2===1){
+      for(let x=0;x<C;x++)g[half][x]=7;
+      if(wide)for(let x=0;x<C;x++)g[half-1][x]=7;
+    }else{
+      for(let x=0;x<C;x++)g[half-1][x]=7;
+    }
+  }
+  // 中央道路（川の上は橋になる）
+  for(let y=1;y<half;y++)g[y][mid]=3;
+  // サブ道路
+  let sideCol=-1;
+  if(rnd()<0.55){
+    sideCol=mid+(rnd()<0.5?-3:3);
+    if(sideCol>=1&&sideCol<C-1)for(let y=3;y<half;y++)g[y][sideCol]=3;
+    else sideCol=-1;
+  }
+  // 中央行（R奇数・川なし時）
+  if(R%2===1&&!hasRiver){
+    for(let x=0;x<C;x++)if(rnd()<0.18)g[half][x]=1;
+    g[half][mid]=3;
+    if(sideCol>=0)g[half][sideCol]=3;
+  }
+  if(R%2===1&&hasRiver){
+    g[half][mid]=3;
+    if(sideCol>=0)g[half][sideCol]=3;
+  }
+  // 都市（上半分に配置→ミラー）
+  const nCity=2+Math.floor(rnd()*3);
+  let placed=0,guard=0;
+  while(placed<nCity&&guard<60){
+    guard++;
+    const x=Math.floor(rnd()*C),y=1+Math.floor(rnd()*(half-1));
+    if(g[y][x]===0||g[y][x]===1){g[y][x]=4;placed++;}
+  }
+  // 工場
+  const owners=[];
+  let fx=mid-2;if(fx<0)fx=1;
+  g[1][fx]=5;
+  owners.push([fx,1,1],[fx,R-2,0]);
+  if(d>=4){
+    let fx2=mid+2;if(fx2>=C)fx2=C-2;
+    if(g[2][fx2]!==3){g[2][fx2]=5;
+      owners.push([fx2,2,1],[fx2,R-3,0]);}
+  }
+  // 下半分へミラー
+  for(let y=0;y<half;y++)for(let x=0;x<C;x++)g[R-1-y][x]=g[y][x];
+  // ユニット配置
+  const baseTypes={2:["inf","inf","tank"],
+    3:["inf","inf","tank","mech"],
+    4:["inf","inf","tank","mech","recon"],
+    5:["inf","inf","mech","tank","aa"]}[d];
+  const extraPool={2:[],3:[["art","htank"][Math.floor(rnd()*2)]],
+    4:["heli","art"],5:["htank","heli","art"]}[d];
+  const order=[];
+  for(let o=0;o<=mid;o++){order.push(mid+o);if(o>0)order.push(mid-o);}
+  function pick(rows,need,taken){
+    const res=[];
+    for(const y of rows){for(const x of order){
+      if(x<0||x>=C)continue;
+      const t=g[y][x];
+      if(t===2||t===7)continue;
+      const k=x+","+y;
+      if(taken.has(k))continue;
+      taken.add(k);res.push({x,y});
+      if(res.length>=need)return res;
+    }}
+    return res;
+  }
+  const takenB=new Set();
+  const blueCells=pick([R-2,R-3],baseTypes.length,takenB);
+  const units=[];
+  const takenR=new Set();
+  blueCells.forEach((c,j)=>{
+    units.push([baseTypes[j],0,c.x,c.y]);
+    units.push([baseTypes[j],1,c.x,R-1-c.y]);
+    takenR.add(c.x+","+(R-1-c.y));
+  });
+  const extraCells=pick([1,2],extraPool.length,takenR);
+  extraCells.forEach((c,j)=>{units.push([extraPool[j],1,c.x,c.y]);});
+  const funds=[3000+d*250,3000+d*250+d*500+Math.min(4000,Math.floor((i-6)*40))];
+  return{
+    name:NAME_A[Math.floor(rnd()*NAME_A.length)]+NAME_B[Math.floor(rnd()*NAME_B.length)],
+    diff:d,desc:"自動生成マップ／敵戦力"+"💀".repeat(d-1),
+    map:g.map(row=>row.join("")),
+    hq:[{x:mid,y:R-1},{x:mid,y:0}],
+    owners,units,funds};
+}
+for(let i=STAGES.length;i<50;i++)STAGES.push(genStage(i));
 /*STAGES_END*/
 
 /* ====================================================
@@ -498,13 +614,13 @@ const terrCv=document.createElement("canvas");
 function key(x,y){return x+","+y;}
 function setOwner(x,y,p){owner[key(x,y)]=p;terrainDirty=true;}
 function getOwner(x,y){const v=owner[key(x,y)];return v===undefined?null:v;}
-function mkUnit(type,pid,x,y){return{type,pid,x,y,px:x,py:y,hp:10,acted:false,flash:0,exp:0,rank:0};}
+function mkUnit(type,pid,x,y){return{type,pid,x,y,px:x,py:y,hp:MAX_HP,acted:false,flash:0,exp:0,rank:0};}
 function unitAt(x,y){return units.find(u=>u.x===x&&u.y===y&&u.hp>0);}
 function isProp(t){return t===T.CITY||t===T.FACTORY||t===T.HQ;}
 function busy(){return anims.length>0||turnBusy||ended||turn!==BLUE;}
 
 /* ====================================================
-   サウンド（WebAudio）＋iPhone消音モード対策
+   サウンド＋iPhone消音モード対策
 ==================================================== */
 let audio=null, muted=false, unlockEl=null;
 function toggleMute(){muted=!muted;
@@ -573,6 +689,7 @@ const SND={
   select(){tone(660,.07,"square",.08);},
   step(){tone(330,.04,"triangle",.07);},
   shot(){noise(.12,.18,3000,500);tone(180,.1,"sawtooth",.1);},
+  crit(){noise(.15,.22,4000,800);tone(1568,.12,"square",.12);},
   boom(){noise(.4,.3,1200,80);tone(70,.35,"sine",.2);},
   capture(){tone(523,.09,"triangle",.12);tone(659,.09,"triangle",.12,.09);
     tone(784,.14,"triangle",.12,.18);},
@@ -653,12 +770,16 @@ function startGame(idx){
 }
 
 /* ====================================================
-   移動範囲（ダイクストラ＋経路復元）
+   移動範囲（合流先も含む）
 ==================================================== */
 function moveCost(u,t){
   const mt=UNIT_DEF[u.type].moveType;
   if(mt==="air")return 1;
   return TERRAIN_INFO[t].cost[mt];
+}
+function canMerge(u,occ){
+  return occ.pid===u.pid&&occ.type===u.type&&occ!==u
+    &&(occ.hp<MAX_HP||u.hp<MAX_HP);
 }
 function calcMove(u){
   const def=UNIT_DEF[u.type];
@@ -682,14 +803,17 @@ function calcMove(u){
       q.push({x:nx,y:ny,c});
     }
   }
-  const reach=new Set();
+  const reach=new Set(),merge=new Set();
   for(const k of dist.keys()){
     const[x,y]=k.split(",").map(Number);
     const occ=unitAt(x,y);
-    if(occ&&occ!==u)continue;
+    if(occ&&occ!==u){
+      if(canMerge(u,occ)){reach.add(k);merge.add(k);}
+      continue;
+    }
     reach.add(k);
   }
-  return{reach,parent,origin:key(u.x,u.y)};
+  return{reach,merge,parent,origin:key(u.x,u.y)};
 }
 function buildPath(md,destKey){
   const path=[];let k=destKey;
@@ -710,52 +834,63 @@ function enemiesInRange(u){
 }
 
 /* ====================================================
-   戦闘（兵科相性＋ランク補正＋アニメーション）
+   戦闘（相性＋ランク補正＋運＋クリティカル）
 ==================================================== */
-function calcDmg(a,d,aHp){
+function baseDmg(a,d,aHp){
   const mult=UNIT_DEF[a.type].vs[UNIT_DEF[d.type].cls];
   const tdef=UNIT_DEF[d.type].cls==="air"?0:TERRAIN_INFO[map[d.y][d.x]].def;
-  return Math.max(1,Math.round(effAtk(a)*mult*(aHp/10)
-    -(tdef+RANKS[d.rank].def)*0.5));
+  return effAtk(a)*mult*(aHp/MAX_HP)-(tdef+RANKS[d.rank].def)*0.5;
+}
+function rollDmg(a,d,aHp){
+  let v=baseDmg(a,d,aHp);
+  v*=0.9+Math.random()*0.2;          // ±10%の運
+  let crit=false;
+  if(Math.random()<0.08){v*=1.4;crit=true;} // 8%でクリティカル
+  return{dmg:Math.max(1,Math.round(v)),crit};
 }
 function performAttack(a,d,after){
-  const dmg=calcDmg(a,d,a.hp);
+  const roll=rollDmg(a,d,a.hp);
+  const dmg=roll.dmg;
   const dHpAfter=d.hp-dmg;
   const dist=Math.abs(a.x-d.x)+Math.abs(a.y-d.y);
-  let counter=0;
+  let counter=0,cCrit=false;
   const cm=UNIT_DEF[d.type].vs[UNIT_DEF[a.type].cls];
   if(dHpAfter>0&&dist===1&&UNIT_DEF[d.type].range[0]===1&&cm>0){
     const atdef=UNIT_DEF[a.type].cls==="air"?0:TERRAIN_INFO[map[a.y][a.x]].def;
-    counter=Math.max(1,Math.round(effAtk(d)*cm*(dHpAfter/10)*0.7
-      -(atdef+RANKS[a.rank].def)*0.5));
+    let cv=(effAtk(d)*cm*(dHpAfter/MAX_HP)*0.7
+      -(atdef+RANKS[a.rank].def)*0.5);
+    cv*=0.9+Math.random()*0.2;
+    if(Math.random()<0.08){cv*=1.4;cCrit=true;}
+    counter=Math.max(1,Math.round(cv));
   }
   const aHpAfter=a.hp-counter;
-  // 経験値（与ダメージ分＋撃破ボーナス8）
   const aExp=dmg+(dHpAfter<=0?8:0);
   const dExp=counter>0?counter+(aHpAfter<=0?8:0):0;
   const aRankUp=aHpAfter>0&&rankFor(a.exp+aExp)>a.rank;
   const dRankUp=dHpAfter>0&&dExp>0&&rankFor(d.exp+dExp)>d.rank;
   const dirX=Math.sign(d.x-a.x),dirY=Math.sign(d.y-a.y);
   const steps=[];
-  steps.push({dur:150,onStart:()=>SND.shot(),
+  steps.push({dur:150,onStart:()=>roll.crit?SND.crit():SND.shot(),
     update:p=>{const k=Math.sin(p*Math.PI)*.34;
       a.px=a.x+dirX*k;a.py=a.y+dirY*k;}});
   steps.push({dur:280,onStart:()=>{
     a.px=a.x;a.py=a.y;
-    d.hp=dHpAfter;d.flash=1;shake=Math.max(shake,4);
-    addPopup(d.x,d.y,"-"+dmg,"#ff6b5e");
+    d.hp=dHpAfter;d.flash=1;shake=Math.max(shake,roll.crit?6:4);
+    addPopup(d.x,d.y,"-"+dmg,roll.crit?"#ffd76a":"#ff6b5e");
+    if(roll.crit)addPopup(d.x,d.y-0.55,"クリティカル！","#ffd76a");
     if(dHpAfter<=0){delete captureProgress[key(d.x,d.y)];}
   }});
   if(dHpAfter<=0){
     steps.push({dur:420,onStart:()=>{explode(d.x,d.y,PLAYER_COLOR[d.pid]);}});
   }else if(counter>0){
-    steps.push({dur:150,onStart:()=>SND.shot(),
+    steps.push({dur:150,onStart:()=>cCrit?SND.crit():SND.shot(),
       update:p=>{const k=Math.sin(p*Math.PI)*.3;
         d.px=d.x-dirX*k;d.py=d.y-dirY*k;}});
     steps.push({dur:280,onStart:()=>{
       d.px=d.x;d.py=d.y;
-      a.hp=aHpAfter;a.flash=1;shake=Math.max(shake,3);
-      addPopup(a.x,a.y,"-"+counter,"#ff6b5e");
+      a.hp=aHpAfter;a.flash=1;shake=Math.max(shake,cCrit?6:3);
+      addPopup(a.x,a.y,"-"+counter,cCrit?"#ffd76a":"#ff6b5e");
+      if(cCrit)addPopup(a.x,a.y-0.55,"クリティカル！","#ffd76a");
     }});
     if(aHpAfter<=0){
       steps.push({dur:420,onStart:()=>{explode(a.x,a.y,PLAYER_COLOR[a.pid]);}});
@@ -771,7 +906,8 @@ function performAttack(a,d,after){
     units=units.filter(u=>u.hp>0);
     const m=UNIT_DEF[a.type].vs[UNIT_DEF[d.type].cls];
     let msg=`${UNIT_DEF[a.type].name}の攻撃！ <b>${dmg}</b>ダメージ`;
-    if(m>=1.2)msg+="（効果バツグン！）";
+    if(roll.crit)msg+="<b>（クリティカル！）</b>";
+    else if(m>=1.2)msg+="（効果バツグン！）";
     if(dHpAfter<=0)msg+=" → 撃破！";
     else if(counter>0){msg+=`／反撃で<b>${counter}</b>被弾`;
       if(aHpAfter<=0)msg+=" → 撃破された！";}
@@ -789,7 +925,7 @@ function tryCapture(u){
   let cp=captureProgress[k];
   if(!cp||cp.pid!==u.pid)cp={pid:u.pid,amount:0};
   cp.amount+=u.hp;
-  if(cp.amount>=20){
+  if(cp.amount>=CAPTURE_NEED){
     delete captureProgress[k];
     setOwner(u.x,u.y,u.pid);
     SND.capture();
@@ -800,8 +936,20 @@ function tryCapture(u){
   }
   captureProgress[k]=cp;
   SND.select();
-  addPopup(u.x,u.y,cp.amount+"/20","#ffd76a");
-  return`占領中… ${cp.amount}/20`;
+  addPopup(u.x,u.y,cp.amount+"/"+CAPTURE_NEED,"#ffd76a");
+  return`占領中… ${cp.amount}/${CAPTURE_NEED}`;
+}
+function doMerge(u,t){
+  t.hp=Math.min(MAX_HP,u.hp+t.hp);
+  t.exp=Math.max(t.exp,u.exp);
+  const nr=rankFor(t.exp);
+  if(nr>t.rank){t.rank=nr;rankUpFx(t);}
+  t.acted=true;t.flash=1;
+  u.hp=0;
+  units=units.filter(x=>x.hp>0);
+  SND.capture();
+  addPopup(t.x,t.y,"合流！","#7dff9a");
+  finishAction(`${UNIT_DEF[t.type].name}が合流しました（HP ${t.hp}）`);
 }
 
 /* ====================================================
@@ -815,9 +963,9 @@ function beginTurn(pid){
   for(const u of units){
     if(u.pid!==pid)continue;
     const t=map[u.y][u.x];
-    if(isProp(t)&&getOwner(u.x,u.y)===pid&&u.hp<10){
-      u.hp=Math.min(10,u.hp+2);
-      addPopup(u.x,u.y,"+2","#7dff9a");
+    if(isProp(t)&&getOwner(u.x,u.y)===pid&&u.hp<MAX_HP){
+      u.hp=Math.min(MAX_HP,u.hp+4);
+      addPopup(u.x,u.y,"+4","#7dff9a");
     }
   }
 }
@@ -868,7 +1016,7 @@ function aiNext(){
 function aiActUnit(u,next){
   let tg=enemiesInRange(u);
   if(tg.length){
-    tg.sort((a,b)=>(calcDmg(u,b,u.hp)-b.hp*0.5)-(calcDmg(u,a,u.hp)-a.hp*0.5));
+    tg.sort((a,b)=>(baseDmg(u,b,u.hp)-b.hp*0.5)-(baseDmg(u,a,u.hp)-a.hp*0.5));
     performAttack(u,tg[0],msg=>{u.acted=true;updateUI(msg);
       if(checkEnded())return;next();});
     return;
@@ -877,6 +1025,7 @@ function aiActUnit(u,next){
   const rng=UNIT_DEF[u.type].range;
   let best=null,bestScore=-1e9;
   for(const k of md.reach){
+    if(md.merge.has(k))continue;
     const[x,y]=k.split(",").map(Number);
     let score=0;
     const t=map[y][x];
@@ -895,11 +1044,10 @@ function aiActUnit(u,next){
     if(score>bestScore){bestScore=score;best=k;}
   }
   const finish=()=>{
-    // 移動後攻撃は直接攻撃ユニットのみ
     if(!isIndirect(u)){
       let tg2=enemiesInRange(u);
       if(tg2.length){
-        tg2.sort((a,b)=>(calcDmg(u,b,u.hp)-b.hp*0.5)-(calcDmg(u,a,u.hp)-a.hp*0.5));
+        tg2.sort((a,b)=>(baseDmg(u,b,u.hp)-b.hp*0.5)-(baseDmg(u,a,u.hp)-a.hp*0.5));
         performAttack(u,tg2[0],msg=>{u.acted=true;updateUI(msg);
           if(checkEnded())return;next();});
         return;
@@ -983,15 +1131,17 @@ function gameOver(winner){
 }
 
 /* ====================================================
-   ステージ選択
+   ステージ選択（全50）
 ==================================================== */
 function openStageSelect(allowClose){
   const d=document.getElementById("dialog");
-  let html=`<h2>ステージ選択</h2><div class="row">`;
+  let html=`<h2>ステージ選択</h2>
+    <p style="text-align:center;margin-bottom:8px"><small>全${STAGES.length}ステージ</small></p>
+    <div class="row">`;
   STAGES.forEach((s,i)=>{
     html+=`<button onclick="startGame(${i})">
       <span>STAGE ${i+1}　${s.name}${cleared.has(i)?" ✅":""}<br>
-      <small>${"★".repeat(s.diff)}${"☆".repeat(5-s.diff)}　${s.map[0].length}×${s.map.length}マス<br>${s.desc}</small></span></button>`;
+      <small>${"★".repeat(s.diff)}${"☆".repeat(5-s.diff)}　${s.map[0].length}×${s.map.length}マス　${s.desc}</small></span></button>`;
   });
   if(allowClose&&map.length&&!ended)
     html+=`<button class="warn center" onclick="closeOverlay()">とじる（ゲームに戻る）</button>`;
@@ -1011,6 +1161,15 @@ cv.addEventListener("pointerdown",e=>{
   if(x<0||y<0||x>=COLS||y>=ROWS)return;
   handleTap(x,y);
 });
+function terrainLine(u){
+  const ti=TERRAIN_INFO[map[u.y][u.x]];
+  const o=getOwner(u.x,u.y);
+  if(UNIT_DEF[u.type].cls==="air")
+    return`📍${ti.name}（飛行中は地形効果なし）`;
+  let s=`📍${ti.name}　防御★${ti.def}`;
+  if(o!==null)s+=`（${PLAYER_NAME[o]}領）`;
+  return s;
+}
 function handleTap(x,y){
   if(mode==="attack"){
     const t=attackTargets.find(u=>u.x===x&&u.y===y);
@@ -1021,13 +1180,21 @@ function handleTap(x,y){
     }else{SND.cancel();}
     return;
   }
+  if(mode==="acted"){SND.cancel();return;} // 行動選択中はボタンで操作
   if(mode==="move"&&moveData&&moveData.reach.has(key(x,y))){
     const u=sel.unit;
+    const ox=u.x,oy=u.y;
+    const isMerge=moveData.merge.has(key(x,y));
+    const target=isMerge?unitAt(x,y):null;
     const moved=key(x,y)!==moveData.origin;
     const path=buildPath(moveData,key(x,y));
     u.x=x;u.y=y;
     mode="anim";setBtns([]);
-    animateMove(u,path,()=>afterMove(u,moved));
+    if(isMerge){
+      animateMove(u,path,()=>doMerge(u,target));
+    }else{
+      animateMove(u,path,()=>afterMove(u,moved,ox,oy));
+    }
     return;
   }
   const u=unitAt(x,y);
@@ -1039,9 +1206,9 @@ function handleTap(x,y){
     const stars=u.rank?` <span style="color:#ffd76a">${"★".repeat(u.rank)}</span>`:"";
     const rngTxt=isIndirect(u)?`／射程${ud.range[0]}-${ud.range[1]}`:"";
     updateUI(`<img src="${sprUrl[u.type][BLUE]}">
-      <span><b>${ud.name}</b>${stars} HP${u.hp}　攻撃${effAtk(u)}${rngTxt}／移動${ud.move}<br>
-      <small>${rk.name}　EXP ${u.exp}${next?`（次のランクまで${next.exp-u.exp}）`:"（最高ランク）"}</small></span>`);
-    setBtns([{label:"ここで行動",fn:()=>{mode="anim";afterMove(u,false);}},
+      <span><b>${ud.name}</b>${stars} HP${u.hp}/${MAX_HP}　攻撃${effAtk(u)}${rngTxt}／移動${ud.move}<br>
+      <small>${rk.name}　EXP ${u.exp}${next?`（次まで${next.exp-u.exp}）`:"（最高）"}　${terrainLine(u)}</small></span>`);
+    setBtns([{label:"ここで行動",fn:()=>{mode="anim";afterMove(u,false,u.x,u.y);}},
              {label:"選択解除",fn:cancelSel}]);
   }else if(u&&u.pid===RED){
     SND.select();
@@ -1050,8 +1217,8 @@ function handleTap(x,y){
     const stars=u.rank?` <span style="color:#ffd76a">${"★".repeat(u.rank)}</span>`:"";
     const rngTxt=isIndirect(u)?`／射程${ud.range[0]}-${ud.range[1]}`:"";
     updateUI(`<img src="${sprUrl[u.type][RED]}">
-      <span><b style="color:#ff8a92">敵${ud.name}</b>${stars} HP${u.hp}　攻撃${effAtk(u)}${rngTxt}／移動${ud.move}<br>
-      <small>${ud.desc}</small></span>`);
+      <span><b style="color:#ff8a92">敵${ud.name}</b>${stars} HP${u.hp}/${MAX_HP}　攻撃${effAtk(u)}${rngTxt}／移動${ud.move}<br>
+      <small>${ud.desc}　${terrainLine(u)}</small></span>`);
   }else{
     cancelSel();
     const t=map[y][x];const ti=TERRAIN_INFO[t];
@@ -1075,7 +1242,7 @@ function animateMove(u,path,after){
   }
   pushAnim(steps,()=>{u.px=u.x;u.py=u.y;after&&after();});
 }
-function afterMove(u,moved){
+function afterMove(u,moved,ox,oy){
   sel={unit:u};moveData=null;
   const canFire=!isIndirect(u)||!moved;
   attackTargets=canFire?enemiesInRange(u):[];
@@ -1083,10 +1250,12 @@ function afterMove(u,moved){
   const btns=[];
   if(attackTargets.length)btns.push({label:"⚔️ 攻撃",warn:true,fn:()=>{
     mode="attack";updateUI("攻撃する敵（赤色のマス）をタップ");
-    setBtns([{label:"やめる",fn:()=>{mode="acted";afterMove(u,moved);}}]);}});
+    setBtns([{label:"やめる",fn:()=>{afterMove(u,moved,ox,oy);}}]);}});
   if(cap)btns.push({label:"🚩 占領",gold:true,fn:()=>{
     const m=tryCapture(u);u.acted=true;finishAction(m||"");}});
   btns.push({label:"待機",fn:()=>{u.acted=true;finishAction("待機しました");}});
+  if(moved)btns.push({label:"↩ 戻る",fn:()=>{
+    u.x=ox;u.y=oy;u.px=ox;u.py=oy;SND.cancel();cancelSel();}});
   mode="acted";
   let hint="行動を選んでください";
   if(isIndirect(u)&&moved)hint+="<br><small>（移動したターンは砲撃できません）</small>";
@@ -1191,17 +1360,14 @@ function renderTerrain(){
   for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){
     const t=map[y][x];
     const px=x*TILE,py=y*TILE,S=TILE;
-    // ベース
     if(t===T.RIVER){
       g.fillStyle=(x+y)%2===0?"#4a8fd4":"#458ace";
       g.fillRect(px,py,S,S);
-      // 波
       g.fillStyle="#8cc4ee";
       for(let i=0;i<3;i++){
         const r1=rseed(x*5+i,y*3),r2=rseed(x*2,y*7+i);
         g.fillRect(px+r1*(S-8)+2,py+r2*(S-6)+3,S*.2,2);
       }
-      // 岸辺
       g.fillStyle="#bfe2f5";
       if(tileAt(x,y-1)!==T.RIVER)g.fillRect(px,py,S,2);
       if(tileAt(x,y+1)!==T.RIVER)g.fillRect(px,py+S-2,S,2);
@@ -1223,7 +1389,6 @@ function renderTerrain(){
       const vBridge=isRiv(-1,0)&&isRiv(1,0);
       const hBridge=isRiv(0,-1)&&isRiv(0,1);
       if(vBridge||hBridge){
-        // 橋：下に水を敷く
         g.fillStyle="#4a8fd4";g.fillRect(px,py,S,S);
         g.fillStyle="#c9a86b";
         if(vBridge){g.fillRect(px+S*.18,py,S*.64,S);
@@ -1232,19 +1397,19 @@ function renderTerrain(){
         else{g.fillRect(px,py+S*.18,S,S*.64);
           g.fillStyle="#8a6f44";
           g.fillRect(px,py+S*.18,S,3);g.fillRect(px,py+S*.82-3,S,3);}
-        continue;
+      }else{
+        const conn=(dx,dy)=>{const nt=tileAt(x+dx,y+dy);
+          return nt===T.ROAD||isProp(nt);};
+        g.fillStyle="#d8c08a";
+        const w=S*.46,o=(S-w)/2;
+        g.fillRect(px+o,py+o,w,w);
+        if(conn(1,0))g.fillRect(px+o,py+o,S-o,w);
+        if(conn(-1,0))g.fillRect(px,py+o,o+w,w);
+        if(conn(0,1))g.fillRect(px+o,py+o,w,S-o);
+        if(conn(0,-1))g.fillRect(px+o,py,w,o+w);
+        g.fillStyle="#efe2b8";
+        g.fillRect(px+S*.44,py+S*.44,S*.12,S*.12);
       }
-      const conn=(dx,dy)=>{const nt=tileAt(x+dx,y+dy);
-        return nt===T.ROAD||isProp(nt);};
-      g.fillStyle="#d8c08a";
-      const w=S*.46,o=(S-w)/2;
-      g.fillRect(px+o,py+o,w,w);
-      if(conn(1,0))g.fillRect(px+o,py+o,S-o,w);
-      if(conn(-1,0))g.fillRect(px,py+o,o+w,w);
-      if(conn(0,1))g.fillRect(px+o,py+o,w,S-o);
-      if(conn(0,-1))g.fillRect(px+o,py,w,o+w);
-      g.fillStyle="#efe2b8";
-      g.fillRect(px+S*.44,py+S*.44,S*.12,S*.12);
     }else if(t===T.FOREST){
       drawTree(g,px+S*.14,py+S*.1,S*.5);
       drawTree(g,px+S*.42,py+S*.32,S*.55);
@@ -1352,16 +1517,25 @@ function draw(){
     ctx.fillStyle="rgba(0,0,0,.55)";
     ctx.fillRect(x*TILE+3,y*TILE+TILE-7,TILE-6,5);
     ctx.fillStyle="#ffd76a";
-    ctx.fillRect(x*TILE+3,y*TILE+TILE-7,(TILE-6)*Math.min(1,cp.amount/20),5);
+    ctx.fillRect(x*TILE+3,y*TILE+TILE-7,(TILE-6)*Math.min(1,cp.amount/CAPTURE_NEED),5);
   }
   if(moveData&&mode==="move"){
     const pulse=.3+.12*Math.sin(timeNow/220);
-    ctx.fillStyle=`rgba(90,170,255,${pulse})`;
     for(const k of moveData.reach){
       const[x,y]=k.split(",").map(Number);
-      ctx.fillRect(x*TILE,y*TILE,TILE,TILE);
-      ctx.strokeStyle="rgba(150,210,255,.7)";
-      ctx.strokeRect(x*TILE+1.5,y*TILE+1.5,TILE-3,TILE-3);
+      if(moveData.merge.has(k)){
+        ctx.fillStyle=`rgba(110,255,150,${pulse+.1})`;
+        ctx.fillRect(x*TILE,y*TILE,TILE,TILE);
+        ctx.fillStyle="#fff";
+        ctx.font="bold "+Math.floor(TILE*.4)+"px sans-serif";
+        ctx.textAlign="center";ctx.textBaseline="middle";
+        ctx.fillText("＋",x*TILE+TILE/2,y*TILE+TILE*.28);
+      }else{
+        ctx.fillStyle=`rgba(90,170,255,${pulse})`;
+        ctx.fillRect(x*TILE,y*TILE,TILE,TILE);
+        ctx.strokeStyle="rgba(150,210,255,.7)";
+        ctx.strokeRect(x*TILE+1.5,y*TILE+1.5,TILE-3,TILE-3);
+      }
     }
   }
   if(mode==="attack"){
@@ -1400,8 +1574,8 @@ function draw(){
         ctx.fillStyle="#ffd76a";drawStar(ctx,sx2,sy2,ss);
       }
     }
-    if(u.hp<10){
-      ctx.font="bold "+Math.floor(TILE*.32)+"px sans-serif";
+    if(u.hp<MAX_HP){
+      ctx.font="bold "+Math.floor(TILE*.3)+"px sans-serif";
       ctx.textAlign="right";ctx.textBaseline="alphabetic";
       ctx.lineWidth=3;ctx.strokeStyle="#000";
       ctx.strokeText(u.hp,u.px*TILE+TILE-3,u.py*TILE+TILE-3);
