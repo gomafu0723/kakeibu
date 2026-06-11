@@ -557,6 +557,7 @@ function genStage(i){
   for(let o=0;o<=mid;o++){order.push(mid+o);if(o>0)order.push(mid-o);}
   function pick(rows,need,taken){
     const res=[];
+    if(need<=0)return res;
     for(const y of rows){for(const x of order){
       if(x<0||x>=C)continue;
       const t=g[y][x];
