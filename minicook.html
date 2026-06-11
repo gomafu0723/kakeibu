@@ -20,9 +20,13 @@
   #app{display:flex;flex-direction:column;height:100%;}
 
   /* ===== HUD ===== */
-  #hud{display:flex;justify-content:space-between;align-items:center;
-    padding:6px 12px;background:linear-gradient(180deg,#5a3a22,#4a2f1d);
+  #hud{display:flex;justify-content:space-between;align-items:center;gap:6px;
+    padding:6px 10px;background:linear-gradient(180deg,#5a3a22,#4a2f1d);
     font-size:15px;font-weight:bold;border-bottom:3px solid #1a0f08;z-index:2;}
+  #roomTag{font-size:11px;opacity:.75;flex:1;text-align:center;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  #muteB{background:none;border:none;font-size:18px;padding:0 2px;
+    font-family:inherit;color:var(--txt);}
   #orders{display:flex;gap:6px;padding:6px 8px;background:#3a2515;
     min-height:64px;align-items:stretch;overflow-x:auto;z-index:2;}
   .ocard{background:#fff8ec;color:#4a2f1d;border-radius:8px;padding:4px 8px;
@@ -72,7 +76,10 @@
   button.btn:active{transform:translateY(2px);box-shadow:0 2px 0 #4a2a12;}
   button.btn.gold{background:var(--gold);color:#5a3a00;box-shadow:0 4px 0 #b08a3e;}
   button.btn.green{background:var(--green);box-shadow:0 4px 0 #1f5c23;}
-  button.btn:disabled{opacity:.4;}
+  button.btn:disabled{opacity:.35;}
+  button.btn.stg{display:flex;justify-content:space-between;align-items:center;
+    font-size:14px;padding:11px 12px;text-align:left;}
+  button.btn.stg .stars{color:var(--gold);font-size:13px;letter-spacing:.1em;flex-shrink:0;}
   #codeShow{font-size:44px;letter-spacing:.25em;color:var(--gold);
     font-weight:900;margin:6px 0;text-shadow:0 3px 0 rgba(0,0,0,.5);}
   #codeIn{font-size:32px;letter-spacing:.3em;text-align:center;width:100%;
@@ -81,9 +88,24 @@
   .plist{text-align:left;font-size:15px;line-height:2;background:#3a2515;
     border-radius:8px;padding:8px 14px;margin:8px 0;}
   .dot{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:8px;}
-  #count{position:fixed;inset:0;display:none;justify-content:center;align-items:center;
-    font-size:110px;font-weight:900;color:var(--gold);z-index:9;
-    text-shadow:0 6px 0 rgba(0,0,0,.6);pointer-events:none;}
+  .bigstars{font-size:44px;letter-spacing:.08em;margin:4px 0;height:54px;}
+  .bigstars span{display:inline-block;opacity:0;transform:scale(3);}
+  .bigstars span.on{animation:starPop .45s ease forwards;color:var(--gold);
+    text-shadow:0 3px 0 rgba(0,0,0,.5);}
+  .bigstars span.off{opacity:.25;transform:scale(1);color:#999;}
+  @keyframes starPop{
+    0%{opacity:0;transform:scale(3) rotate(-30deg);}
+    70%{opacity:1;transform:scale(.9) rotate(8deg);}
+    100%{opacity:1;transform:scale(1) rotate(0);}
+  }
+  .mvprow{display:flex;justify-content:space-between;font-size:13px;
+    padding:3px 4px;border-bottom:1px dashed rgba(255,255,255,.15);}
+  #count{position:fixed;inset:0;display:none;flex-direction:column;
+    justify-content:center;align-items:center;z-index:9;pointer-events:none;
+    text-shadow:0 6px 0 rgba(0,0,0,.6);}
+  #cntStage{font-size:22px;font-weight:900;color:#fff;}
+  #cntNum{font-size:110px;font-weight:900;color:var(--gold);line-height:1.1;}
+  #cntTip{font-size:13px;font-weight:bold;color:#ffe9b8;max-width:86vw;text-align:center;}
   #errbar{position:fixed;left:0;right:0;top:0;background:#b00;color:#fff;
     font-size:11px;padding:4px 8px;z-index:99;display:none;word-break:break-all;}
   .ver{font-size:10px;opacity:.5;margin-top:8px;}
@@ -94,19 +116,24 @@
 <div id="app">
   <div id="hud">
     <span id="time">⏱ ---</span>
-    <span id="roomTag" style="font-size:12px;opacity:.7"></span>
+    <span id="roomTag"></span>
     <span id="score">💰 0</span>
+    <button id="muteB" onclick="toggleMute()">🔊</button>
   </div>
   <div id="orders"></div>
   <div id="stage"><canvas id="cv"></canvas></div>
   <div id="ctrl">
-    <div id="ctrlHint">左：うごく ／ 右：アクション</div>
+    <div id="ctrlHint">左：うごく ／ 右：とる・つかう・消火</div>
     <div id="padL"></div>
     <div id="joyBase"></div><div id="joyStick"></div>
     <button id="btnA">とる<br>つかう</button>
   </div>
 </div>
-<div id="count"></div>
+<div id="count">
+  <div id="cntStage"></div>
+  <div id="cntNum"></div>
+  <div id="cntTip"></div>
+</div>
 
 <div id="overlay">
   <div class="dialog" id="dialog"></div>
@@ -115,10 +142,11 @@
 <script>
 "use strict";
 /* =====================================================
-   わいわいキッチン v1.0
+   わいわいキッチン v2.0
    4人協力クッキング（PeerJS P2P通信）
+   ステージ制・コンロ調理・火事＆消火・★評価・BGM
 ===================================================== */
-const VER="v1.0";
+const VER="v2.0";
 
 /* ---- 画面エラーを表示（デバッグ用） ---- */
 window.onerror=function(msg,src,line){
@@ -130,40 +158,128 @@ window.onerror=function(msg,src,line){
 /* =====================================================
    定数
 ===================================================== */
-const MAPW=9,MAPH=7;
-// #=カウンター .=床 T/L/B=食材箱 P=皿 K=まな板 S=提出口 D=ゴミ箱
-const MAP=[
-"#T#L#B#P#",
-"#.......#",
-"K...#...S",
-"K..###..S",
-"#...#...#",
-"#.......#",
-"####D####",
-];
-const SPAWNS=[[1,1],[7,1],[1,5],[7,5]];
+// マップ記号：#=カウンター .=床 T/L/M/C=食材箱(要カット) B/R=食材箱(そのまま)
+//             P=皿 K=まな板 G=コンロ S=提出口 D=ゴミ箱 E=消火器置き場
+const SPEED=4.0, RADIUS=0.32, CHOP_NEED=3, PLATE_MAX=4;
+const COOK_T=3.5, OVER_T=7.0, FIRE_DELAY=5.0, FIRE_HP=4;
 const PCOLORS=["#3b6fe0","#e04a55","#43a047","#f5a623"];
 const PNAMES=["P1","P2","P3","P4"];
-const SPEED=4.0, RADIUS=0.32, CHOP_NEED=3, GAME_TIME=180;
-const ORDER_LIFE=55, MAX_ORDERS=3;
+
 const RECIPES=[
  {name:"サラダ",emoji:"🥗",need:["l","t"],pay:100},
  {name:"ブルスケッタ",emoji:"🍅🍞",need:["B","t"],pay:120},
  {name:"サンドイッチ",emoji:"🥪",need:["B","l","t"],pay:150},
+ {name:"チーズトースト",emoji:"🧀🍞",need:["B","c"],pay:130},
+ {name:"ハンバーガー",emoji:"🍔",need:["B","f"],pay:180},
+ {name:"チーズバーガー",emoji:"🍔🧀",need:["B","c","f"],pay:220},
+ {name:"スペシャル",emoji:"🍔✨",need:["B","c","f","t"],pay:280},
+ {name:"やきにく丼",emoji:"🍖🍚",need:["R","f"],pay:200},
+ {name:"チーズ肉丼",emoji:"🧀🍚",need:["R","c","f"],pay:240},
 ];
-const FOOD_EMOJI={T:"🍅",t:"🍅",L:"🥬",l:"🥬",B:"🍞"};
+const FOOD_EMOJI={T:"🍅",t:"🍅",L:"🥬",l:"🥬",B:"🍞",M:"🥩",m:"🥩",
+  C:"🧀",c:"🧀",R:"🍚",f:"🍖",x:"🟤",E:"🧯"};
 
+const STAGES=[
+ {name:"はじめてのキッチン",em:"🥗",time:150,oLife:60,maxO:3,sRate:.25,
+  rs:[0,1,2],goal:[300,550,800],tip:"きほんの3レシピ！切って・のせて・出す！",
+  spawns:[[1,1],[7,1],[1,5],[7,5]],
+  map:["#T#L#B#P#",
+       "#.......#",
+       "K...#...S",
+       "K..###..S",
+       "#...#...#",
+       "#.......#",
+       "####D####"]},
+ {name:"チーズこうじょう",em:"🧀",time:150,oLife:58,maxO:3,sRate:.28,
+  rs:[0,2,3],goal:[350,600,850],tip:"🧀チーズも切ってからつかおう！",
+  spawns:[[1,1],[7,1],[1,5],[7,5]],
+  map:["#T#L#C#B#",
+       "#.......#",
+       "K.......S",
+       "#..###..P",
+       "K.......S",
+       "#..K....#",
+       "####D####"]},
+ {name:"グリルかいてん！",em:"🔥",time:160,oLife:68,maxO:3,sRate:.25,
+  rs:[3,4,5],goal:[350,650,950],tip:"🥩は切って🔥で焼く！焼きすぎると火事！🧯",
+  spawns:[[1,1],[7,1],[1,5],[7,5]],
+  map:["#M#B#C#P#",
+       "#.......#",
+       "K...#...S",
+       "G...E...S",
+       "G...#...D",
+       "#.......#",
+       "#########"]},
+ {name:"わたしてキッチン",em:"🤝",time:170,oLife:72,maxO:3,sRate:.25,duo:1,
+  rs:[0,2,4],goal:[300,550,800],tip:"へやが2つ！カウンターごしに食材をわたそう！",
+  spawns:[[1,1],[6,1],[2,5],[6,5]],
+  map:["#T#L#B#M#",
+       "#...#...#",
+       "K...#..G#",
+       "K...E...S",
+       "#...#P.G#",
+       "#...#...#",
+       "##D###D##"]},
+ {name:"おにくまつり",em:"🍖",time:170,oLife:62,maxO:4,sRate:.3,
+  rs:[4,7,8],goal:[450,750,1100],tip:"コンロ4つの肉ラッシュ！火事ちゅうい！",
+  spawns:[[1,1],[7,1],[1,5],[7,5]],
+  map:["#M#R#B#C#",
+       "#.......#",
+       "K..G#G..S",
+       "P...E...S",
+       "K..G#G..D",
+       "#.......#",
+       "#########"]},
+ {name:"ラッシュアワー",em:"🌪️",time:180,oLife:55,maxO:4,sRate:.35,
+  rs:[0,1,2,3,4,5,6,7,8],goal:[500,850,1250],tip:"全レシピ登場の最終決戦！家族の力を見せろ！",
+  spawns:[[1,1],[7,1],[1,5],[7,5]],
+  map:["#T#L#B#M#",
+       "C.......R",
+       "K...#...S",
+       "G...#...S",
+       "G...#...P",
+       "K..E....D",
+       "#########"]},
+];
+
+/* ---- 現在ステージ ---- */
+let curIdx=0,CUR=STAGES[0],MAP=CUR.map,MAPW=9,MAPH=7,stoveKeys=[];
+function setStage(i){
+  curIdx=i;CUR=STAGES[i];MAP=CUR.map;
+  MAPW=MAP[0].length;MAPH=MAP.length;
+  stoveKeys=[];
+  for(let y=0;y<MAPH;y++)for(let x=0;x<MAPW;x++)
+    if(MAP[y][x]==="G")stoveKeys.push(x+","+y);
+  lastOrderHtml="__";lerpP={};
+  resize();
+}
 function tileAt(x,y){
   if(x<0||y<0||x>=MAPW||y>=MAPH)return "#";
   return MAP[y][x];
 }
 function isSolid(ch){return ch!==".";}
-function isCounterLike(ch){return ch==="#"||ch==="K";}
+function isRawChop(k){return k==="T"||k==="L"||k==="M"||k==="C";}
+function isFood(k){return k==="t"||k==="l"||k==="c"||k==="f"||k==="B"||k==="R";}
+
+/* =====================================================
+   セーブ（★記録）※保存できない環境でも動くようtry/catch
+===================================================== */
+let SAVE={};
+try{SAVE=JSON.parse(localStorage.getItem("waiwai_v2")||"{}");}catch(e){SAVE={};}
+function saveSave(){try{localStorage.setItem("waiwai_v2",JSON.stringify(SAVE));}catch(e){}}
+function best(i){return (SAVE.s&&SAVE.s[i])||{st:0,sc:0};}
+function unlocked(i){return i===0||best(i-1).st>=1;}
+function saveBest(i,st,sc){
+  if(!SAVE.s)SAVE.s={};
+  const b=best(i);
+  SAVE.s[i]={st:Math.max(b.st,st),sc:Math.max(b.sc,sc)};
+  saveSave();
+}
 
 /* =====================================================
    通信（PeerJS）
 ===================================================== */
-const PREFIX="waiwai26k-";
+const PREFIX="waiwai26k2-";
 let peer=null,isHost=false,roomCode="",conns=[],hostConn=null,myPid=0;
 let netReady=false;
 
@@ -196,14 +312,13 @@ function tryHostId(tries){
       c._pid=pid;
       conns.push(c);
       G.players.push(newPlayer(pid));
-      c.send({t:"welcome",pid:pid,code:roomCode});
+      c.send({t:"welcome",pid:pid,code:roomCode,v:VER});
       sendLobbyAll();
       showLobby();
     });
     c.on("data",d=>onHostData(c,d));
     c.on("close",()=>{
       if(G.phase==="lobby"){
-        // ロビー中の離脱：詰め直し
         conns=conns.filter(x=>x!==c);
         rebuildLobbyPlayers();
         sendLobbyAll();showLobby();
@@ -247,10 +362,20 @@ function onHostData(c,d){
 }
 function onClientData(d){
   if(!d)return;
-  if(d.t==="welcome"){myPid=d.pid;myPidAssigned=true;roomCode=d.code;}
+  if(d.t==="welcome"){
+    myPid=d.pid;myPidAssigned=true;roomCode=d.code;
+    if(d.v!==VER){
+      netError("バージョンがちがいます（ホスト:"+(d.v||"旧版")+" / あなた:"+VER+"）。<br>全員でページを再読み込み（↻）してください");
+    }
+  }
   else if(d.t==="lobby"){
     G.phase="lobby";G.players=d.players.map(i=>newPlayer(i));
     showLobby();
+  }
+  else if(d.t==="sel"){
+    G.phase="lobby";
+    showDialog(`<h2>🗺️ ステージ選択中</h2>
+      <p style="text-align:center">ホストがステージを<br>えらんでいます…</p>`);
   }
   else if(d.t==="full"){netError("ルームが満員か、ゲーム中です");}
   else if(d.t==="state"){applyState(d.s);}
@@ -259,6 +384,7 @@ function sendLobbyAll(){
   const msg={t:"lobby",players:G.players.map(p=>p.pid)};
   conns.forEach(c=>{try{c.send(msg);}catch(_){}});
 }
+function sendAll(msg){conns.forEach(c=>{try{c.send(msg);}catch(_){}});}
 function netError(msg){
   showDialog(`<h2>⚠️ 接続エラー</h2>
     <p style="text-align:center">${msg}</p>
@@ -269,21 +395,22 @@ function netError(msg){
    ゲーム状態
 ===================================================== */
 function newPlayer(pid){
-  return{pid,x:SPAWNS[pid][0],y:SPAWNS[pid][1],fx:0,fy:1,
-    held:null,gone:false};
+  const sp=CUR.spawns[pid]||CUR.spawns[0];
+  return{pid,x:sp[0],y:sp[1],fx:0,fy:1,
+    held:null,gone:false,st:{sv:0,ch:0,ck:0}};
 }
 // ホストの正本状態
 const G={
   phase:"home",      // home/home2/lobby/count/play/end
   players:[],tiles:{},orders:[],
-  time:GAME_TIME,score:0,served:0,missed:0,
-  cnt:3,evSeq:0,events:[],orderSeq:0,
+  time:150,score:0,served:0,missed:0,
+  cnt:3,evSeq:0,events:[],orderSeq:0,gFl:[0,0,0],
 };
 let inputVec={0:{x:0,y:0}};   // pid -> 移動ベクトル
 let pendActs={};              // pid -> 押されたアクション数
 // 表示用（クライアントは受信、ホストは自前生成）
-let V={players:[],tiles:{},orders:[],time:GAME_TIME,score:0,
-  served:0,missed:0,phase:"home",cnt:3,events:[]};
+let V={players:[],tiles:{},orders:[],time:150,score:0,
+  served:0,missed:0,phase:"home",cnt:3,events:[],stg:0};
 let lerpP={};   // pid -> {x,y}
 let lastEvId=0;
 let localPopups=[];
@@ -291,6 +418,8 @@ let localPopups=[];
 /* =====================================================
    サウンド＋iPhone消音モード対策
 ===================================================== */
+let MUTED=false;
+try{MUTED=!!JSON.parse(localStorage.getItem("waiwai_mute")||"false");}catch(e){}
 let audio=null,unlockEl=null;
 function ac(){if(!audio){const A=window.AudioContext||window.webkitAudioContext;
   try{audio=new A();}catch(e){}}
@@ -318,27 +447,65 @@ function unlockAudio(){
   if(unlockEl)unlockEl.play().catch(()=>{});
 }
 document.addEventListener("pointerdown",unlockAudio,{passive:true});
-function tone(f,d,ty,vo,wh){
+function toneAt(f,d,ty,vo,at){
+  if(MUTED)return;
   const a=ac();if(!a)return;
-  const t=a.currentTime+(wh||0);
   const o=a.createOscillator(),g=a.createGain();
   o.type=ty||"square";o.frequency.value=f;
-  g.gain.setValueAtTime(vo||.1,t);
-  g.gain.exponentialRampToValueAtTime(.001,t+d);
-  o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+d+.02);
+  g.gain.setValueAtTime(vo||.1,at);
+  g.gain.exponentialRampToValueAtTime(.001,at+d);
+  o.connect(g);g.connect(a.destination);o.start(at);o.stop(at+d+.02);
+}
+function tone(f,d,ty,vo,wh){
+  const a=ac();if(!a)return;
+  toneAt(f,d,ty,vo,a.currentTime+(wh||0));
 }
 const SND={
   blip(){tone(660,.05,"square",.07);},
   put(){tone(440,.05,"triangle",.08);},
   chop(){tone(220,.05,"square",.1);tone(150,.06,"square",.07,.03);},
   ready(){tone(880,.07,"triangle",.1);tone(1175,.1,"triangle",.1,.07);},
+  cooked(){tone(740,.07,"triangle",.1);tone(988,.07,"triangle",.1,.07);
+    tone(1319,.12,"triangle",.1,.14);},
   serve(){tone(784,.08,"square",.1);tone(988,.08,"square",.1,.08);
     tone(1319,.16,"square",.1,.16);},
   buzz(){tone(160,.2,"sawtooth",.12);},
   miss(){tone(220,.15,"square",.1);tone(165,.25,"square",.1,.12);},
+  burn(){tone(196,.2,"sawtooth",.1);tone(131,.3,"sawtooth",.1,.15);},
+  fire(){for(let i=0;i<3;i++){tone(880,.1,"square",.12,i*.22);
+    tone(660,.1,"square",.12,i*.22+.11);}},
+  spray(){tone(1400,.08,"sawtooth",.04);tone(1100,.1,"sawtooth",.04,.05);},
+  douse(){tone(523,.1,"triangle",.1);tone(784,.16,"triangle",.1,.1);},
+  star(){tone(784,.09,"square",.1);tone(988,.09,"square",.1,.09);
+    tone(1175,.09,"square",.1,.18);tone(1568,.2,"square",.1,.27);},
   cd(){tone(523,.12,"square",.1);},
   go(){tone(784,.25,"square",.12);},
 };
+
+/* ===== BGM（ようきなキッチンソング） ===== */
+const BGM_M=[523,587,659,784, 659,587,523,0, 587,659,698,880, 698,659,587,0,
+             659,784,880,1047, 880,784,659,0, 587,698,784,988, 880,784,659,523];
+const BGM_B=[262,0,330,0, 262,0,330,0, 294,0,349,0, 294,0,349,0,
+             330,0,392,0, 330,0,392,0, 294,0,349,0, 392,0,392,0];
+let bgmOn=false,bgmT=0,bgmS=0;
+setInterval(()=>{
+  if(!bgmOn||MUTED)return;
+  const a=ac();if(!a||a.state!=="running")return;
+  if(bgmT<a.currentTime)bgmT=a.currentTime+0.05;
+  const hurry=(V.phase==="play"&&V.time<=30);
+  const dur=hurry?0.11:0.135;
+  while(bgmT<a.currentTime+0.3){
+    const m=BGM_M[bgmS%32],b=BGM_B[bgmS%32];
+    if(m)toneAt(m,dur*0.9,"square",.035,bgmT);
+    if(b)toneAt(b,dur*1.6,"triangle",.05,bgmT);
+    bgmS++;bgmT+=dur;
+  }
+},60);
+function toggleMute(){
+  MUTED=!MUTED;
+  document.getElementById("muteB").textContent=MUTED?"🔇":"🔊";
+  try{localStorage.setItem("waiwai_mute",JSON.stringify(MUTED));}catch(e){}
+}
 
 /* =====================================================
    ホスト：ゲームロジック
@@ -350,12 +517,19 @@ function pushEvent(n,x,y,v){
   if(G.events.length>10)G.events.shift();
   fxEvent(e);lastEvId=G.evSeq; // ホストは即時再生
 }
-function hostStart(){
+function hostStart(idx){
+  if(!unlocked(idx))return;
+  setStage(idx);
   // 初期化
-  G.tiles={};G.orders=[];G.time=GAME_TIME;G.score=0;
-  G.served=0;G.missed=0;G.orderSeq=0;
+  G.tiles={};G.orders=[];G.time=CUR.time;G.score=0;
+  G.served=0;G.missed=0;G.orderSeq=0;G.gFl=[0,0,0];
+  // 消火器を配置
+  for(let y=0;y<MAPH;y++)for(let x=0;x<MAPW;x++)
+    if(MAP[y][x]==="E")G.tiles[x+","+y]={k:"E"};
   G.players.forEach((p,i)=>{
-    p.x=SPAWNS[i][0];p.y=SPAWNS[i][1];p.fx=0;p.fy=1;p.held=null;
+    const sp=CUR.spawns[i]||CUR.spawns[0];
+    p.x=sp[0];p.y=sp[1];p.fx=0;p.fy=1;p.held=null;
+    p.st={sv:0,ch:0,ck:0};
   });
   spawnOrder();spawnOrder();
   G.phase="count";G.cnt=3;
@@ -367,10 +541,10 @@ function hostStart(){
   setTimeout(tick,1000);
 }
 function spawnOrder(){
-  if(G.orders.length>=MAX_ORDERS)return;
-  const r=Math.floor(Math.random()*RECIPES.length);
+  if(G.orders.length>=CUR.maxO)return;
+  const r=CUR.rs[Math.floor(Math.random()*CUR.rs.length)];
   G.orderSeq++;
-  G.orders.push({id:G.orderSeq,r,t:ORDER_LIFE});
+  G.orders.push({id:G.orderSeq,r,t:CUR.oLife});
 }
 function hostSim(dt){
   if(G.phase==="play"){
@@ -382,10 +556,32 @@ function hostSim(dt){
     if(expired.length){
       G.orders=G.orders.filter(o=>o.t>0);
       expired.forEach(()=>{G.score=Math.max(0,G.score-30);G.missed++;
-        pushEvent("miss",7.5,2.5,-30);});
+        pushEvent("miss",MAPW-1.5,2.5,-30);});
       while(G.orders.length<2)spawnOrder();
     }
-    if(G.orders.length<2&&Math.random()<dt*0.4)spawnOrder();
+    if(G.orders.length<2)spawnOrder();
+    else if(G.orders.length<CUR.maxO&&Math.random()<dt*CUR.sRate)spawnOrder();
+    // コンロの調理すすみ
+    for(const key of stoveKeys){
+      const it=G.tiles[key];if(!it)continue;
+      const sxy=key.split(",");
+      const sx=+sxy[0],sy=+sxy[1];
+      if(it.fi)continue;
+      if(it.k==="m"){
+        it.ck=(it.ck||0)+dt/COOK_T;
+        if(it.ck>=1){
+          it.k="f";it.ck=1;it.ov=0;
+          pushEvent("cooked",sx,sy);
+          const cp=G.players[it.by];if(cp)cp.st.ck++;
+        }
+      }else if(it.k==="f"){
+        it.ov=(it.ov||0)+dt/OVER_T;
+        if(it.ov>=1){it.k="x";it.ov=1;it.fz=0;pushEvent("burn",sx,sy);}
+      }else if(it.k==="x"){
+        it.fz=(it.fz||0)+dt;
+        if(it.fz>=FIRE_DELAY){it.fi=1;it.fh=FIRE_HP;pushEvent("fire",sx,sy);}
+      }
+    }
   }
   // プレイヤー移動（count中も動けてOK）
   if(G.phase==="play"||G.phase==="count"){
@@ -421,70 +617,106 @@ function moveP(p,dx,dy){
 function frontTile(p){
   return[Math.round(p.x)+p.fx,Math.round(p.y)+p.fy];
 }
-function isRawVeg(k){return k==="T"||k==="L";}
-function isFood(k){return k==="t"||k==="l"||k==="B";}
+function checkStars(){
+  for(let i=0;i<3;i++){
+    if(!G.gFl[i]&&G.score>=CUR.goal[i]){
+      G.gFl[i]=1;
+      pushEvent("star",MAPW/2-0.5,2.5,i+1);
+    }
+  }
+}
 function doAction(p){
-  const[tx,ty]=frontTile(p);
+  const ft=frontTile(p);
+  const tx=ft[0],ty=ft[1];
   const ch=tileAt(tx,ty);
   const key=tx+","+ty;
   const it=G.tiles[key];
   const h=p.held;
-  if(ch==="T"||ch==="L"||ch==="B"){
-    const k=ch;
-    if(!h){p.held={k:(k==="B"?"B":k)};pushEvent("pick",tx,ty);}
-    else if(h.k==="P"&&k==="B"&&!h.c.includes("B")&&h.c.length<3){
-      h.c.push("B");pushEvent("pick",tx,ty);}
+  if(ch==="T"||ch==="L"||ch==="B"||ch==="M"||ch==="C"||ch==="R"){
+    // 食材箱
+    if(!h){p.held={k:ch};pushEvent("pick",tx,ty);}
+    else if(h.k==="P"&&(ch==="B"||ch==="R")&&!h.c.includes(ch)&&h.c.length<PLATE_MAX){
+      h.c.push(ch);pushEvent("pick",tx,ty);}
     else pushEvent("no",tx,ty);
   }else if(ch==="P"){
+    // 皿の山
     if(!h){p.held={k:"P",c:[]};pushEvent("pick",tx,ty);}
     else pushEvent("no",tx,ty);
   }else if(ch==="K"){
+    // まな板
     if(it){
-      if(isRawVeg(it.k)){ // 切る！
+      if(isRawChop(it.k)){ // 切る！
         it.p=(it.p||0)+1;
         pushEvent("chop",tx,ty);
         if(it.p>=CHOP_NEED){
-          it.k=it.k==="T"?"t":"l";delete it.p;
+          it.k={T:"t",L:"l",M:"m",C:"c"}[it.k];delete it.p;
+          p.st.ch++;
           pushEvent("ready",tx,ty);
         }
-      }else if(!h&&isFood(it.k)){
-        p.held={k:it.k};delete G.tiles[key];pushEvent("pick",tx,ty);
-      }else if(h&&h.k==="P"&&isFood(it.k)&&!h.c.includes(it.k)&&h.c.length<3){
+      }else if(!h&&(isFood(it.k)||it.k==="m"||it.k==="x")){
+        p.held={k:it.k,ck:it.ck,ov:it.ov};delete G.tiles[key];pushEvent("pick",tx,ty);
+      }else if(h&&h.k==="P"&&isFood(it.k)&&!h.c.includes(it.k)&&h.c.length<PLATE_MAX){
         h.c.push(it.k);delete G.tiles[key];pushEvent("pick",tx,ty);
       }else pushEvent("no",tx,ty);
     }else{
-      if(h&&(isRawVeg(h.k)||isFood(h.k))&&h.k!=="B"||h&&h.k==="B"){
-        if(h.k!=="P"){G.tiles[key]={k:h.k};p.held=null;pushEvent("put",tx,ty);}
-        else pushEvent("no",tx,ty);
+      if(h&&h.k!=="P"&&h.k!=="E"){
+        G.tiles[key]={k:h.k,ck:h.ck,ov:h.ov};p.held=null;pushEvent("put",tx,ty);
+      }else pushEvent("no",tx,ty);
+    }
+  }else if(ch==="G"){
+    // コンロ
+    if(it&&it.fi){ // 🔥火事中！
+      if(h&&h.k==="E"){
+        it.fh--;
+        pushEvent("spray",tx,ty);
+        if(it.fh<=0){delete G.tiles[key];pushEvent("douse",tx,ty);}
+      }else pushEvent("no",tx,ty);
+    }else if(it){
+      if(!h){
+        p.held={k:it.k,ck:it.ck,ov:it.ov};delete G.tiles[key];pushEvent("pick",tx,ty);
+      }else if(h.k==="P"&&it.k==="f"&&!h.c.includes("f")&&h.c.length<PLATE_MAX){
+        h.c.push("f");delete G.tiles[key];pushEvent("pick",tx,ty);
+      }else pushEvent("no",tx,ty);
+    }else{
+      if(h&&(h.k==="m"||h.k==="f"||h.k==="x")){
+        G.tiles[key]={k:h.k,ck:h.k==="m"?(h.ck||0):1,
+          ov:h.k==="f"?(h.ov||0):0,fz:0,by:p.pid};
+        p.held=null;pushEvent("put",tx,ty);
       }else pushEvent("no",tx,ty);
     }
   }else if(ch==="S"){
+    // 提出口
     if(h&&h.k==="P"&&h.c.length){
       const want=h.c.slice().sort().join("");
       const oi=G.orders.findIndex(o=>RECIPES[o.r].need.slice().sort().join("")===want);
       if(oi>=0){
         const o=G.orders[oi];
-        const pay=RECIPES[o.r].pay+Math.round((o.t/ORDER_LIFE)*50);
-        G.score+=pay;G.served++;
+        const pay=RECIPES[o.r].pay+Math.round((o.t/CUR.oLife)*50);
+        G.score+=pay;G.served++;p.st.sv++;
         G.orders.splice(oi,1);
         p.held=null;
         pushEvent("serve",tx,ty,pay);
+        checkStars();
         spawnOrder();
       }else pushEvent("buzz",tx,ty);
     }else pushEvent("no",tx,ty);
   }else if(ch==="D"){
-    if(h){p.held=null;pushEvent("trash",tx,ty);}
-  }else if(ch==="#"){
+    // ゴミ箱
+    if(h&&h.k==="P"&&h.c.length){h.c.length=0;pushEvent("reset",tx,ty);}
+    else if(h&&h.k!=="E"){p.held=null;pushEvent("trash",tx,ty);}
+    else pushEvent("no",tx,ty);
+  }else if(ch==="#"||ch==="E"){
+    // ふつうのカウンター（E=消火器置き場もカウンター扱い）
     if(it&&!h){
-      p.held=(it.c!==undefined)?{k:"P",c:it.c}:{k:it.k};
+      p.held=(it.c!==undefined)?{k:"P",c:it.c}:{k:it.k,ck:it.ck,ov:it.ov};
       delete G.tiles[key];pushEvent("pick",tx,ty);
     }else if(!it&&h){
-      G.tiles[key]=(h.k==="P")?{k:"P",c:h.c}:{k:h.k};
+      G.tiles[key]=(h.k==="P")?{k:"P",c:h.c}:{k:h.k,ck:h.ck,ov:h.ov};
       p.held=null;pushEvent("put",tx,ty);
     }else if(it&&h){
-      if(h.k==="P"&&isFood(it.k)&&!h.c.includes(it.k)&&h.c.length<3){
+      if(h.k==="P"&&isFood(it.k)&&!h.c.includes(it.k)&&h.c.length<PLATE_MAX){
         h.c.push(it.k);delete G.tiles[key];pushEvent("pick",tx,ty);
-      }else if(it.k==="P"&&isFood(h.k)&&!it.c.includes(h.k)&&it.c.length<3){
+      }else if(it.k==="P"&&isFood(h.k)&&!it.c.includes(h.k)&&it.c.length<PLATE_MAX){
         it.c.push(h.k);p.held=null;pushEvent("put",tx,ty);
       }else pushEvent("no",tx,ty);
     }
@@ -493,12 +725,22 @@ function doAction(p){
 
 /* ---- 状態のブロードキャスト ---- */
 function buildView(){
+  const T2={};
+  for(const k in G.tiles){
+    const it=G.tiles[k];const o={k:it.k};
+    if(it.p)o.p=it.p;
+    if(it.c!==undefined)o.c=it.c;
+    if(it.ck!=null)o.ck=+(+it.ck).toFixed(2);
+    if(it.ov)o.ov=+(+it.ov).toFixed(2);
+    if(it.fi){o.fi=1;o.fh=it.fh;}
+    T2[k]=o;
+  }
   return{
-    phase:G.phase,cnt:G.cnt,
+    phase:G.phase,cnt:G.cnt,stg:curIdx,
     time:Math.ceil(G.time),score:G.score,served:G.served,missed:G.missed,
     players:G.players.map(p=>({i:p.pid,x:+p.x.toFixed(2),y:+p.y.toFixed(2),
-      fx:p.fx,fy:p.fy,h:p.held,g:p.gone?1:0})),
-    tiles:G.tiles,orders:G.orders.map(o=>({id:o.id,r:o.r,t:+(o.t/ORDER_LIFE).toFixed(2)})),
+      fx:p.fx,fy:p.fy,h:p.held,g:p.gone?1:0,st:p.st})),
+    tiles:T2,orders:G.orders.map(o=>({id:o.id,r:o.r,t:+(o.t/CUR.oLife).toFixed(2)})),
     events:G.events,
   };
 }
@@ -512,12 +754,12 @@ setInterval(()=>{
 /* ---- クライアント：状態の受信 ---- */
 function applyState(s){
   const prevPhase=V.phase;
+  if(s.stg!=null&&s.stg!==curIdx)setStage(s.stg);
   V=s;
   if(prevPhase!==s.phase){
     if(s.phase==="count")closeOverlay();
     if(s.phase==="end")showResult();
   }
-  if(s.phase==="count"&&prevPhase==="count"){} // cnt音はrenderで
   // イベント効果音
   for(const e of(s.events||[])){
     if(e.id>lastEvId){fxEvent(e);lastEvId=e.id;}
@@ -540,9 +782,16 @@ function fxEvent(e){
     case"put":SND.put();break;
     case"chop":SND.chop();addPop(e.x,e.y,"🔪","#fff");break;
     case"ready":SND.ready();addPop(e.x,e.y,"できた！","#7dff9a");break;
+    case"cooked":SND.cooked();addPop(e.x,e.y,"やけた！🍖","#ffd76a");break;
+    case"burn":SND.burn();addPop(e.x,e.y,"こげた…💦","#aaa");break;
+    case"fire":SND.fire();addPop(e.x,e.y,"🔥火事だ！🧯で消せ！","#ff8a4a");break;
+    case"spray":SND.spray();addPop(e.x,e.y,"シューッ","#9adfff");break;
+    case"douse":SND.douse();addPop(e.x,e.y,"しょうか！🧯","#7dff9a");break;
     case"serve":SND.serve();addPop(e.x,e.y,"+"+e.v,"#ffd76a");break;
     case"buzz":SND.buzz();addPop(e.x,e.y,"ちがう！","#ff8a8a");break;
     case"miss":SND.miss();addPop(e.x,e.y,"-30 😡","#ff8a8a");break;
+    case"star":SND.star();addPop(e.x,e.y,"★"+e.v+"つ たっせい！","#ffd76a");break;
+    case"reset":SND.put();addPop(e.x,e.y,"もどした","#ccc");break;
     case"trash":SND.put();break;
     case"no":break;
   }
@@ -612,13 +861,13 @@ function showDialog(html){
 }
 function closeOverlay(){document.getElementById("overlay").classList.add("hidden");}
 function showHome(){
-  G.phase="home";
+  G.phase="home";bgmOn=false;
   showDialog(`<h1>🍳 わいわいキッチン</h1>
-  <p style="text-align:center;margin:2px 0 8px"><small>家族で協力クッキング！</small></p>
-  <p>・1人が「ルームを作る」→ 4桁コードを家族に伝える<br>
-  ・残りの人は「参加する」でコード入力<br>
-  ・<b>同じWi-Fi</b>がおすすめ／プレイ中は画面ロックしないでね<br>
-  ・食材をとる → まな板で切る（連打）→ お皿にのせる → 提出口へ！</p>
+  <p style="text-align:center;margin:2px 0 8px"><small>家族で協力クッキング！ ${VER}</small></p>
+  <p>・<b>ステージ6つ</b>＆★ひょうか が登場！<br>
+  ・🥩は切って→🔥コンロで焼く！<b>焼きすぎると火事</b>→🧯で連打消火！<br>
+  ・1人が「ルームを作る」→ 4桁コードを家族に伝える<br>
+  ・<b>同じWi-Fi</b>がおすすめ／プレイ中は画面ロックしないでね</p>
   <div class="row">
     <button class="btn gold" onclick="hostRoom()">🏠 ルームを作る（ホスト）</button>
     <button class="btn" onclick="showJoin()">🔑 ルームに参加する</button>
@@ -641,7 +890,7 @@ function doJoin(){
   joinRoom(v);
 }
 function showLobby(){
-  G.phase="lobby";
+  G.phase="lobby";bgmOn=false;
   document.getElementById("roomTag").textContent="ルーム "+roomCode;
   let list="";
   const n=G.players.length;
@@ -650,7 +899,7 @@ function showLobby(){
     else list+=`<div style="opacity:.4"><span class="dot" style="background:#666"></span>まちあわせ中…</div>`;
   }
   let btn="";
-  if(isHost)btn=`<button class="btn green" onclick="hostStart()">▶ ゲーム開始（${n}人）</button>`;
+  if(isHost)btn=`<button class="btn green" onclick="showStageSelect()">🗺️ ステージをえらぶ（${n}人）</button>`;
   else btn=`<p style="text-align:center"><small>ホストの開始を待っています…</small></p>`;
   showDialog(`<h2>ルーム ${roomCode}</h2>
   <p style="text-align:center">家族にこのコードを伝えてね！</p>
@@ -659,13 +908,75 @@ function showLobby(){
   ${btn}
   <p style="text-align:center;margin-top:6px"><small>※プレイ中は画面が消えないよう<br>自動ロックをオフ推奨（設定→画面表示）</small></p>`);
 }
+function showStageSelect(){
+  if(!isHost)return;
+  sendAll({t:"sel"});
+  let list="";
+  STAGES.forEach((s,i)=>{
+    const b=best(i),un=unlocked(i);
+    const stars="★".repeat(b.st)+"☆".repeat(3-b.st);
+    const duo=s.duo?'<br><small style="opacity:.7">※2人以上むけ</small>':"";
+    list+=`<button class="btn stg" ${un?"":"disabled"} onclick="hostStart(${i})">
+      <span>${un?s.em:"🔒"} ${i+1}. ${s.name}${duo}</span>
+      <span class="stars">${un?stars:""}</span></button>`;
+  });
+  showDialog(`<h2>🗺️ ステージをえらぶ</h2>
+  <p style="text-align:center;margin:0 0 6px"><small>★1つで つぎのステージが解放！</small></p>
+  <div class="row">${list}
+  <button class="btn" onclick="showLobby();sendLobbyAll()">もどる</button></div>`);
+}
+function calcStars(score){
+  let n=0;
+  for(let i=0;i<3;i++)if(score>=CUR.goal[i])n++;
+  return n;
+}
 function showResult(){
-  const v=V;
+  const v=V;bgmOn=false;
+  const st=calcStars(v.score);
+  let newRec=false;
+  if(isHost){
+    newRec=v.score>best(curIdx).sc;
+    saveBest(curIdx,st,v.score);
+  }
+  // ★表示
+  let starsHtml='<div class="bigstars">';
+  for(let i=0;i<3;i++){
+    if(i<st)starsHtml+=`<span class="on" style="animation-delay:${.3+i*.5}s">★</span>`;
+    else starsHtml+=`<span class="off">★</span>`;
+  }
+  starsHtml+="</div>";
+  // MVP（提供数いちばん）
+  const ps=(v.players||[]);
+  let maxSv=0;
+  ps.forEach(p=>{if(p.st&&p.st.sv>maxSv)maxSv=p.st.sv;});
+  let rows="";
+  ps.forEach(p=>{
+    const s=p.st||{sv:0,ch:0,ck:0};
+    const crown=(maxSv>0&&s.sv===maxSv)?"👑":"";
+    rows+=`<div class="mvprow">
+      <span><span class="dot" style="background:${PCOLORS[p.i]}"></span>${PNAMES[p.i]} ${crown}</span>
+      <span>提供${s.sv}・切${s.ch}・焼${s.ck}</span></div>`;
+  });
+  // ボタン
+  let btns="";
+  if(isHost){
+    btns=`<div class="row">`;
+    if(st>=1&&curIdx+1<STAGES.length)
+      btns+=`<button class="btn gold" onclick="hostStart(${curIdx+1})">▶ つぎのステージへ</button>`;
+    btns+=`<button class="btn green" onclick="hostStart(${curIdx})">もう一回つくる！</button>
+      <button class="btn" onclick="showStageSelect()">🗺️ ステージをえらぶ</button></div>`;
+  }else{
+    btns=`<p style="text-align:center"><small>ホストの選択を待っています…</small></p>`;
+  }
   showDialog(`<h2>🎉 営業終了！</h2>
-  <p style="text-align:center;font-size:30px;font-weight:900;color:var(--gold)">💰 ${v.score}点</p>
-  <p style="text-align:center">提供 <b>${v.served}</b>品 ／ 逃した注文 <b>${v.missed}</b>件</p>
-  ${isHost?'<div class="row"><button class="btn gold" onclick="hostStart()">もう一回つくる！</button></div>'
-    :'<p style="text-align:center"><small>ホストの「もう一回」を待っています…</small></p>'}`);
+  <p style="text-align:center;margin:2px 0"><small>${CUR.em} ${CUR.name}</small></p>
+  ${starsHtml}
+  <p style="text-align:center;font-size:30px;font-weight:900;color:var(--gold);margin:2px 0">
+    💰 ${v.score}点 ${newRec?'<span style="font-size:14px;color:#7dff9a">🏆しんきろく！</span>':""}</p>
+  <p style="text-align:center;margin:4px 0">提供 <b>${v.served}</b>品 ／ 逃した注文 <b>${v.missed}</b>件</p>
+  <div style="margin:6px 0">${rows}</div>
+  ${btns}`);
+  setTimeout(()=>{if(st>0)SND.star();},300);
 }
 
 /* =====================================================
@@ -675,9 +986,9 @@ const cv=document.getElementById("cv");
 const ctx=cv.getContext("2d");
 let TILE=44,DPR=1;
 function resize(){
-  const st=document.getElementById("stage");
+  const stEl=document.getElementById("stage");
   DPR=Math.min(2,window.devicePixelRatio||1);
-  TILE=Math.floor(Math.min(st.clientWidth/MAPW,st.clientHeight/MAPH));
+  TILE=Math.floor(Math.min(stEl.clientWidth/MAPW,stEl.clientHeight/MAPH));
   cv.width=TILE*MAPW*DPR;cv.height=TILE*MAPH*DPR;
   cv.style.width=TILE*MAPW+"px";cv.style.height=TILE*MAPH+"px";
 }
@@ -700,7 +1011,7 @@ function drawTileBase(x,y){
   ctx.fillRect(px+2,py+S-8,S-4,6);
   const cx=px+S/2,cy=py+S/2;
   ctx.textAlign="center";ctx.textBaseline="middle";
-  if(ch==="T"||ch==="L"||ch==="B"){
+  if(ch==="T"||ch==="L"||ch==="B"||ch==="M"||ch==="C"||ch==="R"){
     ctx.fillStyle="#9a6a3a";
     ctx.fillRect(px+S*.12,py+S*.12,S*.76,S*.7);
     ctx.fillStyle="#7a4f28";
@@ -720,6 +1031,22 @@ function drawTileBase(x,y){
     ctx.fillRect(px+S*.13,py+S*.19,S*.74,S*.46);
     ctx.font=Math.floor(S*.34)+"px sans-serif";
     ctx.fillText("🔪",px+S*.78,py+S*.3);
+  }else if(ch==="G"){
+    // コンロ（ガス台＋フライパン）
+    ctx.fillStyle="#33363f";
+    ctx.fillRect(px+S*.08,py+S*.08,S*.84,S*.76);
+    ctx.strokeStyle="#555a66";ctx.lineWidth=2;
+    ctx.strokeRect(px+S*.08,py+S*.08,S*.84,S*.76);
+    ctx.strokeStyle="#d05a2a";
+    ctx.beginPath();ctx.arc(cx,cy,S*.3,0,7);ctx.stroke();
+    ctx.fillStyle="#111";
+    ctx.beginPath();ctx.arc(cx,cy,S*.26,0,7);ctx.fill();
+    ctx.strokeStyle="#000";ctx.lineWidth=3;
+    ctx.beginPath();ctx.moveTo(cx+S*.24,cy+S*.1);ctx.lineTo(cx+S*.45,cy+S*.2);ctx.stroke();
+  }else if(ch==="E"){
+    // 消火器置き場（赤いフック）
+    ctx.fillStyle="#b03030";
+    ctx.fillRect(px+S*.3,py+S*.1,S*.4,S*.12);
   }else if(ch==="S"){
     ctx.fillStyle="#2e7d32";
     ctx.fillRect(px+2,py+2,S-4,S-8);
@@ -744,13 +1071,13 @@ function drawItem(x,y,it,s){
     ctx.strokeStyle="#999";ctx.lineWidth=1;ctx.stroke();
     const c=it.c||[];
     c.forEach((k,i)=>{
-      ctx.font=Math.floor(s*.42)+"px sans-serif";
-      ctx.fillText(FOOD_EMOJI[k],x+(i-(c.length-1)/2)*s*.36,y-s*.06);
+      ctx.font=Math.floor(s*.4)+"px sans-serif";
+      ctx.fillText(FOOD_EMOJI[k],x+(i-(c.length-1)/2)*s*.3,y-s*.06);
     });
   }else{
     ctx.font=Math.floor(s*.62)+"px sans-serif";
     ctx.fillText(FOOD_EMOJI[it.k],x,y);
-    if(it.k==="t"||it.k==="l"){ // 切り済みマーク
+    if(it.k==="t"||it.k==="l"||it.k==="m"||it.k==="c"){ // 切り済みマーク
       ctx.strokeStyle="#fff";ctx.lineWidth=2;
       ctx.beginPath();
       ctx.moveTo(x-s*.22,y-s*.18);ctx.lineTo(x+s*.1,y+s*.14);
@@ -758,6 +1085,35 @@ function drawItem(x,y,it,s){
       ctx.stroke();
     }
   }
+}
+let tt=0; // アニメ用時計
+function drawSmoke(px,py,S,strong){
+  const n=strong?3:2;
+  for(let i=0;i<n;i++){
+    const ph=(tt*0.7+i*0.45)%1;
+    const sx=px+S/2+Math.sin((tt*2+i*2.1))*S*.12;
+    const sy=py+S*.3-ph*S*.6;
+    ctx.globalAlpha=(1-ph)*.45;
+    ctx.fillStyle="#999";
+    ctx.beginPath();ctx.arc(sx,sy,S*(.07+ph*.1),0,7);ctx.fill();
+  }
+  ctx.globalAlpha=1;
+}
+function drawFire(px,py,S,fh){
+  const f1=S*(.5+.12*Math.sin(tt*11));
+  const f2=S*(.34+.1*Math.sin(tt*14+2));
+  ctx.textAlign="center";ctx.textBaseline="middle";
+  ctx.font=Math.floor(f1)+"px sans-serif";
+  ctx.fillText("🔥",px+S*.5,py+S*.36);
+  ctx.font=Math.floor(f2)+"px sans-serif";
+  ctx.fillText("🔥",px+S*.72,py+S*.5);
+  drawSmoke(px,py-S*.2,S,true);
+  // 残り消火回数
+  ctx.font="bold "+Math.floor(S*.22)+"px sans-serif";
+  ctx.fillStyle="#fff";ctx.strokeStyle="#000";ctx.lineWidth=3;
+  const tx2=px+S*.5,ty2=py+S*.86;
+  ctx.strokeText("🧯×"+fh,tx2,ty2);
+  ctx.fillText("🧯×"+fh,tx2,ty2);
 }
 function drawPlayer(p,isMe){
   const px=p.dx*TILE+TILE/2,py=p.dy*TILE+TILE/2;
@@ -801,18 +1157,18 @@ function drawPlayer(p,isMe){
 
 let lastT=0;
 function loop(t){
-  const dt=Math.min(0.05,(t-lastT)/1000);lastT=t;
+  const dt=Math.min(0.05,(t-lastT)/1000);lastT=t;tt+=dt;
   // ホストはシミュレーション
   if(isHost&&netReady){
     hostSim(dt);
     const s=buildView();
-    // ホスト自身の表示は正本から
-    V.phase=s.phase;V.cnt=s.cnt;V.time=s.time;V.score=s.score;
-    V.served=s.served;V.missed=s.missed;
-    V.players=s.players;V.tiles=s.tiles;V.orders=s.orders;
+    V=s;
     if(s.phase==="end"&&!resultShown){resultShown=true;showResult();}
     if(s.phase!=="end")resultShown=false;
   }
+  // BGMオンオフ
+  if(V.phase==="play"){if(!bgmOn){bgmOn=true;bgmS=0;bgmT=0;}}
+  else if(V.phase!=="count"){bgmOn=false;}
   render(dt);
   requestAnimationFrame(loop);
 }
@@ -825,14 +1181,40 @@ function render(dt){
   for(let y=0;y<MAPH;y++)for(let x=0;x<MAPW;x++)drawTileBase(x,y);
   // 置かれた物
   for(const k in(V.tiles||{})){
-    const[x,y]=k.split(",").map(Number);
+    const xy=k.split(",");
+    const x=+xy[0],y=+xy[1];
     const it=V.tiles[k];
-    drawItem(x*TILE+TILE/2,y*TILE+TILE/2-TILE*.12,it,TILE*.85);
+    const px=x*TILE,py=y*TILE;
+    if(it.fi){ // 🔥火事
+      drawFire(px,py,TILE,it.fh);
+      continue;
+    }
+    drawItem(px+TILE/2,py+TILE/2-TILE*.12,it,TILE*.85);
+    if(it.k==="x")drawSmoke(px,py,TILE,false);
     if(it.p){ // 切り途中ゲージ
       ctx.fillStyle="rgba(0,0,0,.5)";
-      ctx.fillRect(x*TILE+5,y*TILE+TILE-9,TILE-10,5);
+      ctx.fillRect(px+5,py+TILE-9,TILE-10,5);
       ctx.fillStyle="#7dff9a";
-      ctx.fillRect(x*TILE+5,y*TILE+TILE-9,(TILE-10)*(it.p/CHOP_NEED),5);
+      ctx.fillRect(px+5,py+TILE-9,(TILE-10)*(it.p/CHOP_NEED),5);
+    }
+    if(it.k==="m"&&it.ck!=null){ // 焼きゲージ
+      ctx.fillStyle="rgba(0,0,0,.5)";
+      ctx.fillRect(px+5,py+TILE-9,TILE-10,5);
+      ctx.fillStyle="#ffb84a";
+      ctx.fillRect(px+5,py+TILE-9,(TILE-10)*Math.min(1,it.ck),5);
+    }
+    if(it.k==="f"&&it.ov){ // 焦げゲージ（あぶない！）
+      ctx.fillStyle="rgba(0,0,0,.5)";
+      ctx.fillRect(px+5,py+TILE-9,TILE-10,5);
+      ctx.fillStyle=it.ov>.55?"#ff4a4a":"#ff8a4a";
+      ctx.fillRect(px+5,py+TILE-9,(TILE-10)*Math.min(1,it.ov),5);
+      if(it.ov>.55&&Math.floor(tt*4)%2===0){
+        ctx.font="bold "+Math.floor(TILE*.4)+"px sans-serif";
+        ctx.textAlign="center";ctx.textBaseline="middle";
+        ctx.fillStyle="#ff4a4a";ctx.strokeStyle="#fff";ctx.lineWidth=3;
+        ctx.strokeText("！",px+TILE*.8,py+TILE*.2);
+        ctx.fillText("！",px+TILE*.8,py+TILE*.2);
+      }
     }
   }
   // プレイヤー（補間）
@@ -864,14 +1246,23 @@ function render(dt){
   // HUD
   document.getElementById("time").textContent="⏱ "+(V.time??"---");
   document.getElementById("score").textContent="💰 "+(V.score??0);
+  if(roomCode&&(V.phase==="play"||V.phase==="count"||V.phase==="end")){
+    document.getElementById("roomTag").textContent=
+      CUR.em+" "+CUR.name+"（★"+CUR.goal[0]+"〜）";
+  }
   renderOrders();
   // カウントダウン
   const cd=document.getElementById("count");
   if(V.phase==="count"){
     cd.style.display="flex";
-    if(cd.textContent!==""+V.cnt){cd.textContent=V.cnt;SND.cd();}
+    document.getElementById("cntStage").textContent=CUR.em+" "+CUR.name;
+    document.getElementById("cntTip").textContent=CUR.tip;
+    const num=document.getElementById("cntNum");
+    if(num.textContent!==""+V.cnt){num.textContent=V.cnt;SND.cd();}
   }else if(V.phase==="play"&&cd.style.display!=="none"){
-    cd.style.display="none";SND.go();
+    cd.style.display="none";
+    document.getElementById("cntNum").textContent="";
+    SND.go();
   }else if(V.phase!=="count"){cd.style.display="none";}
 }
 let lastOrderHtml="";
@@ -892,7 +1283,8 @@ function renderOrders(){
 }
 
 /* ===== 起動 ===== */
-resize();
+setStage(0);
+document.getElementById("muteB").textContent=MUTED?"🔇":"🔊";
 showHome();
 requestAnimationFrame(loop);
 </script>
