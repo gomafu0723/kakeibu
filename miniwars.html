@@ -1181,36 +1181,45 @@ function handleTap(x,y){
     }else{SND.cancel();}
     return;
   }
-  if(mode==="acted"){SND.cancel();return;} // 行動選択中はボタンで操作
+  if(mode==="acted"||mode==="mergeAsk"){
+    // 行動前なら他のユニットをタップして選び直せる（移動は取り消し）
+    const u2=unitAt(x,y);
+    if(u2&&u2.pid===BLUE&&!u2.acted){
+      undoPending();
+      selectUnit(u2);
+    }else SND.cancel();
+    return;
+  }
   if(mode==="move"&&moveData&&moveData.reach.has(key(x,y))){
     const u=sel.unit;
     const ox=u.x,oy=u.y;
-    const isMerge=moveData.merge.has(key(x,y));
-    const target=isMerge?unitAt(x,y):null;
-    const moved=key(x,y)!==moveData.origin;
-    const path=buildPath(moveData,key(x,y));
+    const k=key(x,y);
+    if(moveData.merge.has(k)){
+      // 合流は確認してから（誤タップ防止）
+      const target=unitAt(x,y);
+      const path=buildPath(moveData,k);
+      sel={unit:u,ox,oy};moveData=null;mode="mergeAsk";
+      updateUI(`🤝 <b>${UNIT_DEF[u.type].name}</b>を合流させますか？<br><small>（HPを合わせて回復／合流後は行動済みになります）</small>`);
+      setBtns([
+        {label:"🤝 合流する",gold:true,fn:()=>{
+          mode="anim";setBtns([]);
+          u.x=x;u.y=y;
+          animateMove(u,path,()=>doMerge(u,target));
+        }},
+        {label:"やめる",fn:()=>{SND.cancel();cancelSel();}},
+      ]);
+      return;
+    }
+    const moved=k!==moveData.origin;
+    const path=buildPath(moveData,k);
     u.x=x;u.y=y;
     mode="anim";setBtns([]);
-    if(isMerge){
-      animateMove(u,path,()=>doMerge(u,target));
-    }else{
-      animateMove(u,path,()=>afterMove(u,moved,ox,oy));
-    }
+    animateMove(u,path,()=>afterMove(u,moved,ox,oy));
     return;
   }
   const u=unitAt(x,y);
   if(u&&u.pid===BLUE&&!u.acted){
-    SND.select();
-    sel={unit:u};mode="move";moveData=calcMove(u);
-    const ud=UNIT_DEF[u.type];
-    const rk=RANKS[u.rank],next=RANKS[u.rank+1];
-    const stars=u.rank?` <span style="color:#ffd76a">${"★".repeat(u.rank)}</span>`:"";
-    const rngTxt=isIndirect(u)?`／射程${ud.range[0]}-${ud.range[1]}`:"";
-    updateUI(`<img src="${sprUrl[u.type][BLUE]}">
-      <span><b>${ud.name}</b>${stars} HP${u.hp}/${MAX_HP}　攻撃${effAtk(u)}${rngTxt}／移動${ud.move}<br>
-      <small>${rk.name}　EXP ${u.exp}${next?`（次まで${next.exp-u.exp}）`:"（最高）"}　${terrainLine(u)}</small></span>`);
-    setBtns([{label:"ここで行動",fn:()=>{mode="anim";afterMove(u,false,u.x,u.y);}},
-             {label:"選択解除",fn:cancelSel}]);
+    selectUnit(u);
   }else if(u&&u.pid===RED){
     SND.select();
     cancelSel();
@@ -1233,6 +1242,26 @@ function handleTap(x,y){
     }
   }
 }
+function selectUnit(u){
+  SND.select();
+  sel={unit:u};mode="move";moveData=calcMove(u);
+  const ud=UNIT_DEF[u.type];
+  const rk=RANKS[u.rank],next=RANKS[u.rank+1];
+  const stars=u.rank?` <span style="color:#ffd76a">${"★".repeat(u.rank)}</span>`:"";
+  const rngTxt=isIndirect(u)?`／射程${ud.range[0]}-${ud.range[1]}`:"";
+  updateUI(`<img src="${sprUrl[u.type][BLUE]}">
+    <span><b>${ud.name}</b>${stars} HP${u.hp}/${MAX_HP}　攻撃${effAtk(u)}${rngTxt}／移動${ud.move}<br>
+    <small>${rk.name}　EXP ${u.exp}${next?`（次まで${next.exp-u.exp}）`:"（最高）"}　${terrainLine(u)}</small></span>`);
+  setBtns([{label:"ここで行動",fn:()=>{mode="anim";afterMove(u,false,u.x,u.y);}},
+           {label:"選択解除",fn:cancelSel}]);
+}
+function undoPending(){
+  if(sel&&sel.unit&&sel.ox!==undefined){
+    const u=sel.unit;
+    u.x=sel.ox;u.y=sel.oy;u.px=sel.ox;u.py=sel.oy;
+  }
+  sel=null;moveData=null;attackTargets=[];mode="idle";setBtns([]);
+}
 function animateMove(u,path,after){
   if(path.length<2){u.px=u.x;u.py=u.y;after&&after();return;}
   const steps=[];
@@ -1244,7 +1273,7 @@ function animateMove(u,path,after){
   pushAnim(steps,()=>{u.px=u.x;u.py=u.y;after&&after();});
 }
 function afterMove(u,moved,ox,oy){
-  sel={unit:u};moveData=null;
+  sel={unit:u,ox,oy,moved};moveData=null;
   const canFire=!isIndirect(u)||!moved;
   attackTargets=canFire?enemiesInRange(u):[];
   const cap=canCaptureHere(u);
@@ -1255,10 +1284,10 @@ function afterMove(u,moved,ox,oy){
   if(cap)btns.push({label:"🚩 占領",gold:true,fn:()=>{
     const m=tryCapture(u);u.acted=true;finishAction(m||"");}});
   btns.push({label:"待機",fn:()=>{u.acted=true;finishAction("待機しました");}});
-  if(moved)btns.push({label:"↩ 戻る",fn:()=>{
+  btns.push({label:moved?"↩ 戻る":"やめる",fn:()=>{
     u.x=ox;u.y=oy;u.px=ox;u.py=oy;SND.cancel();cancelSel();}});
   mode="acted";
-  let hint="行動を選んでください";
+  let hint="行動を選んでください <small>（他のユニットをタップで選び直しOK）</small>";
   if(isIndirect(u)&&moved)hint+="<br><small>（移動したターンは砲撃できません）</small>";
   updateUI(hint);
   setBtns(btns);
