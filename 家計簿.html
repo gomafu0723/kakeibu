@@ -486,6 +486,40 @@ async function postToSheet(payload){
   try{await fetch(GAS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});}catch(e){}
 }
 
+
+// リアルタイム残高（現金＋積立8項目）を計算する共通関数
+function calcRealtimeBalances(){
+  const todayStr=today();
+  const result={};
+  const nowD=new Date();
+  const nowY=nowD.getFullYear(), nowM=nowD.getMonth()+1;
+
+  // 現金（変動費）：実際の今月・今日までの支出を反映
+  const totalBudget=Object.values(BUDGET).reduce((a,b)=>a+b,0);
+  const curMonthExpenses=expenses.filter(e=>{
+    if(!e.date)return false;
+    const d=new Date(e.date);
+    return d.getFullYear()===nowY&&(d.getMonth()+1)===nowM&&e.date<=todayStr;
+  });
+  const rtBudgetUsed=Object.keys(BUDGET).reduce((a,k)=>{
+    return a+curMonthExpenses.filter(e=>e.cat===k).reduce((s,e)=>s+Number(e.amount),0);
+  },0);
+  result['現金']=totalBudget-rtBudgetUsed;
+
+  // 積立8項目：基準日(2026/05/01)以降・今日までの全収支を累計
+  const rtBaseDate='2026-05-01';
+  const monthsElapsed=Math.max(0,(nowY-2026)*12+(nowM-5));
+  ['貯蓄','生命保険積立','自動車税積立','車検積立','固定資産税積立','自動車保険積立','史絵梨貯金','涼介貯金'].forEach(cat=>{
+    const baseBal=BASE_BALANCE_OBJ[cat]||0;
+    const rtInc=incomes.filter(e=>e.cat===cat&&e.date>=rtBaseDate&&e.date<=todayStr).reduce((a,e)=>a+Number(e.amount),0);
+    const rtExp=expenses.filter(e=>e.cat===cat&&e.date>=rtBaseDate&&e.date<=todayStr).reduce((a,e)=>a+Number(e.amount),0);
+    const monthly=FIXED_AMOUNTS[cat]||0;
+    result[cat]=baseBal+monthly*monthsElapsed+rtInc-rtExp;
+  });
+
+  return result;
+}
+
 function renderHome(){
   const used=calcCatUsed();
   const budgetUsed=Object.keys(BUDGET).reduce((a,k)=>a+(used[k]||0),0);
@@ -499,15 +533,10 @@ function renderHome(){
   const dailyRemain=Math.round(remainAfterReserve/Math.max(1,daysLeft));
   const monthIncome=getMonthData(incomes).reduce((a,e)=>a+Number(e.amount),0);
 
-  // リアルタイム残高（今日以前の支出・収入のみ）
+  // リアルタイム残高（今日時点・現在の実際の月基準）
   const todayStr=today();
-  const rtExpenses=getMonthData(expenses).filter(e=>e.date<=todayStr);
-  const rtIncomes=getMonthData(incomes).filter(e=>e.date<=todayStr);
-  const rtBudgetUsed=Object.keys(BUDGET).reduce((a,k)=>{
-    return a+rtExpenses.filter(e=>e.cat===k).reduce((s,e)=>s+Number(e.amount),0);
-  },0);
-  const rtIncome=rtIncomes.reduce((a,e)=>a+Number(e.amount),0);
-  const rtRemain=totalBudget-rtBudgetUsed-RESERVE;
+  const rtBalances=calcRealtimeBalances();
+  const rtRemain=rtBalances['現金'];
 
   // 積立残高
   const balance=calcFixedBalance();
@@ -586,17 +615,7 @@ function renderHome(){
         <div class="item-right"><div class="iamt" style="color:${rtRemain<0?'var(--red)':rtRemain<10000?'var(--amber)':'var(--green)'};">${fmtYen(rtRemain)}</div></div>
       </div>
       ${['貯蓄','生命保険積立','自動車税積立','車検積立','固定資産税積立','自動車保険積立','史絵梨貯金','涼介貯金'].map(cat=>{
-        const baseBal={貯蓄:7374283,生命保険積立:129479,自動車税積立:27556,車検積立:14000,固定資産税積立:52400,自動車保険積立:6000,史絵梨貯金:1088237,涼介貯金:409959}[cat]||0;
-        const nowD=new Date();
-        const nowY=nowD.getFullYear(), nowM=nowD.getMonth()+1;
-        const rtBaseDate='2026-05-01';
-        // 基準月から今日までの積立累計（今日が属する月まで）
-        const monthsElapsed=Math.max(0,(nowY-2026)*12+(nowM-5));
-        // 基準日以降・今日以前の全収支を累計
-        const rtInc=incomes.filter(e=>e.cat===cat&&e.date>=rtBaseDate&&e.date<=todayStr).reduce((a,e)=>a+Number(e.amount),0);
-        const rtExp=expenses.filter(e=>e.cat===cat&&e.date>=rtBaseDate&&e.date<=todayStr).reduce((a,e)=>a+Number(e.amount),0);
-        const monthly=FIXED_AMOUNTS[cat]||0;
-        const rtBal=baseBal+monthly*monthsElapsed+rtInc-rtExp;
+        const rtBal=rtBalances[cat]||0;
         return`<div class="list-item" style="cursor:default">
           <div class="item-left"><div class="iname">${cat}</div></div>
           <div class="item-right"><div class="iamt" style="color:${rtBal<0?'var(--red)':'var(--text2)'};">${fmtYen(rtBal)}</div></div>
@@ -999,11 +1018,31 @@ function openAssetModal(idx){
   document.getElementById('asset-edit-idx').value=idx;
   document.getElementById('asset-date').value=rec?rec.date:today();
   const container=document.getElementById('asset-fields');
-  container.innerHTML=ASSET_KEYS.map(k=>`
+
+  // 新規記録の場合：リアルタイム残高を初期値として表示
+  let prefill={};
+  if(!isEdit){
+    prefill=calcRealtimeBalances();
+    // リアルタイム計算対象外の項目は直近の資産記録から引き継ぐ
+    const sorted=[...assets].sort((a,b)=>new Date(b.date)-new Date(a.date));
+    const latest=sorted[0];
+    if(latest){
+      ASSET_KEYS.forEach(k=>{
+        if(prefill[k]===undefined) prefill[k]=latest[k]||0;
+      });
+    }
+  }
+
+  container.innerHTML=ASSET_KEYS.map(k=>{
+    let val='';
+    if(rec&&rec[k]) val=rec[k];
+    else if(!isEdit&&prefill[k]!==undefined) val=prefill[k];
+    return`
     <div class="asset-input-row">
       <div class="asset-input-label">${k}</div>
-      <input class="asset-input-field" type="number" id="assetfield-${k}" placeholder="0" inputmode="numeric" value="${rec&&rec[k]?rec[k]:''}">
-    </div>`).join('');
+      <input class="asset-input-field" type="number" id="assetfield-${k}" placeholder="0" inputmode="numeric" value="${val}">
+    </div>`;
+  }).join('');
   const btnRow=document.getElementById('asset-btn-row');
   btnRow.innerHTML=isEdit
     ?`<button class="btn-danger" onclick="deleteAsset()">削除</button>
