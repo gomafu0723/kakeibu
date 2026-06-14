@@ -472,127 +472,397 @@ const STAGES=[
         ["htank",1,5,1],["heli",1,3,1],["art",1,5,2]],
  funds:[5000,8000]},
 ];
-/* ---- 自動生成ステージ（7〜50） ---- */
+/* ---- 自動生成ステージ（7〜100）：9種のアーキタイプでバリエーション強化 ---- */
 function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;
   let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;
   return((t^t>>>14)>>>0)/4294967296;};}
-const NAME_A=["北の","南の","東の","西の","霧の","紅の","鋼の","風の","雷の","氷の","炎の","影の"];
-const NAME_B=["平原","渓谷","回廊","戦線","荒野","河畔","高地","十字路","国境","要衝","湿原","丘陵"];
+const NAME_A=["北の","南の","東の","西の","霧の","紅の","鋼の","風の","雷の","氷の","炎の","影の","青の","白の","金の","深緑の"];
+const NAME_B=["平原","渓谷","回廊","戦線","荒野","河畔","高地","十字路","国境","要衝","湿原","丘陵","要塞","群島","盆地","深淵"];
+function randomName(rnd){return NAME_A[Math.floor(rnd()*NAME_A.length)]+NAME_B[Math.floor(rnd()*NAME_B.length)];}
+
+/* --- 共通ヘルパー --- */
+function mkGrid(C,R,v){return Array.from({length:R},()=>Array(C).fill(v));}
+function inb(x,y,C,R){return x>=0&&y>=0&&x<C&&y<R;}
+function noiseFill(g,C,R,x0,y0,x1,y1,rnd,mtnP,forP){
+  for(let y=Math.max(0,y0);y<=Math.min(R-1,y1);y++)
+    for(let x=Math.max(0,x0);x<=Math.min(C-1,x1);x++){
+      const r=rnd();
+      if(r<mtnP)g[y][x]=2;
+      else if(r<mtnP+forP)g[y][x]=1;
+    }
+}
+// 点対称ミラー：上半分(0..half-1)はそのまま、下半分へ点対称コピー
+function mirrorPoint(g,C,R){
+  const half=Math.floor(R/2);
+  for(let y=0;y<half;y++)for(let x=0;x<C;x++)g[R-1-y][C-1-x]=g[y][x];
+}
+function clearHQArea(g,C,R,hq){
+  hq.forEach(h=>{
+    for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+      const x=h.x+dx,y=h.y+dy;
+      if(inb(x,y,C,R)&&(g[y][x]===2||g[y][x]===7))g[y][x]=0;
+    }
+  });
+}
+// HQ間のtread通行可能性を保証（だめなら強制的に道を通す）
+function ensureConnectivity(g,C,R,hq){
+  const cost=t=>(t===2||t===7)?40:1;
+  function dijk(sx,sy){
+    const dist=Array.from({length:R},()=>Array(C).fill(Infinity));
+    dist[sy][sx]=0;
+    const q=[[sx,sy]];
+    while(q.length){
+      q.sort((a,b)=>dist[a[1]][a[0]]-dist[b[1]][b[0]]);
+      const[x,y]=q.shift();
+      const dc=dist[y][x];
+      for(const[dx,dy]of[[1,0],[-1,0],[0,1],[0,-1]]){
+        const nx=x+dx,ny=y+dy;
+        if(!inb(nx,ny,C,R))continue;
+        const nc=dc+cost(g[ny][nx]);
+        if(nc<dist[ny][nx]){dist[ny][nx]=nc;q.push([nx,ny]);}
+      }
+    }
+    return dist;
+  }
+  const dist=dijk(hq[0].x,hq[0].y);
+  if(dist[hq[1].y][hq[1].x]<40)return;
+  let x=hq[0].x,y=hq[0].y;
+  const ty=hq[1].y,tx=hq[1].x;
+  const sy=ty>y?1:(ty<y?-1:0);
+  while(y!==ty){if(g[y][x]===2||g[y][x]===7)g[y][x]=3;y+=sy;}
+  const sx=tx>x?1:(tx<x?-1:0);
+  while(x!==tx){if(g[y][x]===2||g[y][x]===7)g[y][x]=3;x+=sx;}
+  if(g[y][x]===2||g[y][x]===7)g[y][x]=3;
+}
+// 90度回転（転置）：縦長↔横長を入れ替える
+function transposeStage(g,C,R,hq,owners,units){
+  const g2=Array.from({length:C},()=>Array(R).fill(0));
+  for(let a=0;a<C;a++)for(let b=0;b<R;b++)g2[a][b]=g[b][a];
+  return{
+    g:g2,C:R,R:C,
+    hq:hq.map(h=>({x:h.y,y:h.x})),
+    owners:owners.map(o=>[o[1],o[0],o[2]]),
+    units:units.map(u=>[u[0],u[1],u[3],u[2]]),
+  };
+}
+function scatterProps(g,C,R,rnd,x0,y0,x1,y1,count,type,avoid){
+  const placed=[];let guard=0;
+  x0=Math.max(0,x0);y0=Math.max(0,y0);x1=Math.min(C-1,x1);y1=Math.min(R-1,y1);
+  if(x1<x0||y1<y0)return placed;
+  while(placed.length<count&&guard<300){
+    guard++;
+    const x=x0+Math.floor(rnd()*(x1-x0+1));
+    const y=y0+Math.floor(rnd()*(y1-y0+1));
+    if(g[y][x]!==0&&g[y][x]!==1)continue;
+    const k=x+","+y;
+    if(avoid.has(k))continue;
+    g[y][x]=type;placed.push({x,y});avoid.add(k);
+  }
+  return placed;
+}
+function ringOrder(cx,cy,x0,y0,x1,y1){
+  const cells=[];
+  for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)cells.push([x,y]);
+  cells.sort((a,b)=>{
+    const da=Math.abs(a[0]-cx)+Math.abs(a[1]-cy)+((a[0]*131+a[1]*977)%5)*0.01;
+    const db=Math.abs(b[0]-cx)+Math.abs(b[1]-cy)+((b[0]*131+b[1]*977)%5)*0.01;
+    return da-db;
+  });
+  return cells;
+}
+function pickCells(g,C,R,cells,need,taken){
+  const res=[];
+  if(need<=0)return res;
+  for(const[x,y]of cells){
+    if(!inb(x,y,C,R))continue;
+    const t=g[y][x];
+    if(t===2||t===7)continue;
+    const k=x+","+y;
+    if(taken.has(k))continue;
+    taken.add(k);res.push({x,y});
+    if(res.length>=need)return res;
+  }
+  return res;
+}
+function nearBox(h,C,R){
+  let x0=0,x1=C-1,y0=0,y1=R-1;
+  const xEdge=(h.x===0||h.x===C-1),yEdge=(h.y===0||h.y===R-1);
+  const depth=(xEdge&&yEdge)?3:2;
+  if(h.y===R-1)y0=R-depth; else if(h.y===0)y1=depth-1;
+  if(h.x===0)x1=depth-1; else if(h.x===C-1)x0=C-depth;
+  return{x0,y0,x1,y1};
+}
+
+const BASE_POOL={2:["inf","inf","tank"],
+  3:["inf","inf","tank","mech"],
+  4:["inf","mech","tank","tank","recon"],
+  5:["inf","mech","tank","tank","aa"]};
+const EXTRA_POOL={2:[],3:["htank"],4:["heli","art"],5:["htank","heli","art","rocket"]};
+function sizeTierFor(i){return i<30?0:i<55?1:i<80?2:3;}
+function fundsFor(i,d,bonus){
+  const extra=i>=80?2500:i>=65?1500:i>=50?700:0;
+  return[3000+d*250+(bonus||0), 3000+d*250+d*500+Math.min(6000,Math.floor((i-6)*40))+extra];
+}
+const ARCH_DESC={
+  corridor:"一本道をめぐる正面決戦",
+  twin_path:"山稜に分かたれた二正面作戦",
+  economic:"拠点が密集する経済戦",
+  open_field:"遮蔽物の少ない平原での激突",
+  maze:"入り組んだ山岳・森林地帯",
+  archipelago:"広い水域と数少ない橋をめぐる攻防",
+  gauntlet:"極端に細長い回廊での一本道勝負",
+  fortress:"山に守られた敵要塞への攻略戦",
+  giant:"広大な戦場での総力戦",
+};
+function diffTag(i,d){
+  return i>=80?"敵の総戦力が圧倒的":i>=65?"大軍と豊富な資金":i>=50?"熟練した敵部隊":"敵戦力"+"💀".repeat(Math.max(0,d-1));
+}
+
+/* --- 点対称地形の共通ビルダー --- */
+function buildSymmetricGrid(rnd,C,R,opts){
+  const g=mkGrid(C,R,0);
+  const half=Math.floor(R/2);
+  const mid=Math.floor(C/2);
+  if(opts.maze){
+    for(let y=0;y<half;y++)for(let x=0;x<C;x++){
+      const r=rnd();
+      if(r<opts.mtnP)g[y][x]=2; else if(r<opts.mtnP+opts.forP)g[y][x]=1;
+    }
+    let cx=mid;
+    for(let y=half-1;y>=0;y--){
+      g[y][cx]=0;
+      if(rnd()<0.45)cx=Math.max(1,Math.min(C-2,cx+(rnd()<0.5?1:-1)));
+      g[y][cx]=0;
+    }
+  }else{
+    noiseFill(g,C,R,0,0,C-1,half-1,rnd,opts.mtnP,opts.forP);
+  }
+  if(opts.spineCol!==undefined&&opts.spineCol>=0&&opts.spineCol<C){
+    for(let y=0;y<half;y++)g[y][opts.spineCol]=2;
+  }
+  (opts.riverRows||[]).forEach(ry=>{
+    if(ry>=0&&ry<half)for(let x=0;x<C;x++)g[ry][x]=7;
+  });
+  mirrorPoint(g,C,R);
+  (opts.roadCols||[]).forEach(cx2=>{
+    if(cx2>=0&&cx2<C)for(let y=0;y<R;y++)g[y][cx2]=3;
+  });
+  return{g,mid,half};
+}
+
+/* --- 点対称マップ共通の拠点・ユニット配置 --- */
+function finishSymmetric(g,C,R,rnd,i,d,hq,opts){
+  opts=opts||{};
+  clearHQArea(g,C,R,hq);
+  const avoid=new Set([hq[0].x+","+hq[0].y,hq[1].x+","+hq[1].y]);
+  const owners=[];
+  const facCount=opts.factories!==undefined?opts.factories:(d>=4?2:1);
+  for(let k=0;k<facCount;k++){
+    const b=k===0?nearBox(hq[0],C,R):{x0:0,y0:0,x1:C-1,y1:R-1};
+    const p=scatterProps(g,C,R,rnd,b.x0,b.y0,b.x1,b.y1,1,5,avoid);
+    p.forEach(pt=>{
+      const mx=C-1-pt.x,my=R-1-pt.y;
+      if(g[my][mx]===0||g[my][mx]===1){
+        g[my][mx]=5;avoid.add(mx+","+my);
+        owners.push([pt.x,pt.y,0],[mx,my,1]);
+      }else{
+        owners.push([pt.x,pt.y,0]);
+      }
+    });
+  }
+  const cityN=opts.cities!==undefined?opts.cities:2+Math.floor(rnd()*3);
+  const cp=scatterProps(g,C,R,rnd,0,0,C-1,R-1,cityN,4,avoid);
+  cp.forEach(pt=>{
+    const mx=C-1-pt.x,my=R-1-pt.y;
+    if(!(mx===pt.x&&my===pt.y)&&(g[my][mx]===0||g[my][mx]===1)&&!avoid.has(mx+","+my)){
+      g[my][mx]=4;avoid.add(mx+","+my);
+    }
+  });
+  // ユニット配置（青HQ周辺→点対称に赤側へミラー、さらに赤HQ周辺に増援）
+  const box0=nearBox(hq[0],C,R);
+  const order0=ringOrder(hq[0].x,hq[0].y,box0.x0,box0.y0,box0.x1,box0.y1);
+  const taken=new Set();
+  const baseTypes=BASE_POOL[d];
+  const blueCells=pickCells(g,C,R,order0,baseTypes.length,taken);
+  const units=[];
+  blueCells.forEach((c,j)=>{
+    units.push([baseTypes[j],0,c.x,c.y]);
+    units.push([baseTypes[j],1,C-1-c.x,R-1-c.y]);
+  });
+  const box1=nearBox(hq[1],C,R);
+  const order1=ringOrder(hq[1].x,hq[1].y,box1.x0,box1.y0,box1.x1,box1.y1);
+  const taken1=new Set();
+  units.forEach(u=>{if(u[1]===1)taken1.add(u[2]+","+u[3]);});
+  const extraTypes=EXTRA_POOL[d];
+  const extraCells=pickCells(g,C,R,order1,extraTypes.length,taken1);
+  extraCells.forEach((c,j)=>units.push([extraTypes[j],1,c.x,c.y]));
+  ensureConnectivity(g,C,R,hq);
+  return{owners,units,funds:fundsFor(i,d,opts.fundsBonus)};
+}
+
+/* --- アーキタイプ別：地形生成（縦長ベース） --- */
+function archCorridor(rnd,C,R){
+  const mid=Math.floor(C/2),half=Math.floor(R/2);
+  const riverRows=rnd()<0.5&&half>=4?[1+Math.floor(rnd()*(half-2))]:[];
+  const roadCols=[mid];
+  if(rnd()<0.45&&mid+2<=C-1)roadCols.push(mid+2);
+  else if(rnd()<0.45&&mid-2>=0)roadCols.push(mid-2);
+  const{g}=buildSymmetricGrid(rnd,C,R,{mtnP:0.08,forP:0.20,riverRows,roadCols});
+  return{g,hq:[{x:mid,y:R-1},{x:C-1-mid,y:0}]};
+}
+function archTwinPath(rnd,C,R){
+  const mid=Math.floor(C/2),half=Math.floor(R/2);
+  let left=mid-2,right=mid+2;
+  if(left<1)left=1; if(right>C-2)right=C-2;
+  const riverRows=rnd()<0.35&&half>=4?[1+Math.floor(rnd()*(half-2))]:[];
+  const{g}=buildSymmetricGrid(rnd,C,R,{mtnP:0.05,forP:0.12,spineCol:mid,riverRows,roadCols:[left,right]});
+  return{g,hq:[{x:mid,y:R-1},{x:C-1-mid,y:0}]};
+}
+function archEconomic(rnd,C,R){
+  const mid=Math.floor(C/2);
+  const{g}=buildSymmetricGrid(rnd,C,R,{mtnP:0.04,forP:0.10,roadCols:[mid]});
+  return{g,hq:[{x:mid,y:R-1},{x:C-1-mid,y:0}]};
+}
+function archOpenField(rnd,C,R){
+  const mid=Math.floor(C/2);
+  const{g}=buildSymmetricGrid(rnd,C,R,{mtnP:0.01,forP:0.05,roadCols:[mid]});
+  return{g,hq:[{x:mid,y:R-1},{x:C-1-mid,y:0}]};
+}
+function archMaze(rnd,C,R){
+  const mid=Math.floor(C/2);
+  const{g}=buildSymmetricGrid(rnd,C,R,{maze:true,mtnP:0.24,forP:0.16,roadCols:[]});
+  return{g,hq:[{x:mid,y:R-1},{x:C-1-mid,y:0}]};
+}
+function archArchipelago(rnd,C,R){
+  const mid=Math.floor(C/2),half=Math.floor(R/2);
+  const riverRows=[];
+  if(half-2>=0)riverRows.push(half-2);
+  if(half-1>=0)riverRows.push(half-1);
+  const roadCols=[mid];
+  if(rnd()<0.4){let alt=mid+3;if(alt>C-1)alt=mid-3; if(alt>=0&&alt<C&&alt!==mid)roadCols.push(alt);}
+  const{g}=buildSymmetricGrid(rnd,C,R,{mtnP:0.03,forP:0.08,riverRows,roadCols});
+  return{g,hq:[{x:mid,y:R-1},{x:C-1-mid,y:0}]};
+}
+function archGauntlet(rnd,C,R){
+  const mid=Math.floor(C/2),half=Math.floor(R/2);
+  const riverRows=rnd()<0.6&&half>=5?[Math.floor(half/2)+1]:[];
+  const{g}=buildSymmetricGrid(rnd,C,R,{mtnP:0.30,forP:0.16,riverRows,roadCols:[mid]});
+  return{g,hq:[{x:mid,y:R-1},{x:C-1-mid,y:0}]};
+}
+function archGiant(rnd,C,R){
+  const mid=Math.floor(C/2);
+  const riverRows=rnd()<0.5?[Math.floor(R/4)]:[];
+  const roadCols=[mid];
+  if(mid-3>=0)roadCols.push(mid-3);
+  if(mid+3<=C-1)roadCols.push(mid+3);
+  const{g}=buildSymmetricGrid(rnd,C,R,{mtnP:0.09,forP:0.18,riverRows,roadCols});
+  return{g,hq:[{x:mid,y:R-1},{x:C-1-mid,y:0}]};
+}
+
+/* --- フォートレス（非対称・要塞包囲戦） --- */
+function archFortress(rnd,i,d,tier){
+  const C=10+tier,R=13+2*tier;
+  const g=mkGrid(C,R,0);
+  const mid=Math.floor(C/2);
+  noiseFill(g,C,R,0,3,C-1,R-4,rnd,0.05,0.12);
+  const hqR={x:mid,y:1};
+  for(let y=0;y<=2;y++)for(let x=mid-2;x<=mid+2;x++){
+    if(!inb(x,y,C,R))continue;
+    const gate=(y===2&&Math.abs(x-mid)<=1);
+    const core=(x===hqR.x&&y===hqR.y);
+    if(gate||core)g[y][x]=0;
+    else g[y][x]=(rnd()<0.65?2:1);
+  }
+  for(let y=3;y<R-1;y++)g[y][mid]=3;
+  if(rnd()<0.5){
+    const ry=4+Math.floor(rnd()*Math.max(1,R-8));
+    for(let x=0;x<C;x++)g[ry][x]=7;
+    g[ry][mid]=3;
+  }
+  const hqB={x:mid,y:R-1};
+  const hq=[hqB,hqR];
+  clearHQArea(g,C,R,hq);
+  const avoid=new Set([hqB.x+","+hqB.y,hqR.x+","+hqR.y]);
+  const owners=[];
+  const redFac=scatterProps(g,C,R,rnd,Math.max(0,mid-2),0,Math.min(C-1,mid+2),1,1,5,avoid);
+  if(redFac.length===0){g[0][mid]=5;owners.push([mid,0,1]);avoid.add(mid+",0");}
+  else redFac.forEach(p=>owners.push([p.x,p.y,1]));
+  scatterProps(g,C,R,rnd,0,R-2,C-1,R-1,1,5,avoid).forEach(p=>owners.push([p.x,p.y,0]));
+  scatterProps(g,C,R,rnd,0,3,C-1,R-4,2+Math.floor(rnd()*2),4,avoid);
+  const redOrder=ringOrder(mid,1,Math.max(0,mid-2),0,Math.min(C-1,mid+2),2);
+  const redTaken=new Set();
+  const redTypes=[...BASE_POOL[d],...EXTRA_POOL[d]];
+  const redCells=pickCells(g,C,R,redOrder,redTypes.length,redTaken);
+  const units=[];
+  redCells.forEach((c,j)=>units.push([redTypes[j],1,c.x,c.y]));
+  const blueOrder=ringOrder(hqB.x,hqB.y,0,R-2,C-1,R-1);
+  const blueTaken=new Set();
+  const blueCells=pickCells(g,C,R,blueOrder,BASE_POOL[d].length,blueTaken);
+  blueCells.forEach((c,j)=>units.push([BASE_POOL[d][j],0,c.x,c.y]));
+  ensureConnectivity(g,C,R,hq);
+  const funds=fundsFor(i,d,2000);
+  return{g,C,R,hq,owners,units,funds};
+}
+
+/* --- アーキタイプ・シーケンス（直前と被らないシャッフル巡回） --- */
+const ARCH_LIST=['corridor','twin_path','economic','open_field','maze','archipelago','gauntlet','fortress','giant'];
+function shuffleArr(arr,rnd){
+  const a=arr.slice();
+  for(let k=a.length-1;k>0;k--){const j=Math.floor(rnd()*(k+1));[a[k],a[j]]=[a[j],a[k]];}
+  return a;
+}
+function buildArchSequence(total){
+  const rnd=mulberry32(20260614);
+  const seq=[];
+  while(seq.length<total){
+    const batch=shuffleArr(ARCH_LIST,rnd);
+    if(seq.length&&batch[0]===seq[seq.length-1]){[batch[0],batch[1]]=[batch[1],batch[0]];}
+    seq.push(...batch);
+  }
+  return seq;
+}
+const ARCH_SEQ=buildArchSequence(100);
+const ARCH_DIMS={corridor:[9,12],twin_path:[10,13],economic:[10,12],open_field:[9,11],
+  maze:[9,12],archipelago:[9,13],gauntlet:[7,15],giant:[12,15]};
+const ARCH_BUILDERS={corridor:archCorridor,twin_path:archTwinPath,economic:archEconomic,
+  open_field:archOpenField,maze:archMaze,archipelago:archArchipelago,gauntlet:archGauntlet,giant:archGiant};
+
+const HANDMADE=STAGES.length;
 function genStage(i){
   const rnd=mulberry32(20260611+i*7919);
   const d=Math.min(5,2+Math.floor((i-6)/9));
-  const C=9+(i%2)+(i>=30?1:0)+(i>=60?1:0);
-  const R=12+(i%3)+(i>=24?1:0)+(i>=55?1:0);
-  const mid=Math.floor(C/2);
-  const half=Math.floor(R/2);
-  const g=Array.from({length:R},()=>Array(C).fill(0));
-  // 上半分の地形
-  for(let y=0;y<half;y++)for(let x=0;x<C;x++){
-    const r=rnd();
-    if(y>=2){
-      if(r<0.10)g[y][x]=2;
-      else if(r<0.26)g[y][x]=1;
-    }else if(r<0.15)g[y][x]=1;
+  const tier=sizeTierFor(i);
+  const arch=ARCH_SEQ[i-HANDMADE];
+  let g,C,R,hq,owners,units,funds;
+  if(arch==='fortress'){
+    const f=archFortress(rnd,i,d,tier);
+    g=f.g;C=f.C;R=f.R;hq=f.hq;owners=f.owners;units=f.units;funds=f.funds;
+  }else{
+    const[bc,br]=ARCH_DIMS[arch];
+    C=arch==='gauntlet'?7:bc+tier;
+    R=br+2*tier;
+    const built=ARCH_BUILDERS[arch](rnd,C,R);
+    g=built.g;hq=built.hq;
+    const fin=finishSymmetric(g,C,R,rnd,i,d,hq,
+      arch==='economic'?{factories:d>=4?2:1,cities:4+Math.floor(rnd()*2)}
+      :arch==='giant'?{factories:2,cities:3+Math.floor(rnd()*3)}
+      :{});
+    owners=fin.owners;units=fin.units;funds=fin.funds;
   }
-  // HQ周辺を確保
-  for(let x=mid-2;x<=mid+2;x++)if(x>=0&&x<C&&g[1][x]===2)g[1][x]=0;
-  if(g[2][mid]===2)g[2][mid]=0;
-  // 川
-  const riverRate=i>=75?0.72:i>=50?0.60:0.45;
-  const hasRiver=rnd()<riverRate&&R>=13;
-  const wide=hasRiver&&rnd()<0.5;
-  if(hasRiver){
-    if(R%2===1){
-      for(let x=0;x<C;x++)g[half][x]=7;
-      if(wide)for(let x=0;x<C;x++)g[half-1][x]=7;
-    }else{
-      for(let x=0;x<C;x++)g[half-1][x]=7;
-    }
+  if(rnd()<0.5){
+    const t=transposeStage(g,C,R,hq,owners,units);
+    g=t.g;C=t.C;R=t.R;hq=t.hq;owners=t.owners;units=t.units;
   }
-  // 中央道路（川の上は橋になる）
-  for(let y=1;y<half;y++)g[y][mid]=3;
-  // サブ道路
-  let sideCol=-1;
-  if(rnd()<0.55){
-    sideCol=mid+(rnd()<0.5?-3:3);
-    if(sideCol>=1&&sideCol<C-1)for(let y=3;y<half;y++)g[y][sideCol]=3;
-    else sideCol=-1;
-  }
-  // 中央行（R奇数・川なし時）
-  if(R%2===1&&!hasRiver){
-    for(let x=0;x<C;x++)if(rnd()<0.18)g[half][x]=1;
-    g[half][mid]=3;
-    if(sideCol>=0)g[half][sideCol]=3;
-  }
-  if(R%2===1&&hasRiver){
-    g[half][mid]=3;
-    if(sideCol>=0)g[half][sideCol]=3;
-  }
-  // 都市（上半分に配置→ミラー）
-  const nCity=2+Math.floor(rnd()*3);
-  let placed=0,guard=0;
-  while(placed<nCity&&guard<60){
-    guard++;
-    const x=Math.floor(rnd()*C),y=1+Math.floor(rnd()*(half-1));
-    if(g[y][x]===0||g[y][x]===1){g[y][x]=4;placed++;}
-  }
-  // 工場
-  const owners=[];
-  let fx=mid-2;if(fx<0)fx=1;
-  g[1][fx]=5;
-  owners.push([fx,1,1],[fx,R-2,0]);
-  if(d>=4){
-    let fx2=mid+2;if(fx2>=C)fx2=C-2;
-    if(g[2][fx2]!==3){g[2][fx2]=5;
-      owners.push([fx2,2,1],[fx2,R-3,0]);}
-  }
-  // 下半分へミラー
-  for(let y=0;y<half;y++)for(let x=0;x<C;x++)g[R-1-y][x]=g[y][x];
-  // ユニット配置
-  const baseTypes={2:["inf","inf","tank"],
-    3:["inf","inf","tank","mech"],
-    4:["inf","inf","tank","mech","recon"],
-    5:["inf","inf","mech","tank","aa"]}[d];
-  const extraPool={2:[],3:[["art","htank"][Math.floor(rnd()*2)]],
-    4:["heli","art"],5:["htank","heli","art"]}[d];
-  const order=[];
-  for(let o=0;o<=mid;o++){order.push(mid+o);if(o>0)order.push(mid-o);}
-  function pick(rows,need,taken){
-    const res=[];
-    if(need<=0)return res;
-    for(const y of rows){for(const x of order){
-      if(x<0||x>=C)continue;
-      const t=g[y][x];
-      if(t===2||t===7)continue;
-      const k=x+","+y;
-      if(taken.has(k))continue;
-      taken.add(k);res.push({x,y});
-      if(res.length>=need)return res;
-    }}
-    return res;
-  }
-  const takenB=new Set();
-  const blueCells=pick([R-2,R-3],baseTypes.length,takenB);
-  const units=[];
-  const takenR=new Set();
-  blueCells.forEach((c,j)=>{
-    units.push([baseTypes[j],0,c.x,c.y]);
-    units.push([baseTypes[j],1,c.x,R-1-c.y]);
-    takenR.add(c.x+","+(R-1-c.y));
-  });
-  const extraCells=pick([1,2],extraPool.length,takenR);
-  extraCells.forEach((c,j)=>{units.push([extraPool[j],1,c.x,c.y]);});
-  const extra=i>=80?2500:i>=65?1500:i>=50?700:0;
-  const funds=[3000+d*250,3000+d*250+d*500+Math.min(6000,Math.floor((i-6)*40))+extra];
-  const diffDesc=i>=80?"敵の総戦力が圧倒的":i>=65?"大軍と豊富な資金":i>=50?"熟練した敵部隊":"自動生成マップ／敵戦力"+"💀".repeat(d-1);
   return{
-    name:NAME_A[Math.floor(rnd()*NAME_A.length)]+NAME_B[Math.floor(rnd()*NAME_B.length)],
-    diff:d,desc:diffDesc,
+    name:randomName(rnd),
+    diff:d,
+    desc:(ARCH_DESC[arch]||"")+"／"+diffTag(i,d),
     map:g.map(row=>row.join("")),
-    hq:[{x:mid,y:R-1},{x:mid,y:0}],
-    owners,units,funds};
+    hq,owners,units,funds,
+  };
 }
 for(let i=STAGES.length;i<100;i++)STAGES.push(genStage(i));
+
 /*STAGES_END*/
 
 /* ====================================================
