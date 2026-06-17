@@ -96,15 +96,16 @@
   <div class="dialog" id="dialog">
     <h2>ミニウォーズ DX</h2>
     <p>🔵 青軍（あなた）対 🔴 赤軍（CPU）<br>
-    ・<b>全50ステージ</b>！後半ほど敵が強大に<br>
+    ・<b>全20ステージ</b>！すべて手作り、後半ほど敵が強大に<br>
     ・ユニット9種類、兵科の相性が勝敗のカギ<br>
     ・ダメージには運がからむ。<b style="color:#ffd76a">クリティカル</b>もあり！<br>
     ・同じ種類の味方に重なると<b>合流</b>してHP回復<br>
     ・砲兵・ロケット砲は移動したターンは撃てない<br>
     ・歩兵・バズーカ兵で都市を占領 → 毎ターン収入<br>
     ・戦闘で経験値！<b style="color:#ffd76a">★ランクアップ</b>で攻防強化<br>
-    ・<b style="color:#ffd76a">敵HQの占領</b>か敵全滅で勝利！</p>
-    <div class="row"><button class="gold center" onclick="openStageSelect()">▶ ステージをえらぶ</button></div>
+    ・<b style="color:#ffd76a">敵HQの占領</b>か敵全滅で勝利！<br>
+    ・🏠ホームでいつでも中断、つづきから再開できます</p>
+    <div class="row" id="titleRow"><button class="gold center" onclick="openStageSelect()">▶ ステージをえらぶ</button></div>
   </div>
 </div>
 
@@ -471,398 +472,316 @@ const STAGES=[
         ["inf",1,2,1],["inf",1,7,1],["tank",1,4,1],["tank",1,6,1],
         ["htank",1,5,1],["heli",1,3,1],["art",1,5,2]],
  funds:[5000,8000]},
+
+
+{name:"ひろい平原",diff:2,desc:"遮蔽物の少ない平原。機動力が勝敗を分ける",
+ map:[
+ "20000000002",
+ "00005000000",
+ "00100000100",
+ "00400000400",
+ "00000000000",
+ "00001110000",
+ "00000000000",
+ "00400000400",
+ "00100000100",
+ "00000050000",
+ "20000000002",
+ ],
+ hq:[{x:5,y:10},{x:5,y:0}],
+ owners:[[4, 1, 1], [6, 9, 0]],
+ units:[["inf", 0, 4, 9], ["inf", 0, 6, 8], ["tank", 0, 5, 9], ["inf", 1, 4, 1], ["inf", 1, 6, 2], ["tank", 1, 5, 1]],
+ funds:[3200, 3300]},
+
+{name:"港町経済戦",diff:2,desc:"4つの都市が並ぶ通商路をめぐる経済戦",
+ map:[
+ "22000000022",
+ "00000500000",
+ "04000000040",
+ "00010001000",
+ "00003330000",
+ "00400000400",
+ "00003330000",
+ "00010001000",
+ "04000000040",
+ "00000500000",
+ "22000000022",
+ ],
+ hq:[{x:5,y:10},{x:5,y:0}],
+ owners:[[5, 1, 1], [5, 9, 0]],
+ units:[["inf", 0, 4, 9], ["inf", 0, 6, 9], ["recon", 0, 5, 9], ["inf", 1, 4, 1], ["inf", 1, 6, 1], ["recon", 1, 5, 1]],
+ funds:[3300, 3400]},
+
+{name:"群島の架け橋",diff:3,desc:"広い水域を渡れるのは橋の上だけ",
+ map:[
+ "00000000000",
+ "00000500000",
+ "00100000100",
+ "00400000400",
+ "00000000000",
+ "77777377777",
+ "77777377777",
+ "77777377777",
+ "00000000000",
+ "00400000400",
+ "00100000100",
+ "00000500000",
+ "00000000000",
+ ],
+ hq:[{x:5,y:12},{x:5,y:0}],
+ owners:[[5, 1, 1], [5, 11, 0]],
+ units:[["inf", 0, 5, 11], ["inf", 0, 3, 10], ["tank", 0, 7, 10], ["mech", 0, 5, 10], ["inf", 1, 5, 1], ["inf", 1, 3, 2], ["tank", 1, 7, 2], ["mech", 1, 5, 2]],
+ funds:[3600, 4700]},
+
+{name:"極細回廊",diff:3,desc:"幅3マスの一本道。すれ違いもできない死地",
+ map:[
+ "2000002",
+ "2005002",
+ "2000002",
+ "2100012",
+ "2100012",
+ "2000002",
+ "2010102",
+ "2000002",
+ "7773777",
+ "2000002",
+ "2010102",
+ "2000002",
+ "2100012",
+ "2100012",
+ "2000002",
+ "2005002",
+ "2000002",
+ ],
+ hq:[{x:3,y:16},{x:3,y:0}],
+ owners:[[3, 1, 1], [3, 15, 0]],
+ units:[["inf", 0, 3, 15], ["mech", 0, 3, 14], ["tank", 0, 3, 13], ["inf", 1, 3, 1], ["mech", 1, 3, 2], ["tank", 1, 3, 3]],
+ funds:[3600, 4800]},
+
+{name:"山岳迷路",diff:3,desc:"入り組んだ山道。最短ルートは一つではない",
+ map:[
+ "000000000",
+ "020252020",
+ "021000120",
+ "020222020",
+ "001212100",
+ "022000220",
+ "000000000",
+ "022000220",
+ "001212100",
+ "020222020",
+ "021000120",
+ "020252020",
+ "000000000",
+ ],
+ hq:[{x:4,y:12},{x:4,y:0}],
+ owners:[[4, 1, 1], [4, 11, 0]],
+ units:[["inf", 0, 3, 10], ["inf", 0, 5, 10], ["mech", 0, 4, 10], ["inf", 1, 3, 2], ["inf", 1, 5, 2], ["mech", 1, 4, 2]],
+ funds:[3700, 4900]},
+
+{name:"二正面作戦",diff:4,desc:"山稜に分かたれた左右二つの戦線",
+ map:[
+ "00000200000",
+ "00500200400",
+ "00010201000",
+ "00300200300",
+ "00300200300",
+ "00300000300",
+ "00000000000",
+ "00300000300",
+ "00300200300",
+ "00300200300",
+ "00010201000",
+ "00500200400",
+ "00000200000",
+ ],
+ hq:[{x:5,y:12},{x:5,y:0}],
+ owners:[[2, 1, 1], [2, 11, 0]],
+ units:[["inf", 0, 2, 11], ["tank", 0, 2, 10], ["mech", 0, 3, 10], ["inf", 0, 7, 10], ["inf", 1, 2, 1], ["tank", 1, 2, 2], ["mech", 1, 3, 2], ["inf", 1, 7, 2]],
+ funds:[4000, 5800]},
+
+{name:"川の要衝",diff:4,desc:"2つの橋をおさえた者が戦場を制す",
+ map:[
+ "00000000000",
+ "00000500000",
+ "00001010000",
+ "00000400000",
+ "00000000000",
+ "71117771117",
+ "71117771117",
+ "71117771117",
+ "00000000000",
+ "00000400000",
+ "00001010000",
+ "00000500000",
+ "00000000000",
+ ],
+ hq:[{x:5,y:12},{x:5,y:0}],
+ owners:[[5, 1, 1], [5, 11, 0]],
+ units:[["inf", 0, 2, 10], ["inf", 0, 8, 10], ["tank", 0, 5, 10], ["aa", 0, 5, 11], ["inf", 1, 2, 2], ["inf", 1, 8, 2], ["tank", 1, 5, 2], ["art", 1, 5, 1]],
+ funds:[4200, 6200]},
+
+{name:"工業三角州",diff:4,desc:"6つの拠点がひしめく経済戦。資金が物量を生む",
+ map:[
+ "2000000000002",
+ "0000005000000",
+ "0040000000400",
+ "0000400040000",
+ "0000033300000",
+ "0100000000010",
+ "0100000000010",
+ "0000033300000",
+ "0000400040000",
+ "0040000000400",
+ "0000005000000",
+ "2000000000002",
+ ],
+ hq:[{x:6,y:11},{x:6,y:0}],
+ owners:[[6, 1, 1], [6, 10, 0]],
+ units:[["inf", 0, 5, 10], ["inf", 0, 7, 10], ["recon", 0, 6, 10], ["mech", 0, 6, 9], ["inf", 1, 5, 1], ["inf", 1, 7, 1], ["recon", 1, 6, 1], ["mech", 1, 6, 2]],
+ funds:[4200, 6500]},
+
+{name:"渓谷の死闘",diff:4,desc:"切り立った渓谷の一本道。伏兵に注意",
+ map:[
+ "222000222",
+ "222050222",
+ "222000222",
+ "222000222",
+ "222101222",
+ "222101222",
+ "222000222",
+ "222737222",
+ "222000222",
+ "222101222",
+ "222101222",
+ "222000222",
+ "222000222",
+ "222050222",
+ "222000222",
+ ],
+ hq:[{x:4,y:14},{x:4,y:0}],
+ owners:[[4, 1, 1], [4, 13, 0]],
+ units:[["inf", 0, 4, 13], ["mech", 0, 4, 12], ["tank", 0, 4, 11], ["aa", 0, 4, 10], ["inf", 1, 4, 1], ["mech", 1, 4, 2], ["tank", 1, 4, 3], ["art", 1, 4, 4]],
+ funds:[4300, 6800]},
+
+{name:"広域決戦",diff:5,desc:"3本の橋をめぐる大規模な総力戦",
+ map:[
+ "0000000000000",
+ "0040005000400",
+ "0000000000000",
+ "0000000000000",
+ "0010022200100",
+ "0000000000000",
+ "0000000000000",
+ "7773773773777",
+ "7773773773777",
+ "7773773773777",
+ "0000000000000",
+ "0000000000000",
+ "0010022200100",
+ "0000000000000",
+ "0000000000000",
+ "0040005000400",
+ "0000000000000",
+ ],
+ hq:[{x:6,y:16},{x:6,y:0}],
+ owners:[[6, 1, 1], [2, 1, 1], [10, 1, 1], [6, 15, 0], [2, 15, 0], [10, 15, 0]],
+ units:[["inf", 0, 5, 15], ["inf", 0, 7, 15], ["tank", 0, 6, 15], ["mech", 0, 3, 15], ["recon", 0, 9, 15], ["aa", 0, 6, 14], ["inf", 1, 5, 1], ["inf", 1, 7, 1], ["tank", 1, 6, 1], ["mech", 1, 3, 1], ["recon", 1, 9, 1], ["htank", 1, 6, 2]],
+ funds:[4500, 7600]},
+
+{name:"包囲突破",diff:5,desc:"山に守られた敵要塞。正面の門以外は越えられない",
+ map:[
+ "00020002000",
+ "00025002000",
+ "00020002000",
+ "00022022000",
+ "00000000000",
+ "00000000000",
+ "00100000100",
+ "00000000000",
+ "00000000000",
+ "00001010000",
+ "00000000000",
+ "04000000040",
+ "00000000000",
+ "00000000000",
+ ],
+ hq:[{x:5,y:13},{x:5,y:1}],
+ owners:[[4, 1, 1], [1, 11, 0], [9, 11, 0]],
+ units:[["inf", 1, 4, 2], ["inf", 1, 6, 2], ["mech", 1, 5, 3], ["tank", 1, 6, 1], ["art", 1, 5, 2], ["inf", 0, 4, 13], ["inf", 0, 6, 13], ["tank", 0, 5, 13], ["mech", 0, 5, 12]],
+ funds:[6500, 3800]},
+
+{name:"三方からの猛攻",diff:5,desc:"3つの戦線が同時に交わる大乱戦",
+ map:[
+ "0000000000000",
+ "0000005000000",
+ "0040000000400",
+ "0000000000000",
+ "0000000000000",
+ "0030003000300",
+ "1131113111311",
+ "1131113111311",
+ "1131113111311",
+ "0030003000300",
+ "0000000000000",
+ "0000000000000",
+ "0040000000400",
+ "0000005000000",
+ "0000000000000",
+ ],
+ hq:[{x:6,y:14},{x:6,y:0}],
+ owners:[[6, 1, 1], [6, 13, 0], [2, 2, 1], [10, 2, 1], [2, 12, 0], [10, 12, 0]],
+ units:[["inf", 0, 2, 13], ["inf", 0, 10, 13], ["tank", 0, 6, 13], ["mech", 0, 6, 12], ["recon", 0, 4, 13], ["aa", 0, 8, 13], ["inf", 1, 2, 1], ["inf", 1, 10, 1], ["tank", 1, 6, 1], ["mech", 1, 6, 2], ["recon", 1, 4, 1], ["art", 1, 8, 1]],
+ funds:[5000, 8500]},
+
+{name:"鋼鉄要塞",diff:5,desc:"重戦車・対空・砲兵で固めた要塞への総攻撃",
+ map:[
+ "02220002220",
+ "02220502220",
+ "02220002220",
+ "00000000000",
+ "00000000000",
+ "00000000000",
+ "00100000100",
+ "00000500000",
+ "00000000000",
+ "00100000100",
+ "00000000000",
+ "04000000040",
+ "00000400000",
+ "00000000000",
+ "00000000000",
+ ],
+ hq:[{x:5,y:13},{x:5,y:1}],
+ owners:[[5, 1, 1], [5, 7, 0], [1, 11, 0], [9, 11, 0], [5, 12, 0]],
+ units:[["inf", 1, 4, 2], ["inf", 1, 6, 2], ["htank", 1, 5, 3], ["aa", 1, 4, 1], ["aa", 1, 6, 1], ["art", 1, 5, 2], ["rocket", 1, 5, 4], ["inf", 0, 4, 13], ["inf", 0, 6, 13], ["tank", 0, 5, 13], ["mech", 0, 4, 12], ["mech", 0, 6, 12], ["recon", 0, 5, 12]],
+ funds:[8000, 4200]},
+
+{name:"帝国の門",diff:5,desc:"全兵科入り乱れる最終決戦。油断は禁物",
+ map:[
+ "0000200020000",
+ "0000205020000",
+ "0000200020000",
+ "0000220220000",
+ "0000400040000",
+ "0001000001000",
+ "0000000000000",
+ "7737773777377",
+ "7737773777377",
+ "7737773777377",
+ "0000000000000",
+ "0001000001000",
+ "0000400040000",
+ "0000220220000",
+ "0000200020000",
+ "0000205020000",
+ "0000200020000",
+ ],
+ hq:[{x:6,y:16},{x:6,y:0}],
+ owners:[[6, 1, 1], [6, 15, 0], [4, 4, 1], [8, 4, 1], [8, 12, 0], [4, 12, 0]],
+ units:[["tank", 1, 5, 1], ["tank", 1, 7, 1], ["inf", 1, 5, 4], ["inf", 1, 7, 4], ["mech", 1, 6, 5], ["recon", 1, 4, 5], ["htank", 1, 6, 6], ["heli", 1, 3, 6], ["rocket", 1, 9, 6], ["tank", 0, 7, 15], ["tank", 0, 5, 15], ["inf", 0, 7, 12], ["inf", 0, 5, 12], ["mech", 0, 6, 11], ["recon", 0, 8, 11], ["htank", 0, 6, 10], ["heli", 0, 9, 10], ["rocket", 0, 3, 10]],
+ funds:[6000, 12000]},
 ];
-/* ---- 自動生成ステージ（7〜100）：9種のアーキタイプでバリエーション強化 ---- */
-function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;
-  let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;
-  return((t^t>>>14)>>>0)/4294967296;};}
-const NAME_A=["北の","南の","東の","西の","霧の","紅の","鋼の","風の","雷の","氷の","炎の","影の","青の","白の","金の","深緑の"];
-const NAME_B=["平原","渓谷","回廊","戦線","荒野","河畔","高地","十字路","国境","要衝","湿原","丘陵","要塞","群島","盆地","深淵"];
-function randomName(rnd){return NAME_A[Math.floor(rnd()*NAME_A.length)]+NAME_B[Math.floor(rnd()*NAME_B.length)];}
-
-/* --- 共通ヘルパー --- */
-function mkGrid(C,R,v){return Array.from({length:R},()=>Array(C).fill(v));}
-function inb(x,y,C,R){return x>=0&&y>=0&&x<C&&y<R;}
-function noiseFill(g,C,R,x0,y0,x1,y1,rnd,mtnP,forP){
-  for(let y=Math.max(0,y0);y<=Math.min(R-1,y1);y++)
-    for(let x=Math.max(0,x0);x<=Math.min(C-1,x1);x++){
-      const r=rnd();
-      if(r<mtnP)g[y][x]=2;
-      else if(r<mtnP+forP)g[y][x]=1;
-    }
-}
-// 点対称ミラー：上半分(0..half-1)はそのまま、下半分へ点対称コピー
-function mirrorPoint(g,C,R){
-  const half=Math.floor(R/2);
-  for(let y=0;y<half;y++)for(let x=0;x<C;x++)g[R-1-y][C-1-x]=g[y][x];
-}
-function clearHQArea(g,C,R,hq){
-  hq.forEach(h=>{
-    for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
-      const x=h.x+dx,y=h.y+dy;
-      if(inb(x,y,C,R)&&(g[y][x]===2||g[y][x]===7))g[y][x]=0;
-    }
-  });
-}
-// HQ間のtread通行可能性を保証（だめなら強制的に道を通す）
-function ensureConnectivity(g,C,R,hq){
-  const cost=t=>(t===2||t===7)?40:1;
-  function dijk(sx,sy){
-    const dist=Array.from({length:R},()=>Array(C).fill(Infinity));
-    dist[sy][sx]=0;
-    const q=[[sx,sy]];
-    while(q.length){
-      q.sort((a,b)=>dist[a[1]][a[0]]-dist[b[1]][b[0]]);
-      const[x,y]=q.shift();
-      const dc=dist[y][x];
-      for(const[dx,dy]of[[1,0],[-1,0],[0,1],[0,-1]]){
-        const nx=x+dx,ny=y+dy;
-        if(!inb(nx,ny,C,R))continue;
-        const nc=dc+cost(g[ny][nx]);
-        if(nc<dist[ny][nx]){dist[ny][nx]=nc;q.push([nx,ny]);}
-      }
-    }
-    return dist;
-  }
-  const dist=dijk(hq[0].x,hq[0].y);
-  if(dist[hq[1].y][hq[1].x]<40)return;
-  let x=hq[0].x,y=hq[0].y;
-  const ty=hq[1].y,tx=hq[1].x;
-  const sy=ty>y?1:(ty<y?-1:0);
-  while(y!==ty){if(g[y][x]===2||g[y][x]===7)g[y][x]=3;y+=sy;}
-  const sx=tx>x?1:(tx<x?-1:0);
-  while(x!==tx){if(g[y][x]===2||g[y][x]===7)g[y][x]=3;x+=sx;}
-  if(g[y][x]===2||g[y][x]===7)g[y][x]=3;
-}
-// 90度回転（転置）：縦長↔横長を入れ替える
-function transposeStage(g,C,R,hq,owners,units){
-  const g2=Array.from({length:C},()=>Array(R).fill(0));
-  for(let a=0;a<C;a++)for(let b=0;b<R;b++)g2[a][b]=g[b][a];
-  return{
-    g:g2,C:R,R:C,
-    hq:hq.map(h=>({x:h.y,y:h.x})),
-    owners:owners.map(o=>[o[1],o[0],o[2]]),
-    units:units.map(u=>[u[0],u[1],u[3],u[2]]),
-  };
-}
-function scatterProps(g,C,R,rnd,x0,y0,x1,y1,count,type,avoid){
-  const placed=[];let guard=0;
-  x0=Math.max(0,x0);y0=Math.max(0,y0);x1=Math.min(C-1,x1);y1=Math.min(R-1,y1);
-  if(x1<x0||y1<y0)return placed;
-  while(placed.length<count&&guard<300){
-    guard++;
-    const x=x0+Math.floor(rnd()*(x1-x0+1));
-    const y=y0+Math.floor(rnd()*(y1-y0+1));
-    if(g[y][x]!==0&&g[y][x]!==1)continue;
-    const k=x+","+y;
-    if(avoid.has(k))continue;
-    g[y][x]=type;placed.push({x,y});avoid.add(k);
-  }
-  return placed;
-}
-function ringOrder(cx,cy,x0,y0,x1,y1){
-  const cells=[];
-  for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)cells.push([x,y]);
-  cells.sort((a,b)=>{
-    const da=Math.abs(a[0]-cx)+Math.abs(a[1]-cy)+((a[0]*131+a[1]*977)%5)*0.01;
-    const db=Math.abs(b[0]-cx)+Math.abs(b[1]-cy)+((b[0]*131+b[1]*977)%5)*0.01;
-    return da-db;
-  });
-  return cells;
-}
-function pickCells(g,C,R,cells,need,taken){
-  const res=[];
-  if(need<=0)return res;
-  for(const[x,y]of cells){
-    if(!inb(x,y,C,R))continue;
-    const t=g[y][x];
-    if(t===2||t===7)continue;
-    const k=x+","+y;
-    if(taken.has(k))continue;
-    taken.add(k);res.push({x,y});
-    if(res.length>=need)return res;
-  }
-  return res;
-}
-function nearBox(h,C,R){
-  let x0=0,x1=C-1,y0=0,y1=R-1;
-  const xEdge=(h.x===0||h.x===C-1),yEdge=(h.y===0||h.y===R-1);
-  const depth=(xEdge&&yEdge)?3:2;
-  if(h.y===R-1)y0=R-depth; else if(h.y===0)y1=depth-1;
-  if(h.x===0)x1=depth-1; else if(h.x===C-1)x0=C-depth;
-  return{x0,y0,x1,y1};
-}
-
-const BASE_POOL={2:["inf","inf","tank"],
-  3:["inf","inf","tank","mech"],
-  4:["inf","mech","tank","tank","recon"],
-  5:["inf","mech","tank","tank","aa"]};
-const EXTRA_POOL={2:[],3:["htank"],4:["heli","art"],5:["htank","heli","art","rocket"]};
-function sizeTierFor(i){return i<30?0:i<55?1:i<80?2:3;}
-function fundsFor(i,d,bonus){
-  const extra=i>=80?2500:i>=65?1500:i>=50?700:0;
-  return[3000+d*250+(bonus||0), 3000+d*250+d*500+Math.min(6000,Math.floor((i-6)*40))+extra];
-}
-const ARCH_DESC={
-  corridor:"一本道をめぐる正面決戦",
-  twin_path:"山稜に分かたれた二正面作戦",
-  economic:"拠点が密集する経済戦",
-  open_field:"遮蔽物の少ない平原での激突",
-  maze:"入り組んだ山岳・森林地帯",
-  archipelago:"広い水域と数少ない橋をめぐる攻防",
-  gauntlet:"極端に細長い回廊での一本道勝負",
-  fortress:"山に守られた敵要塞への攻略戦",
-  giant:"広大な戦場での総力戦",
-};
-function diffTag(i,d){
-  return i>=80?"敵の総戦力が圧倒的":i>=65?"大軍と豊富な資金":i>=50?"熟練した敵部隊":"敵戦力"+"💀".repeat(Math.max(0,d-1));
-}
-
-/* --- 点対称地形の共通ビルダー --- */
-function buildSymmetricGrid(rnd,C,R,opts){
-  const g=mkGrid(C,R,0);
-  const half=Math.floor(R/2);
-  const mid=Math.floor(C/2);
-  if(opts.maze){
-    for(let y=0;y<half;y++)for(let x=0;x<C;x++){
-      const r=rnd();
-      if(r<opts.mtnP)g[y][x]=2; else if(r<opts.mtnP+opts.forP)g[y][x]=1;
-    }
-    let cx=mid;
-    for(let y=half-1;y>=0;y--){
-      g[y][cx]=0;
-      if(rnd()<0.45)cx=Math.max(1,Math.min(C-2,cx+(rnd()<0.5?1:-1)));
-      g[y][cx]=0;
-    }
-  }else{
-    noiseFill(g,C,R,0,0,C-1,half-1,rnd,opts.mtnP,opts.forP);
-  }
-  if(opts.spineCol!==undefined&&opts.spineCol>=0&&opts.spineCol<C){
-    for(let y=0;y<half;y++)g[y][opts.spineCol]=2;
-  }
-  (opts.riverRows||[]).forEach(ry=>{
-    if(ry>=0&&ry<half)for(let x=0;x<C;x++)g[ry][x]=7;
-  });
-  mirrorPoint(g,C,R);
-  (opts.roadCols||[]).forEach(cx2=>{
-    if(cx2>=0&&cx2<C)for(let y=0;y<R;y++)g[y][cx2]=3;
-  });
-  return{g,mid,half};
-}
-
-/* --- 点対称マップ共通の拠点・ユニット配置 --- */
-function finishSymmetric(g,C,R,rnd,i,d,hq,opts){
-  opts=opts||{};
-  clearHQArea(g,C,R,hq);
-  const avoid=new Set([hq[0].x+","+hq[0].y,hq[1].x+","+hq[1].y]);
-  const owners=[];
-  const facCount=opts.factories!==undefined?opts.factories:(d>=4?2:1);
-  for(let k=0;k<facCount;k++){
-    const b=k===0?nearBox(hq[0],C,R):{x0:0,y0:0,x1:C-1,y1:R-1};
-    const p=scatterProps(g,C,R,rnd,b.x0,b.y0,b.x1,b.y1,1,5,avoid);
-    p.forEach(pt=>{
-      const mx=C-1-pt.x,my=R-1-pt.y;
-      if(g[my][mx]===0||g[my][mx]===1){
-        g[my][mx]=5;avoid.add(mx+","+my);
-        owners.push([pt.x,pt.y,0],[mx,my,1]);
-      }else{
-        owners.push([pt.x,pt.y,0]);
-      }
-    });
-  }
-  const cityN=opts.cities!==undefined?opts.cities:2+Math.floor(rnd()*3);
-  const cp=scatterProps(g,C,R,rnd,0,0,C-1,R-1,cityN,4,avoid);
-  cp.forEach(pt=>{
-    const mx=C-1-pt.x,my=R-1-pt.y;
-    if(!(mx===pt.x&&my===pt.y)&&(g[my][mx]===0||g[my][mx]===1)&&!avoid.has(mx+","+my)){
-      g[my][mx]=4;avoid.add(mx+","+my);
-    }
-  });
-  // ユニット配置（青HQ周辺→点対称に赤側へミラー、さらに赤HQ周辺に増援）
-  const box0=nearBox(hq[0],C,R);
-  const order0=ringOrder(hq[0].x,hq[0].y,box0.x0,box0.y0,box0.x1,box0.y1);
-  const taken=new Set();
-  const baseTypes=BASE_POOL[d];
-  const blueCells=pickCells(g,C,R,order0,baseTypes.length,taken);
-  const units=[];
-  blueCells.forEach((c,j)=>{
-    units.push([baseTypes[j],0,c.x,c.y]);
-    units.push([baseTypes[j],1,C-1-c.x,R-1-c.y]);
-  });
-  const box1=nearBox(hq[1],C,R);
-  const order1=ringOrder(hq[1].x,hq[1].y,box1.x0,box1.y0,box1.x1,box1.y1);
-  const taken1=new Set();
-  units.forEach(u=>{if(u[1]===1)taken1.add(u[2]+","+u[3]);});
-  const extraTypes=EXTRA_POOL[d];
-  const extraCells=pickCells(g,C,R,order1,extraTypes.length,taken1);
-  extraCells.forEach((c,j)=>units.push([extraTypes[j],1,c.x,c.y]));
-  ensureConnectivity(g,C,R,hq);
-  return{owners,units,funds:fundsFor(i,d,opts.fundsBonus)};
-}
-
-/* --- アーキタイプ別：地形生成（縦長ベース） --- */
-function archCorridor(rnd,C,R){
-  const mid=Math.floor(C/2),half=Math.floor(R/2);
-  const riverRows=rnd()<0.5&&half>=4?[1+Math.floor(rnd()*(half-2))]:[];
-  const roadCols=[mid];
-  if(rnd()<0.45&&mid+2<=C-1)roadCols.push(mid+2);
-  else if(rnd()<0.45&&mid-2>=0)roadCols.push(mid-2);
-  const{g}=buildSymmetricGrid(rnd,C,R,{mtnP:0.08,forP:0.20,riverRows,roadCols});
-  return{g,hq:[{x:mid,y:R-1},{x:C-1-mid,y:0}]};
-}
-function archTwinPath(rnd,C,R){
-  const mid=Math.floor(C/2),half=Math.floor(R/2);
-  let left=mid-2,right=mid+2;
-  if(left<1)left=1; if(right>C-2)right=C-2;
-  const riverRows=rnd()<0.35&&half>=4?[1+Math.floor(rnd()*(half-2))]:[];
-  const{g}=buildSymmetricGrid(rnd,C,R,{mtnP:0.05,forP:0.12,spineCol:mid,riverRows,roadCols:[left,right]});
-  return{g,hq:[{x:mid,y:R-1},{x:C-1-mid,y:0}]};
-}
-function archEconomic(rnd,C,R){
-  const mid=Math.floor(C/2);
-  const{g}=buildSymmetricGrid(rnd,C,R,{mtnP:0.04,forP:0.10,roadCols:[mid]});
-  return{g,hq:[{x:mid,y:R-1},{x:C-1-mid,y:0}]};
-}
-function archOpenField(rnd,C,R){
-  const mid=Math.floor(C/2);
-  const{g}=buildSymmetricGrid(rnd,C,R,{mtnP:0.01,forP:0.05,roadCols:[mid]});
-  return{g,hq:[{x:mid,y:R-1},{x:C-1-mid,y:0}]};
-}
-function archMaze(rnd,C,R){
-  const mid=Math.floor(C/2);
-  const{g}=buildSymmetricGrid(rnd,C,R,{maze:true,mtnP:0.24,forP:0.16,roadCols:[]});
-  return{g,hq:[{x:mid,y:R-1},{x:C-1-mid,y:0}]};
-}
-function archArchipelago(rnd,C,R){
-  const mid=Math.floor(C/2),half=Math.floor(R/2);
-  const riverRows=[];
-  if(half-2>=0)riverRows.push(half-2);
-  if(half-1>=0)riverRows.push(half-1);
-  const roadCols=[mid];
-  if(rnd()<0.4){let alt=mid+3;if(alt>C-1)alt=mid-3; if(alt>=0&&alt<C&&alt!==mid)roadCols.push(alt);}
-  const{g}=buildSymmetricGrid(rnd,C,R,{mtnP:0.03,forP:0.08,riverRows,roadCols});
-  return{g,hq:[{x:mid,y:R-1},{x:C-1-mid,y:0}]};
-}
-function archGauntlet(rnd,C,R){
-  const mid=Math.floor(C/2),half=Math.floor(R/2);
-  const riverRows=rnd()<0.6&&half>=5?[Math.floor(half/2)+1]:[];
-  const{g}=buildSymmetricGrid(rnd,C,R,{mtnP:0.30,forP:0.16,riverRows,roadCols:[mid]});
-  return{g,hq:[{x:mid,y:R-1},{x:C-1-mid,y:0}]};
-}
-function archGiant(rnd,C,R){
-  const mid=Math.floor(C/2);
-  const riverRows=rnd()<0.5?[Math.floor(R/4)]:[];
-  const roadCols=[mid];
-  if(mid-3>=0)roadCols.push(mid-3);
-  if(mid+3<=C-1)roadCols.push(mid+3);
-  const{g}=buildSymmetricGrid(rnd,C,R,{mtnP:0.09,forP:0.18,riverRows,roadCols});
-  return{g,hq:[{x:mid,y:R-1},{x:C-1-mid,y:0}]};
-}
-
-/* --- フォートレス（非対称・要塞包囲戦） --- */
-function archFortress(rnd,i,d,tier){
-  const C=10+tier,R=13+2*tier;
-  const g=mkGrid(C,R,0);
-  const mid=Math.floor(C/2);
-  noiseFill(g,C,R,0,3,C-1,R-4,rnd,0.05,0.12);
-  const hqR={x:mid,y:1};
-  for(let y=0;y<=2;y++)for(let x=mid-2;x<=mid+2;x++){
-    if(!inb(x,y,C,R))continue;
-    const gate=(y===2&&Math.abs(x-mid)<=1);
-    const core=(x===hqR.x&&y===hqR.y);
-    if(gate||core)g[y][x]=0;
-    else g[y][x]=(rnd()<0.65?2:1);
-  }
-  for(let y=3;y<R-1;y++)g[y][mid]=3;
-  if(rnd()<0.5){
-    const ry=4+Math.floor(rnd()*Math.max(1,R-8));
-    for(let x=0;x<C;x++)g[ry][x]=7;
-    g[ry][mid]=3;
-  }
-  const hqB={x:mid,y:R-1};
-  const hq=[hqB,hqR];
-  clearHQArea(g,C,R,hq);
-  const avoid=new Set([hqB.x+","+hqB.y,hqR.x+","+hqR.y]);
-  const owners=[];
-  const redFac=scatterProps(g,C,R,rnd,Math.max(0,mid-2),0,Math.min(C-1,mid+2),1,1,5,avoid);
-  if(redFac.length===0){g[0][mid]=5;owners.push([mid,0,1]);avoid.add(mid+",0");}
-  else redFac.forEach(p=>owners.push([p.x,p.y,1]));
-  scatterProps(g,C,R,rnd,0,R-2,C-1,R-1,1,5,avoid).forEach(p=>owners.push([p.x,p.y,0]));
-  scatterProps(g,C,R,rnd,0,3,C-1,R-4,2+Math.floor(rnd()*2),4,avoid);
-  const redOrder=ringOrder(mid,1,Math.max(0,mid-2),0,Math.min(C-1,mid+2),2);
-  const redTaken=new Set();
-  const redTypes=[...BASE_POOL[d],...EXTRA_POOL[d]];
-  const redCells=pickCells(g,C,R,redOrder,redTypes.length,redTaken);
-  const units=[];
-  redCells.forEach((c,j)=>units.push([redTypes[j],1,c.x,c.y]));
-  const blueOrder=ringOrder(hqB.x,hqB.y,0,R-2,C-1,R-1);
-  const blueTaken=new Set();
-  const blueCells=pickCells(g,C,R,blueOrder,BASE_POOL[d].length,blueTaken);
-  blueCells.forEach((c,j)=>units.push([BASE_POOL[d][j],0,c.x,c.y]));
-  ensureConnectivity(g,C,R,hq);
-  const funds=fundsFor(i,d,2000);
-  return{g,C,R,hq,owners,units,funds};
-}
-
-/* --- アーキタイプ・シーケンス（直前と被らないシャッフル巡回） --- */
-const ARCH_LIST=['corridor','twin_path','economic','open_field','maze','archipelago','gauntlet','fortress','giant'];
-function shuffleArr(arr,rnd){
-  const a=arr.slice();
-  for(let k=a.length-1;k>0;k--){const j=Math.floor(rnd()*(k+1));[a[k],a[j]]=[a[j],a[k]];}
-  return a;
-}
-function buildArchSequence(total){
-  const rnd=mulberry32(20260614);
-  const seq=[];
-  while(seq.length<total){
-    const batch=shuffleArr(ARCH_LIST,rnd);
-    if(seq.length&&batch[0]===seq[seq.length-1]){[batch[0],batch[1]]=[batch[1],batch[0]];}
-    seq.push(...batch);
-  }
-  return seq;
-}
-const ARCH_SEQ=buildArchSequence(100);
-const ARCH_DIMS={corridor:[9,12],twin_path:[10,13],economic:[10,12],open_field:[9,11],
-  maze:[9,12],archipelago:[9,13],gauntlet:[7,15],giant:[12,15]};
-const ARCH_BUILDERS={corridor:archCorridor,twin_path:archTwinPath,economic:archEconomic,
-  open_field:archOpenField,maze:archMaze,archipelago:archArchipelago,gauntlet:archGauntlet,giant:archGiant};
-
-const HANDMADE=STAGES.length;
-function genStage(i){
-  const rnd=mulberry32(20260611+i*7919);
-  const d=Math.min(5,2+Math.floor((i-6)/9));
-  const tier=sizeTierFor(i);
-  const arch=ARCH_SEQ[i-HANDMADE];
-  let g,C,R,hq,owners,units,funds;
-  if(arch==='fortress'){
-    const f=archFortress(rnd,i,d,tier);
-    g=f.g;C=f.C;R=f.R;hq=f.hq;owners=f.owners;units=f.units;funds=f.funds;
-  }else{
-    const[bc,br]=ARCH_DIMS[arch];
-    C=arch==='gauntlet'?7:bc+tier;
-    R=br+2*tier;
-    const built=ARCH_BUILDERS[arch](rnd,C,R);
-    g=built.g;hq=built.hq;
-    const fin=finishSymmetric(g,C,R,rnd,i,d,hq,
-      arch==='economic'?{factories:d>=4?2:1,cities:4+Math.floor(rnd()*2)}
-      :arch==='giant'?{factories:2,cities:3+Math.floor(rnd()*3)}
-      :{});
-    owners=fin.owners;units=fin.units;funds=fin.funds;
-  }
-  if(rnd()<0.5){
-    const t=transposeStage(g,C,R,hq,owners,units);
-    g=t.g;C=t.C;R=t.R;hq=t.hq;owners=t.owners;units=t.units;
-  }
-  return{
-    name:randomName(rnd),
-    diff:d,
-    desc:(ARCH_DESC[arch]||"")+"／"+diffTag(i,d),
-    map:g.map(row=>row.join("")),
-    hq,owners,units,funds,
-  };
-}
-for(let i=STAGES.length;i<100;i++)STAGES.push(genStage(i));
-
 /*STAGES_END*/
 
 /* ====================================================
@@ -1150,7 +1069,68 @@ function loadStage(s){
   units=(s.units||[]).map(a=>mkUnit(a[0],a[1],a[2],a[3]));
   funds=[s.funds[0],s.funds[1]];
 }
+/* ====================================================
+   途中セーブ（localStorage・1スロット）
+   ※常に「青軍ターン・操作待ち」の瞬間にだけ保存するので、
+     復帰後は必ずそのまま操作を続けられる
+==================================================== */
+const SAVE_KEY="mwdx_save";
+function loadSaveData(){
+  try{
+    const raw=localStorage.getItem(SAVE_KEY);
+    return raw?JSON.parse(raw):null;
+  }catch(e){return null;}
+}
+function clearSave(){
+  try{localStorage.removeItem(SAVE_KEY);}catch(e){}
+}
+function autosave(){
+  if(ended||turn!==BLUE)return;
+  try{
+    const data={
+      stage:currentStage,
+      turnCount,
+      funds:[funds[BLUE],funds[RED]],
+      owner:Object.assign({},owner),
+      units:units.filter(u=>u.hp>0).map(u=>(
+        {type:u.type,pid:u.pid,x:u.x,y:u.y,hp:u.hp,acted:u.acted,exp:u.exp,rank:u.rank})),
+      captureProgress:Object.assign({},captureProgress),
+      savedAt:Date.now(),
+    };
+    localStorage.setItem(SAVE_KEY,JSON.stringify(data));
+  }catch(e){}
+}
+function resumeGame(){
+  const data=loadSaveData();
+  if(!data||!STAGES[data.stage]){clearSave();openStageSelect();return;}
+  currentStage=data.stage;
+  document.getElementById("overlay").classList.add("hidden");
+  unlockAudio();
+  const s=STAGES[currentStage];
+  COLS=s.map[0].length;ROWS=s.map.length;
+  map=s.map.map(r=>[...r].map(Number));
+  HQ_POS=s.hq;
+  map[s.hq[0].y][s.hq[0].x]=T.HQ;
+  map[s.hq[1].y][s.hq[1].x]=T.HQ;
+  owner=data.owner||{};
+  units=(data.units||[]).map(a=>({type:a.type,pid:a.pid,x:a.x,y:a.y,px:a.x,py:a.y,
+    hp:a.hp,acted:!!a.acted,flash:0,exp:a.exp||0,rank:a.rank||0}));
+  funds=[data.funds[0],data.funds[1]];
+  captureProgress=data.captureProgress||{};
+  turn=BLUE;turnCount=data.turnCount||1;
+  sel=null;mode="idle";moveData=null;attackTargets=[];
+  ended=false;particles=[];popups=[];rings=[];anims=[];shake=0;
+  resize();terrainDirty=true;
+  updateTop();setBtns([]);
+  const remain=units.filter(u=>u.pid===BLUE&&u.hp>0&&!u.acted).length;
+  updateUI(remain>0?"🔵 つづきから！ユニットをタップ"
+    :"🔵 つづきから！全ユニット行動済み。「ターン終了」を押してください");
+  turnBusy=false;
+  bgmStart();
+}
+
 function startGame(idx){
+  clearSave();
   currentStage=idx;
   document.getElementById("overlay").classList.add("hidden");
   unlockAudio();
@@ -1164,7 +1144,7 @@ function startGame(idx){
   updateUI("あなたのターンです。ユニットをタップ！");
   turnBusy=true;
   showBanner(`STAGE ${idx+1}　${STAGES[idx].name}`,"#ffd76a",()=>{
-    showBanner("DAY 1 ─ 青軍ターン",PLAYER_COLOR[BLUE],()=>{turnBusy=false;bgmStart();});
+    showBanner("DAY 1 ─ 青軍ターン",PLAYER_COLOR[BLUE],()=>{turnBusy=false;bgmStart();autosave();});
   });
 }
 
@@ -1380,7 +1360,7 @@ function endTurn(){
     turn=BLUE;turnCount++;beginTurn(BLUE);updateTop();turnBusy=true;
     SND.turn();
     showBanner(`DAY ${turnCount} ─ 青軍ターン`,PLAYER_COLOR[BLUE],()=>{
-      turnBusy=false;updateUI("🔵 あなたのターンです");});
+      turnBusy=false;updateUI("🔵 あなたのターンです");autosave();});
   }
 }
 function showBanner(txt,color,cb){
@@ -1510,6 +1490,7 @@ function checkEnded(){
 }
 function gameOver(winner){
   if(ended)return;ended=true;
+  clearSave();
   bgmStop();
   if(winner===BLUE){saveStageScore(currentStage,turnCount);}
   else{cleared.add(currentStage);}
@@ -1532,12 +1513,17 @@ function gameOver(winner){
 }
 
 /* ====================================================
-   ステージ選択（全100）
+   ステージ選択（全20）
 ==================================================== */
 function openStageSelect(allowClose){
   const d=document.getElementById("dialog");
-  let html=`<h2>ステージ選択</h2>
-    <p style="text-align:center;margin-bottom:8px"><small>全${STAGES.length}ステージ　⭐クリア評価</small></p>
+  const sv=loadSaveData();
+  let html=`<h2>ステージ選択</h2>`;
+  if(sv&&STAGES[sv.stage]){
+    html+=`<div class="row"><button class="gold center" onclick="resumeGame()">
+      ▶ つづきから（STAGE ${sv.stage+1}　${STAGES[sv.stage].name}・DAY ${sv.turnCount}）</button></div>`;
+  }
+  html+=`<p style="text-align:center;margin-bottom:8px"><small>全${STAGES.length}ステージ　⭐クリア評価</small></p>
     <div class="row">`;
   STAGES.forEach((s,i)=>{
     const sc=getStageScore(i);
@@ -1707,6 +1693,7 @@ function finishAction(msg){
   updateUI(msg);setBtns([]);updateTop();
   if(ended)return;
   if(checkEnded())return;
+  autosave();
   const remain=units.filter(u=>u.pid===BLUE&&u.hp>0&&!u.acted).length;
   if(remain===0)updateUI(msg+"<br><small>全ユニット行動済み。「ターン終了」を押してください</small>");
 }
@@ -1747,6 +1734,7 @@ function produce(type,x,y){
   addPopup(x,y,"生産！","#7dff9a");
   closeOverlay();updateTop();
   updateUI(UNIT_DEF[type].name+"を生産しました（次のターンから行動できます）");
+  autosave();
 }
 function closeOverlay(){document.getElementById("overlay").classList.add("hidden");}
 
@@ -2097,7 +2085,19 @@ buildSprites();
 resize();
 requestAnimationFrame(loop);
 // 過去のクリアスコアをlocalStorageから復元
-try{for(let i=0;i<100;i++){if(localStorage.getItem('mwdx_s'+i)!==null)cleared.add(i);}}catch(e){}
+try{for(let i=0;i<STAGES.length;i++){if(localStorage.getItem('mwdx_s'+i)!==null)cleared.add(i);}}catch(e){}
+// タイトル画面に「つづきから」ボタンを追加（途中セーブがある場合）
+(function initTitleContinue(){
+  const sv=loadSaveData();
+  if(!sv||!STAGES[sv.stage])return;
+  const row=document.getElementById("titleRow");
+  if(!row)return;
+  const btn=document.createElement("button");
+  btn.className="gold center";
+  btn.textContent=`▶ つづきから（STAGE ${sv.stage+1}　${STAGES[sv.stage].name}）`;
+  btn.onclick=resumeGame;
+  row.insertBefore(btn,row.firstChild);
+})();
 </script>
 </body>
 </html>
