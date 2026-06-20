@@ -26,10 +26,9 @@
   .funds{color:var(--gold);white-space:nowrap;}
   #mutebtn,#menubtn,#homebtn{background:none;border:none;font-size:18px;box-shadow:none;padding:2px 4px;}
 
-  #mapwrap{flex:1;display:flex;justify-content:center;align-items:center;
-    overflow:hidden;background:
+  #mapwrap{flex:1;position:relative;overflow:hidden;touch-action:none;background:
       radial-gradient(ellipse at 50% 30%, #1b1f44 0%, #0c0e22 80%);}
-  canvas{image-rendering:pixelated;}
+  canvas{image-rendering:pixelated;touch-action:none;position:absolute;left:0;top:0;}
 
   #bottom{background:linear-gradient(180deg,#262b5c,#181b3a);
     border-top:3px solid #000;padding:8px 10px;min-height:118px;z-index:2;}
@@ -1797,14 +1796,103 @@ function openStageSelect(allowClose){
 /* ====================================================
    入力
 ==================================================== */
+/* ====================================================
+   入力（タップ／ピンチズーム／パン）
+==================================================== */
+let camScale=1, camX=0, camY=0;
+const CAM_MIN=0.6, CAM_MAX=3.0;
+const pointers=new Map(); // pointerId -> {x,y}
+let pinchStart=null;      // {dist, midX, midY, scale, camX, camY}
+let dragStart=null;       // {x,y,camX,camY,moved}
+const TAP_SLOP=10; // px（これ以上動いたらタップ扱いしない）
+
+function applyCam(){
+  cv.style.transformOrigin="0 0";
+  cv.style.transform=`translate(${camX}px,${camY}px) scale(${camScale})`;
+}
+function resetCam(){
+  const wrap=document.getElementById("mapwrap");
+  const ww=wrap.clientWidth, wh=wrap.clientHeight;
+  camScale=1;
+  camX=(ww-TILE*COLS)/2;
+  camY=(wh-TILE*ROWS)/2;
+  applyCam();
+}
+function clampCam(){
+  const wrap=document.getElementById("mapwrap");
+  const ww=wrap.clientWidth, wh=wrap.clientHeight;
+  const cw=TILE*COLS*camScale, ch=TILE*ROWS*camScale;
+  if(cw>ww){camX=Math.max(ww-cw,Math.min(0,camX));}
+  else{camX=(ww-cw)/2;}
+  if(ch>wh){camY=Math.max(wh-ch,Math.min(0,camY));}
+  else{camY=(wh-ch)/2;}
+}
+function dist2(a,b){return Math.hypot(a.x-b.x,a.y-b.y);}
+function mid2(a,b){return{x:(a.x+b.x)/2,y:(a.y+b.y)/2};}
+
 cv.addEventListener("pointerdown",e=>{
-  if(busy())return;
-  const r=cv.getBoundingClientRect();
-  const x=Math.floor((e.clientX-r.left)/TILE);
-  const y=Math.floor((e.clientY-r.top)/TILE);
-  if(x<0||y<0||x>=COLS||y>=ROWS)return;
-  handleTap(x,y);
+  cv.setPointerCapture&&cv.setPointerCapture(e.pointerId);
+  pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pointers.size===1){
+    const p=[...pointers.values()][0];
+    dragStart={x:p.x,y:p.y,camX,camY,moved:false};
+    pinchStart=null;
+  }else if(pointers.size===2){
+    const[a,b]=[...pointers.values()];
+    pinchStart={dist:dist2(a,b),mid:mid2(a,b),scale:camScale,camX,camY};
+    dragStart=null;
+  }
 });
+cv.addEventListener("pointermove",e=>{
+  if(!pointers.has(e.pointerId))return;
+  pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pointers.size===2&&pinchStart){
+    const[a,b]=[...pointers.values()];
+    const nd=dist2(a,b), nm=mid2(a,b);
+    let ns=pinchStart.scale*(nd/Math.max(1,pinchStart.dist));
+    ns=Math.max(CAM_MIN,Math.min(CAM_MAX,ns));
+    // ピンチ中心(画面座標)がズーム後も同じキャンバス上の点を指すように補正
+    const wrap=document.getElementById("mapwrap").getBoundingClientRect();
+    const localX=pinchStart.mid.x-wrap.left, localY=pinchStart.mid.y-wrap.top;
+    const ratio=ns/pinchStart.scale;
+    camX=localX-(localX-pinchStart.camX)*ratio + (nm.x-pinchStart.mid.x);
+    camY=localY-(localY-pinchStart.camY)*ratio + (nm.y-pinchStart.mid.y);
+    camScale=ns;
+    clampCam();
+    applyCam();
+  }else if(pointers.size===1&&dragStart){
+    const p=[...pointers.values()][0];
+    const dx=p.x-dragStart.x, dy=p.y-dragStart.y;
+    if(Math.hypot(dx,dy)>TAP_SLOP)dragStart.moved=true;
+    if(camScale>1.001){ // 拡大時のみパン可能（等倍ならタップ操作優先）
+      camX=dragStart.camX+dx;
+      camY=dragStart.camY+dy;
+      clampCam();
+      applyCam();
+    }
+  }
+});
+function endPointer(e){
+  const wasSingle=pointers.size===1;
+  const ds=dragStart;
+  pointers.delete(e.pointerId);
+  if(pointers.size===0){
+    if(wasSingle&&ds&&!ds.moved&&!busy()){
+      const r=cv.getBoundingClientRect();
+      const x=Math.floor((e.clientX-r.left)/r.width*COLS);
+      const y=Math.floor((e.clientY-r.top)/r.height*ROWS);
+      if(x>=0&&y>=0&&x<COLS&&y<ROWS)handleTap(x,y);
+    }
+    dragStart=null;pinchStart=null;
+  }else if(pointers.size===1){
+    // 2本指→1本指に減った：残った指でパン継続できるようにする
+    const p=[...pointers.values()][0];
+    dragStart={x:p.x,y:p.y,camX,camY,moved:true};
+    pinchStart=null;
+  }
+}
+cv.addEventListener("pointerup",endPointer);
+cv.addEventListener("pointercancel",endPointer);
 function terrainLine(u){
   const ti=TERRAIN_INFO[map[u.y][u.x]];
   const o=getOwner(u.x,u.y);
@@ -2028,6 +2116,7 @@ function resize(){
   cv.style.width=TILE*COLS+"px";cv.style.height=TILE*ROWS+"px";
   terrCv.width=cv.width;terrCv.height=cv.height;
   terrainDirty=true;
+  resetCam();
 }
 window.addEventListener("resize",()=>{resize();});
 
