@@ -1794,38 +1794,69 @@ function openStageSelect(allowClose){
 }
 
 /* ====================================================
-   入力
-==================================================== */
 /* ====================================================
    入力（タップ／ピンチズーム／パン）
+   ※ズームはCSS拡大ではなく、TILE自体を変更して再描画する
+     （解像度が常にシャープなまま拡大・縮小される）
 ==================================================== */
-let camScale=1, camX=0, camY=0;
-const CAM_MIN=0.6, CAM_MAX=3.0;
+let baseTile=36;
+const REF_COLS=11, REF_ROWS=12; // 標準表示の基準（マップが何マスでもこの見た目サイズを保つ）
+const TILE_MIN=18, TILE_MAX_MULT=3.2;
+let camX=0, camY=0;
 const pointers=new Map(); // pointerId -> {x,y}
-let pinchStart=null;      // {dist, midX, midY, scale, camX, camY}
+let pinchPrev=null;       // {dist, mid}
 let dragStart=null;       // {x,y,camX,camY,moved}
 const TAP_SLOP=10; // px（これ以上動いたらタップ扱いしない）
 
 function applyCam(){
-  cv.style.transformOrigin="0 0";
-  cv.style.transform=`translate(${camX}px,${camY}px) scale(${camScale})`;
-}
-function resetCam(){
-  const wrap=document.getElementById("mapwrap");
-  const ww=wrap.clientWidth, wh=wrap.clientHeight;
-  camScale=1;
-  camX=(ww-TILE*COLS)/2;
-  camY=(wh-TILE*ROWS)/2;
-  applyCam();
+  cv.style.transform=`translate(${camX}px,${camY}px)`;
 }
 function clampCam(){
   const wrap=document.getElementById("mapwrap");
   const ww=wrap.clientWidth, wh=wrap.clientHeight;
-  const cw=TILE*COLS*camScale, ch=TILE*ROWS*camScale;
+  const cw=TILE*COLS, ch=TILE*ROWS;
   if(cw>ww){camX=Math.max(ww-cw,Math.min(0,camX));}
   else{camX=(ww-cw)/2;}
   if(ch>wh){camY=Math.max(wh-ch,Math.min(0,camY));}
   else{camY=(wh-ch)/2;}
+}
+function setTileSize(newTile){
+  newTile=Math.round(newTile);
+  const wrap=document.getElementById("mapwrap");
+  const maxT=Math.max(baseTile*TILE_MAX_MULT, baseTile+1);
+  newTile=Math.max(TILE_MIN,Math.min(maxT,newTile));
+  if(newTile===TILE)return false;
+  TILE=newTile;
+  cv.width=TILE*COLS*DPR;cv.height=TILE*ROWS*DPR;
+  cv.style.width=TILE*COLS+"px";cv.style.height=TILE*ROWS+"px";
+  terrCv.width=cv.width;terrCv.height=cv.height;
+  terrainDirty=true;
+  return true;
+}
+// 画面中心が指すマップ上の地点を維持したままタイルサイズを変える
+function setTileSizeKeepingFocus(newTile,focalX,focalY){
+  const oldTile=TILE;
+  if(!setTileSize(newTile))return;
+  const ratio=TILE/oldTile;
+  camX=focalX-(focalX-camX)*ratio;
+  camY=focalY-(focalY-camY)*ratio;
+}
+function centerCameraOnTile(tx,ty){
+  const wrap=document.getElementById("mapwrap");
+  const ww=wrap.clientWidth, wh=wrap.clientHeight;
+  camX=ww/2-(tx+0.5)*TILE;
+  camY=wh/2-(ty+0.5)*TILE;
+  clampCam();
+}
+function resetCam(){
+  const wrap=document.getElementById("mapwrap");
+  baseTile=Math.floor(Math.min(wrap.clientWidth/REF_COLS, wrap.clientHeight/REF_ROWS));
+  baseTile=Math.max(20,Math.min(56,baseTile));
+  TILE=0; // 強制的にsetTileSizeで再構築させる
+  setTileSize(baseTile);
+  const hq=(HQ_POS&&HQ_POS[0])?HQ_POS[0]:{x:Math.floor(COLS/2),y:ROWS-1};
+  centerCameraOnTile(hq.x,hq.y);
+  applyCam();
 }
 function dist2(a,b){return Math.hypot(a.x-b.x,a.y-b.y);}
 function mid2(a,b){return{x:(a.x+b.x)/2,y:(a.y+b.y)/2};}
@@ -1836,35 +1867,36 @@ cv.addEventListener("pointerdown",e=>{
   if(pointers.size===1){
     const p=[...pointers.values()][0];
     dragStart={x:p.x,y:p.y,camX,camY,moved:false};
-    pinchStart=null;
+    pinchPrev=null;
   }else if(pointers.size===2){
     const[a,b]=[...pointers.values()];
-    pinchStart={dist:dist2(a,b),mid:mid2(a,b),scale:camScale,camX,camY};
+    pinchPrev={dist:dist2(a,b),mid:mid2(a,b)};
     dragStart=null;
   }
 });
 cv.addEventListener("pointermove",e=>{
   if(!pointers.has(e.pointerId))return;
   pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
-  if(pointers.size===2&&pinchStart){
+  if(pointers.size===2&&pinchPrev){
     const[a,b]=[...pointers.values()];
     const nd=dist2(a,b), nm=mid2(a,b);
-    let ns=pinchStart.scale*(nd/Math.max(1,pinchStart.dist));
-    ns=Math.max(CAM_MIN,Math.min(CAM_MAX,ns));
-    // ピンチ中心(画面座標)がズーム後も同じキャンバス上の点を指すように補正
     const wrap=document.getElementById("mapwrap").getBoundingClientRect();
-    const localX=pinchStart.mid.x-wrap.left, localY=pinchStart.mid.y-wrap.top;
-    const ratio=ns/pinchStart.scale;
-    camX=localX-(localX-pinchStart.camX)*ratio + (nm.x-pinchStart.mid.x);
-    camY=localY-(localY-pinchStart.camY)*ratio + (nm.y-pinchStart.mid.y);
-    camScale=ns;
+    const localX=pinchPrev.mid.x-wrap.left, localY=pinchPrev.mid.y-wrap.top;
+    const desired=TILE*(nd/Math.max(1,pinchPrev.dist));
+    setTileSizeKeepingFocus(desired,localX,localY);
+    // 指の中点そのものの移動分も平行移動として加える
+    camX+=(nm.x-pinchPrev.mid.x);
+    camY+=(nm.y-pinchPrev.mid.y);
     clampCam();
     applyCam();
+    pinchPrev={dist:nd,mid:nm};
   }else if(pointers.size===1&&dragStart){
     const p=[...pointers.values()][0];
     const dx=p.x-dragStart.x, dy=p.y-dragStart.y;
     if(Math.hypot(dx,dy)>TAP_SLOP)dragStart.moved=true;
-    if(camScale>1.001){ // 拡大時のみパン可能（等倍ならタップ操作優先）
+    const wrap=document.getElementById("mapwrap");
+    const overflow=(TILE*COLS>wrap.clientWidth)||(TILE*ROWS>wrap.clientHeight);
+    if(overflow){ // マップが画面より大きい時のみ1本指パンが効く
       camX=dragStart.camX+dx;
       camY=dragStart.camY+dy;
       clampCam();
@@ -1883,12 +1915,12 @@ function endPointer(e){
       const y=Math.floor((e.clientY-r.top)/r.height*ROWS);
       if(x>=0&&y>=0&&x<COLS&&y<ROWS)handleTap(x,y);
     }
-    dragStart=null;pinchStart=null;
+    dragStart=null;pinchPrev=null;
   }else if(pointers.size===1){
     // 2本指→1本指に減った：残った指でパン継続できるようにする
     const p=[...pointers.values()][0];
     dragStart={x:p.x,y:p.y,camX,camY,moved:true};
-    pinchStart=null;
+    pinchPrev=null;
   }
 }
 cv.addEventListener("pointerup",endPointer);
@@ -2109,13 +2141,7 @@ function setBtns(list){
    描画
 ==================================================== */
 function resize(){
-  const wrap=document.getElementById("mapwrap");
   DPR=Math.min(2,window.devicePixelRatio||1);
-  TILE=Math.floor(Math.min(wrap.clientWidth/COLS,wrap.clientHeight/ROWS));
-  cv.width=TILE*COLS*DPR;cv.height=TILE*ROWS*DPR;
-  cv.style.width=TILE*COLS+"px";cv.style.height=TILE*ROWS+"px";
-  terrCv.width=cv.width;terrCv.height=cv.height;
-  terrainDirty=true;
   resetCam();
 }
 window.addEventListener("resize",()=>{resize();});
