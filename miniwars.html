@@ -148,8 +148,8 @@ const UNIT_DEF={
          vs:{foot:1.2,veh:1.0, air:1.0}, desc:"全地形を飛行／対空に注意"},
   aa:   {name:"対空戦車",  cls:"veh", moveType:"tread",move:5,atk:6, range:[1,1],cost:4000,canCapture:false,
          vs:{foot:1.15,veh:0.5,air:2.0}, desc:"ヘリに超強い"},
-  bomber:{name:"爆撃機",   cls:"air", moveType:"air",  move:5,atk:12,range:[1,1],cost:7000,canCapture:false,
-         vs:{foot:1.3,veh:1.4, air:0.3}, desc:"地上を蹂躙する空の要塞／対空に弱い"},
+  bomber:{name:"爆撃機",   cls:"air", moveType:"air",  move:7,atk:18,range:[1,1],cost:22000,canCapture:false,
+         vs:{foot:1.6,veh:1.8, air:1.3}, desc:"最強・全てを薙ぎ払う空の要塞（高価）"},
   medic:{name:"救急隊",    cls:"foot",moveType:"foot", move:4,atk:0, range:[1,1],cost:3000,canCapture:true,
          vs:{foot:0,veh:0,air:0},        desc:"隣接する味方をHP回復／占領も可能",heal:8},
 };
@@ -320,31 +320,31 @@ const PX={
   ".KKKKKKKKKKKK...",
   ],
   bomber:[
-  "................",
-  ".......KK.......",
   ".......KK.......",
   "......KTTK......",
-  "....KKKTTKKK....",
-  "KKKKTTTTTTTTKKKK",
+  "......KTTK......",
+  ".....KTTTTK.....",
+  "KKKKKTTTTTTKKKKK",
   "KTTTTTTTTTTTTTTK",
-  "KTtTTTTAATTTTtTK",
-  "KKKKTTTTTTTTKKKK",
-  "....KKKTTKKK....",
-  "......KWWK......",
-  ".....KK..KK.....",
+  "KTtTTTAAAATTTtTK",
+  "KTTTTTAAAATTTTTK",
+  "KKKKKTTTTTTKKKKK",
+  ".....KTTTTK.....",
+  "....KKKWWKKK....",
+  "...KK..KK..KK...",
   ],
   medic:[
   "................",
-  "....KKKKKK......",
-  "...KWWWWWWK.....",
-  "..KWWKRRKWWKKK..",
-  ".KWWKKRRKKWWTK..",
-  ".KWKRRRRRRKWTK..",
-  ".KWKRRRRRRKWKK..",
-  ".KWWKKRRKKWWK...",
-  "..KWWWWWWWWK....",
-  "...KWK..KWK....",
-  "..KKK....KKK...",
+  "....TTTTTT......",
+  "...TWWWWWWT.....",
+  "..TWWKRRKWWTKK..",
+  ".TTWKKRRKKWTTK..",
+  ".TtWKRRRRKKWtK..",
+  ".TTWKKRRKKKWTK..",
+  ".TTWWWWWWWWTTK..",
+  ".TTTTTTTTTTTTK..",
+  ".KGGKKGGKKGGK...",
+  "..KK..KK..KK....",
   "................",
   ],
 };
@@ -1318,36 +1318,116 @@ const SND={
 };
 
 /* ====================================================
-   BGM（Web Audio スケジューラー方式・16小節ループ）
-   C ペンタトニック、138BPM、メロディ＋ベース＋キック
+   BGM（Web Audio スケジューラー方式・複数曲）
+   4曲を用意し、ステージごとに雰囲気に合わせて切替
 ==================================================== */
 let bgmPlaying=false,bgmGain=null,bgmTimer=null;
 let bgmStep=0,bgmNextT=0,bgmBassStep=0,bgmBassNext=0,bgmKickNext=0;
-const BGM_BPM=138,BGM_BEAT=60/BGM_BPM;
+let bgmTrack=0; // 現在の曲番号
 function bgmHz(n){return 130.81*Math.pow(1.05946,n);}
-// メロディ [半音fromC3, 拍数]  -1=休符（2拍=1小節）
-const BGM_ML=[
-  // Aセクション（8小節・明るい主題）
-  [24,.25],[28,.25],[31,.5],[28,.5],[24,.5],
-  [26,.5],[24,.5],[-1,.5],[19,.5],
-  [21,.25],[24,.25],[28,.5],[24,.25],[21,.25],[-1,.5],
-  [19,.5],[21,.5],[24,.5],[-1,.5],
-  [31,.25],[33,.25],[31,.5],[28,.5],[26,.25],[24,.25],
-  [26,.5],[28,.5],[24,.75],[-1,.25],
-  [28,.25],[31,.25],[33,.5],[31,.5],[28,.5],
-  [24,2.0],
-  // Bセクション（8小節・緊張感）
-  [19,.25],[21,.25],[24,.5],[21,.5],[19,.5],
-  [16,.5],[19,.5],[-1,.5],[14,.5],
-  [21,.25],[24,.25],[26,.5],[24,.5],[21,.5],
-  [19,.5],[21,.5],[24,.5],[-1,.5],
-  [26,.5],[24,.25],[21,.25],[24,.5],[26,.5],
-  [28,.25],[26,.25],[24,.5],[21,.5],[19,.5],
-  [21,.25],[24,.25],[26,.5],[28,.5],[26,.5],
-  [19,2.0],
+
+/* --- 各曲の定義 ---
+   ml: メロディ [半音fromC3, 拍数]（-1は休符）
+   bass: [半音, 拍数]
+   bpm: テンポ
+   melType/bassType: 波形
+   kickEvery: キックの間隔（拍） 0ならキックなし */
+const BGM_TRACKS=[
+  { // 0: 明るい行進曲（序盤ステージ向け）
+    name:"進軍",bpm:138,melType:"square",bassType:"triangle",kickEvery:2,melVol:.07,
+    ml:[
+      [24,.25],[28,.25],[31,.5],[28,.5],[24,.5],
+      [26,.5],[24,.5],[-1,.5],[19,.5],
+      [21,.25],[24,.25],[28,.5],[24,.25],[21,.25],[-1,.5],
+      [19,.5],[21,.5],[24,.5],[-1,.5],
+      [31,.25],[33,.25],[31,.5],[28,.5],[26,.25],[24,.25],
+      [26,.5],[28,.5],[24,.75],[-1,.25],
+      [28,.25],[31,.25],[33,.5],[31,.5],[28,.5],
+      [24,2.0],
+      [19,.25],[21,.25],[24,.5],[21,.5],[19,.5],
+      [16,.5],[19,.5],[-1,.5],[14,.5],
+      [21,.25],[24,.25],[26,.5],[24,.5],[21,.5],
+      [19,.5],[21,.5],[24,.5],[-1,.5],
+      [26,.5],[24,.25],[21,.25],[24,.5],[26,.5],
+      [28,.25],[26,.25],[24,.5],[21,.5],[19,.5],
+      [21,.25],[24,.25],[26,.5],[28,.5],[26,.5],
+      [19,2.0],
+    ],
+    bass:[[0,2],[7,2],[9,2],[7,2],[5,2],[7,2],[7,2],[4,2]],
+  },
+  { // 1: 緊迫の短調（要塞・包囲ステージ向け）
+    name:"包囲",bpm:126,melType:"sawtooth",bassType:"triangle",kickEvery:2,melVol:.06,
+    ml:[
+      [21,.5],[21,.25],[23,.25],[24,.5],[21,.5],
+      [17,.5],[19,.5],[21,1.0],
+      [24,.5],[24,.25],[26,.25],[28,.5],[26,.5],
+      [24,.5],[21,.5],[19,1.0],
+      [28,.5],[26,.5],[24,.5],[21,.5],
+      [23,.5],[24,.5],[26,1.0],
+      [21,.25],[23,.25],[24,.5],[21,.5],[17,.5],
+      [21,2.0],
+      [16,.5],[17,.5],[19,.5],[16,.5],
+      [12,.5],[16,.5],[19,1.0],
+      [21,.5],[19,.5],[17,.5],[16,.5],
+      [17,.5],[19,.5],[21,1.0],
+      [24,.5],[23,.5],[21,.5],[19,.5],
+      [17,.5],[19,.5],[21,1.0],
+      [19,.5],[17,.5],[16,.5],[14,.5],
+      [16,2.0],
+    ],
+    bass:[[9,2],[9,2],[7,2],[4,2],[5,2],[5,2],[7,2],[9,2]],
+  },
+  { // 2: 荒涼とした戦場（川・沼・迷路ステージ向け）
+    name:"荒野",bpm:108,melType:"triangle",bassType:"sine",kickEvery:4,melVol:.075,
+    ml:[
+      [19,1.0],[24,1.0],
+      [23,.5],[21,.5],[19,1.0],
+      [21,1.0],[26,1.0],
+      [24,.5],[21,.5],[19,1.0],
+      [16,1.0],[21,1.0],
+      [19,.5],[17,.5],[16,1.0],
+      [14,1.0],[19,1.0],
+      [21,2.0],
+      [24,1.0],[28,1.0],
+      [26,.5],[24,.5],[21,1.0],
+      [23,1.0],[26,1.0],
+      [24,.5],[23,.5],[21,1.0],
+      [19,1.0],[24,1.0],
+      [21,.5],[19,.5],[17,1.0],
+      [19,1.0],[21,1.0],
+      [19,2.0],
+    ],
+    bass:[[0,4],[-3,4],[5,4],[4,4]],
+  },
+  { // 3: 壮大な決戦（帝都・最終ステージ向け）
+    name:"決戦",bpm:150,melType:"square",bassType:"sawtooth",kickEvery:1,melVol:.07,
+    ml:[
+      [24,.5],[24,.5],[31,.5],[31,.5],
+      [33,.5],[31,.5],[28,1.0],
+      [26,.5],[26,.5],[28,.5],[24,.5],
+      [26,.5],[28,.5],[31,1.0],
+      [31,.5],[33,.5],[36,.5],[33,.5],
+      [31,.5],[28,.5],[31,1.0],
+      [28,.5],[26,.5],[24,.5],[26,.5],
+      [28,2.0],
+      [24,.5],[31,.5],[28,.5],[24,.5],
+      [21,.5],[24,.5],[28,1.0],
+      [29,.5],[28,.5],[26,.5],[24,.5],
+      [26,.5],[28,.5],[29,1.0],
+      [31,.5],[29,.5],[28,.5],[26,.5],
+      [28,.5],[31,.5],[36,1.0],
+      [33,.5],[31,.5],[28,.5],[26,.5],
+      [24,2.0],
+    ],
+    bass:[[0,1],[0,1],[7,1],[7,1],[5,1],[5,1],[4,1],[7,1],
+          [0,1],[0,1],[7,1],[7,1],[9,1],[9,1],[7,1],[4,1]],
+  },
 ];
-// ベース（2拍ごとに進む、C3オクターブ）
-const BGM_BASS=[[0,2],[7,2],[9,2],[7,2],[5,2],[7,2],[7,2],[4,2]];
+// ステージ番号ごとにどの曲を使うか（20ステージ分）
+const STAGE_BGM=[
+  0,0,2,1,2, 0,1,1,3,3,      // 1-10
+  1,0,2,2,1, 1,3,2,3,3,      // 11-20
+];
 
 function bgmNote(freq,when,dur,type,vol){
   const a=ac();if(!a||!bgmGain||freq<=0)return;
@@ -1374,24 +1454,32 @@ function bgmKick(when){
 function bgmSched(){
   if(!bgmPlaying)return;
   const a=ac();if(!a)return;
+  const tr=BGM_TRACKS[bgmTrack]||BGM_TRACKS[0];
+  const beat=60/tr.bpm;
   const ahead=a.currentTime+.4;
   while(bgmNextT<ahead){
-    const[n,beats]=BGM_ML[bgmStep%BGM_ML.length];
-    const dur=beats*BGM_BEAT;
-    if(n>=0)bgmNote(bgmHz(n),bgmNextT,dur*.88,'square',.07);
+    const[n,beats]=tr.ml[bgmStep%tr.ml.length];
+    const dur=beats*beat;
+    if(n>=0)bgmNote(bgmHz(n),bgmNextT,dur*.88,tr.melType,tr.melVol);
     bgmNextT+=dur;bgmStep++;
   }
   while(bgmBassNext<ahead){
-    const[bn,bb]=BGM_BASS[bgmBassStep%BGM_BASS.length];
-    const bdur=bb*BGM_BEAT;
-    bgmNote(bgmHz(bn),bgmBassNext,bdur*.85,'triangle',.07);
+    const[bn,bb]=tr.bass[bgmBassStep%tr.bass.length];
+    const bdur=bb*beat;
+    bgmNote(bgmHz(bn),bgmBassNext,bdur*.85,tr.bassType,.07);
     bgmBassNext+=bdur;bgmBassStep++;
   }
-  while(bgmKickNext<ahead){
-    bgmKick(bgmKickNext);
-    bgmKickNext+=BGM_BEAT*2;
+  if(tr.kickEvery>0){
+    while(bgmKickNext<ahead){
+      bgmKick(bgmKickNext);
+      bgmKickNext+=beat*tr.kickEvery;
+    }
   }
   bgmTimer=setTimeout(bgmSched,100);
+}
+// ステージ番号に応じて曲を選ぶ
+function bgmSelectForStage(idx){
+  bgmTrack=(STAGE_BGM[idx]!==undefined)?STAGE_BGM[idx]:0;
 }
 function bgmStart(){
   if(bgmPlaying)return;
@@ -1552,6 +1640,7 @@ function resumeGame(){
   updateUI(remain>0?"🔵 つづきから！ユニットをタップ"
     :"🔵 つづきから！全ユニット行動済み。「ターン終了」を押してください");
   turnBusy=false;
+  bgmSelectForStage(currentStage);
   bgmStart();
 }
 
@@ -1565,6 +1654,7 @@ function startGame(idx){
   ended=false;particles=[];popups=[];rings=[];anims=[];shake=0;
   beginTurn(BLUE);
   bgmStop();
+  bgmSelectForStage(idx);
   resize();terrainDirty=true;
   updateTop();setBtns([]);
   updateUI("あなたのターンです。ユニットをタップ！");
