@@ -79,7 +79,7 @@
     <span>
       <button id="homebtn" onclick="goHome()">🏠</button>
       <button id="menubtn" onclick="openStageSelect(true)">📋</button>
-      <button id="mutebtn" onclick="toggleMute()">🔊</button>
+      <button id="mutebtn" onclick="toggleMute()">🔇</button>
     </span>
   </div>
   <div id="mapwrap"><canvas id="cv"></canvas></div>
@@ -1235,7 +1235,7 @@ function busy(){return anims.length>0||turnBusy||ended||turn!==BLUE;}
 /* ====================================================
    サウンド＋iPhone消音モード対策
 ==================================================== */
-let audio=null, muted=false, unlockEl=null;
+let audio=null, muted=true, unlockEl=null;
 function toggleMute(){muted=!muted;
   document.getElementById("mutebtn").textContent=muted?"🔇":"🔊";
   bgmSetMute(muted);
