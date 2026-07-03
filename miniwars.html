@@ -1239,10 +1239,18 @@ let audio=null, muted=false, unlockEl=null;
 function toggleMute(){muted=!muted;
   document.getElementById("mutebtn").textContent=muted?"🔇":"🔊";
   bgmSetMute(muted);
-  if(!muted)unlockAudio();}
+  if(muted){
+    // 裏で鳴っている無音ループを止め、音声セッションを手放す
+    // → これで他の音楽アプリ（YouTube Musicなど）の再生が途切れなくなる
+    if(unlockEl){try{unlockEl.pause();}catch(e){}}
+    if(audio){try{audio.suspend();}catch(e){}}
+  }else{
+    unlockAudio();
+  }
+}
 function ac(){if(!audio){const A=window.AudioContext||window.webkitAudioContext;
   try{audio=new A();}catch(e){}}
-  if(audio&&audio.state==="suspended")audio.resume();
+  if(audio&&audio.state==="suspended"&&!muted)audio.resume();
   return audio;}
 function silentWavURL(){
   const n=8000;
@@ -1258,6 +1266,7 @@ function silentWavURL(){
   return URL.createObjectURL(new Blob([buf],{type:"audio/wav"}));
 }
 function unlockAudio(){
+  if(muted)return; // ミュート中は音声セッションを一切奪わない
   const a=ac();
   if(a&&a.state==="suspended")a.resume();
   if(!unlockEl){
@@ -1270,7 +1279,7 @@ function unlockAudio(){
   }
   if(unlockEl)unlockEl.play().catch(()=>{});
 }
-document.addEventListener("pointerdown",unlockAudio,{passive:true});
+document.addEventListener("pointerdown",()=>{if(!muted)unlockAudio();},{passive:true});
 
 function tone(freq,dur,type,vol,when){
   const a=ac();if(!a||muted)return;
@@ -1482,13 +1491,14 @@ function bgmSelectForStage(idx){
   bgmTrack=(STAGE_BGM[idx]!==undefined)?STAGE_BGM[idx]:0;
 }
 function bgmStart(){
+  if(muted)return; // ミュート中はそもそも音声処理を起動しない（音楽アプリの邪魔をしない）
   if(bgmPlaying)return;
   const a=ac();if(!a)return;
   bgmPlaying=true;bgmStep=0;bgmBassStep=0;
   const t=a.currentTime+.12;
   bgmNextT=t;bgmBassNext=t;bgmKickNext=t;
   bgmGain=a.createGain();
-  bgmGain.gain.value=muted?0:.75;
+  bgmGain.gain.value=.75;
   bgmGain.connect(a.destination);
   bgmSched();
 }
@@ -1501,7 +1511,13 @@ function bgmStop(){
   }
 }
 function bgmSetMute(m){
-  if(bgmGain)try{bgmGain.gain.setTargetAtTime(m?0:.75,ac().currentTime,.05);}catch(e){}
+  if(m){
+    // ミュートON：BGMを完全停止し、音声処理そのものを手放す
+    bgmStop();
+  }else if(!bgmPlaying&&ended===false){
+    // ミュートOFF：ゲームがプレイ中なら再開する
+    bgmStart();
+  }
 }
 
 /* ====================================================
