@@ -1,0 +1,236 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Modern Kings Engine</title>
+    <style>
+        body { 
+            margin: 0; overflow: hidden; background-color: #1a1a2e; 
+            touch-action: none; /* スマホ特有のジェスチャーを無効化 */
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+        #gameCanvas { display: block; }
+        #ui {
+            position: absolute; bottom: 0; width: 100%; height: 80px;
+            background: rgba(15, 15, 30, 0.9); border-top: 2px solid #e94560;
+            display: flex; justify-content: space-around; align-items: center; color: white;
+        }
+        .btn {
+            background: #e94560; border: none; padding: 10px 20px;
+            color: white; font-weight: bold; border-radius: 5px; font-size: 16px;
+        }
+        .btn:active { background: #c81d3f; }
+        #info { font-size: 14px; text-align: center; }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="ui">
+        <div id="info">青のターン<br>ユニットを選択</div>
+        <button class="btn" id="endTurnBtn">ターン終了</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const infoUI = document.getElementById('info');
+        
+        // iPhoneのRetinaディスプレイ対応（ぼやけ防止）
+        const dpr = window.devicePixelRatio || 1;
+        let width = window.innerWidth;
+        let height = window.innerHeight - 80; // UI分引く
+        canvas.width = width * dpr;
+        canvas.height = height * dpr;
+        canvas.style.width = width + "px";
+        canvas.style.height = height + "px";
+        ctx.scale(dpr, dpr);
+
+        // --- ヘックス（六角形）数学エンジン ---
+        const HEX_SIZE = 30;
+        function hexToPixel(q, r) {
+            const x = HEX_SIZE * Math.sqrt(3) * (q + r/2);
+            const y = HEX_SIZE * 3/2 * r;
+            return { x: x + width/2, y: y + height/2 }; // 画面中央を基準に
+        }
+
+        function pixelToHex(x, y) {
+            const px = x - width/2;
+            const py = y - height/2;
+            const q = (Math.sqrt(3)/3 * px - 1/3 * py) / HEX_SIZE;
+            const r = (2/3 * py) / HEX_SIZE;
+            return axialRound(q, r);
+        }
+
+        function axialRound(q, r) {
+            let s = -q - r;
+            let rq = Math.round(q), rr = Math.round(r), rs = Math.round(s);
+            let qDiff = Math.abs(rq - q), rDiff = Math.abs(rr - r), sDiff = Math.abs(rs - s);
+            if (qDiff > rDiff && qDiff > sDiff) { rq = -rr - rs; } 
+            else if (rDiff > sDiff) { rr = -rq - rs; }
+            return { q: rq, r: rr };
+        }
+
+        function hexDistance(q1, r1, q2, r2) {
+            return (Math.abs(q1 - q2) + Math.abs(q1 + r1 - q2 - r2) + Math.abs(r1 - r2)) / 2;
+        }
+
+        // --- ゲームデータ ---
+        const map = new Map(); // "q,r" をキーにしたタイルのマップ
+        const units = [];
+        let currentTurn = 1; // 1: Blue, 2: Red
+        let selectedHex = null;
+
+        // マップ生成 (半径4の六角形マップ)
+        const MAP_RADIUS = 4;
+        for (let q = -MAP_RADIUS; q <= MAP_RADIUS; q++) {
+            for (let r = Math.max(-MAP_RADIUS, -q - MAP_RADIUS); r <= Math.min(MAP_RADIUS, -q + MAP_RADIUS); r++) {
+                map.set(`${q},${r}`, { type: 'grass', q, r });
+            }
+        }
+        
+        // 拠点（城）の配置
+        map.get(`0,-4`).type = 'castle_red';
+        map.get(`0,4`).type = 'castle_blue';
+
+        // ユニットの配置
+        units.push({ q: 0, r: 3, owner: 1, type: 'Fighter', hp: 10, move: 2, acted: false });
+        units.push({ q: 1, r: 3, owner: 1, type: 'Knight', hp: 15, move: 3, acted: false });
+        units.push({ q: 0, r: -3, owner: 2, type: 'Fighter', hp: 10, move: 2, acted: false });
+        units.push({ q: -1, r: -3, owner: 2, type: 'Knight', hp: 15, move: 3, acted: false });
+
+        // --- 描画ロジック ---
+        function drawHex(x, y, color, strokeColor = "#333", lineWidth = 1) {
+            ctx.beginPath();
+            for (let i = 0; i < 6; i++) {
+                const angle_deg = 60 * i - 30;
+                const angle_rad = Math.PI / 180 * angle_deg;
+                const px = x + HEX_SIZE * Math.cos(angle_rad);
+                const py = y + HEX_SIZE * Math.sin(angle_rad);
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+            ctx.fillStyle = color;
+            ctx.fill();
+            ctx.lineWidth = lineWidth;
+            ctx.strokeStyle = strokeColor;
+            ctx.stroke();
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, width, height);
+
+            // マップ描画
+            map.forEach((tile, key) => {
+                const { x, y } = hexToPixel(tile.q, tile.r);
+                let color = '#2e8b57'; // 草原
+                if (tile.type === 'castle_red') color = '#8b0000';
+                if (tile.type === 'castle_blue') color = '#00008b';
+                
+                // 選択中タイルの強調表示
+                if (selectedHex && selectedHex.q === tile.q && selectedHex.r === tile.r) {
+                    color = '#ffff99';
+                }
+
+                // 移動可能範囲のハイライト（簡易実装）
+                if (selectedHex) {
+                    const su = units.find(u => u.q === selectedHex.q && u.r === selectedHex.r && u.owner === currentTurn && !u.acted);
+                    if (su && hexDistance(su.q, su.r, tile.q, tile.r) <= su.move) {
+                        ctx.globalAlpha = 0.5;
+                        drawHex(x, y, '#ffffff', '#fff', 2);
+                        ctx.globalAlpha = 1.0;
+                    }
+                }
+                
+                drawHex(x, y, color);
+            });
+
+            // ユニット描画
+            units.forEach(u => {
+                const { x, y } = hexToPixel(u.q, u.r);
+                ctx.beginPath();
+                ctx.arc(x, y, HEX_SIZE * 0.6, 0, Math.PI * 2);
+                ctx.fillStyle = u.owner === 1 ? '#4d4dff' : '#ff4d4d';
+                if (u.acted) ctx.fillStyle = '#555'; // 行動済みはグレーダウン
+                ctx.fill();
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#fff';
+                ctx.stroke();
+                
+                // HPやタイプの文字表示
+                ctx.fillStyle = '#fff';
+                ctx.font = '10px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(u.type[0], x, y - 2);
+                ctx.fillText(`HP${u.hp}`, x, y + 10);
+            });
+        }
+
+        // --- タッチ入力ロジック ---
+        canvas.addEventListener('touchstart', (e) => {
+            const touch = e.touches[0];
+            const rect = canvas.getBoundingClientRect();
+            // タッチ座標をCanvas内の解像度に補正
+            const x = (touch.clientX - rect.left);
+            const y = (touch.clientY - rect.top);
+            
+            const targetHex = pixelToHex(x, y);
+            
+            // マップ外なら無視
+            if (!map.has(`${targetHex.q},${targetHex.r}`)) return;
+
+            const clickedUnit = units.find(u => u.q === targetHex.q && u.r === targetHex.r);
+
+            if (!selectedHex) {
+                // ユニットを選択
+                if (clickedUnit && clickedUnit.owner === currentTurn && !clickedUnit.acted) {
+                    selectedHex = targetHex;
+                    infoUI.innerHTML = `${clickedUnit.type}を選択中<br>移動先をタップ`;
+                }
+            } else {
+                // 既に選択中なら移動・攻撃判定
+                const selectedUnit = units.find(u => u.q === selectedHex.q && u.r === selectedHex.r);
+                const dist = hexDistance(selectedUnit.q, selectedUnit.r, targetHex.q, targetHex.r);
+
+                if (dist > 0 && dist <= selectedUnit.move) {
+                    if (!clickedUnit) {
+                        // 空きマスへ移動
+                        selectedUnit.q = targetHex.q;
+                        selectedUnit.r = targetHex.r;
+                        selectedUnit.acted = true;
+                    } else if (clickedUnit.owner !== currentTurn) {
+                        // 敵を攻撃（簡易戦闘ロジック：HPを削り合う）
+                        clickedUnit.hp -= 5;
+                        selectedUnit.hp -= 2;
+                        if (clickedUnit.hp <= 0) units.splice(units.indexOf(clickedUnit), 1);
+                        if (selectedUnit.hp <= 0) units.splice(units.indexOf(selectedUnit), 1);
+                        else selectedUnit.acted = true; // 生き残ったら行動終了
+                    }
+                }
+                selectedHex = null; // 選択解除
+                infoUI.innerHTML = currentTurn === 1 ? '青のターン<br>ユニットを選択' : '赤のターン<br>ユニットを選択';
+            }
+            render();
+        });
+
+        // ターン終了ボタン
+        document.getElementById('endTurnBtn').addEventListener('click', () => {
+            currentTurn = currentTurn === 1 ? 2 : 1;
+            units.forEach(u => u.acted = false); // 全ユニットを行動可能に
+            selectedHex = null;
+            infoUI.innerHTML = currentTurn === 1 ? '青のターン<br>ユニットを選択' : '赤のターン<br>ユニットを選択';
+            
+            // 敵(赤)のターンの場合、本来ここにCPUのAI思考ルーチンが入ります
+            if (currentTurn === 2) {
+                infoUI.innerHTML = '赤のターン<br>（現在Hot-Seat対戦モード）';
+            }
+            render();
+        });
+
+        // 初期描画
+        render();
+    </script>
+</body>
+</html>
