@@ -1008,9 +1008,6 @@ let anims=[], particles=[], popups=[], rings=[], shake=0;
 let terrainDirty=true;
 let timeNow=0;
 let currentStage=0;
-/* ★5「伝説」ユニットの次ステージ引き継ぎ */
-let veteranCarry=null;      // {type,hp,exp,rank}
-let veteranCarryForStage=-1; // このステージ番号で開始した時だけ合流する
 const cleared=new Set();
 
 const cv=document.getElementById("cv");
@@ -1022,32 +1019,6 @@ function key(x,y){return x+","+y;}
 function setOwner(x,y,p){owner[key(x,y)]=p;terrainDirty=true;}
 function getOwner(x,y){const v=owner[key(x,y)];return v===undefined?null:v;}
 function mkUnit(type,pid,x,y){return{type,pid,x,y,px:x,py:y,hp:MAX_HP,acted:false,flash:0,exp:0,rank:0};}
-/* HQ付近から歩兵が置ける空きマスを螺旋状に探す（ベテラン合流用） */
-function findFreeTileNear(cx,cy){
-  for(let r=0;r<8;r++){
-    for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){
-      if(Math.max(Math.abs(dx),Math.abs(dy))!==r)continue;
-      const x=cx+dx,y=cy+dy;
-      if(x<0||y<0||x>=COLS||y>=ROWS)continue;
-      const t=map[y][x];
-      if(t===T.MTN||t===T.RIVER)continue;
-      if(unitAt(x,y))continue;
-      return{x,y};
-    }
-  }
-  return{x:cx,y:cy};
-}
-/* 勝利時に★5ユニットがいれば、次ステージへの合流処理を行う */
-function spawnVeteranIfDue(idx){
-  if(!veteranCarry||veteranCarryForStage!==idx)return;
-  const hq=HQ_POS[BLUE];
-  const spot=findFreeTileNear(hq.x,hq.y);
-  const u=mkUnit(veteranCarry.type,BLUE,spot.x,spot.y);
-  u.hp=veteranCarry.hp;u.exp=veteranCarry.exp;u.rank=veteranCarry.rank;u.flash=1;
-  units.push(u);
-  addPopup(spot.x,spot.y,UNIT_DEF[u.type].name+"合流！","#fff1b8");
-  veteranCarry=null;veteranCarryForStage=-1;
-}
 function unitAt(x,y){return units.find(u=>u.x===x&&u.y===y&&u.hp>0);}
 function isProp(t){return t===T.CITY||t===T.FACTORY||t===T.HQ;}
 function busy(){return anims.length>0||turnBusy||ended||turn!==BLUE;}
@@ -1486,7 +1457,6 @@ function startGame(idx){
   document.getElementById("overlay").classList.add("hidden");
   unlockAudio();
   loadStage(STAGES[idx]);
-  spawnVeteranIfDue(idx);
   turn=BLUE;turnCount=1;sel=null;mode="idle";captureProgress={};
   ended=false;particles=[];popups=[];rings=[];anims=[];shake=0;
   beginTurn(BLUE);
@@ -1848,43 +1818,7 @@ function gameOver(winner){
   bgmStop();
   if(winner===BLUE){saveStageScore(currentStage,turnCount);}
   else{cleared.add(currentStage);}
-  setTimeout(()=>{
-    if(winner===BLUE){
-      const eligible=units.filter(u=>u.pid===BLUE&&u.hp>0&&u.rank===5);
-      if(eligible.length>0&&currentStage+1<STAGES.length){
-        showVeteranSelect(eligible);
-        return;
-      }
-    }
-    showEndDialog(winner);
-  },900);
-}
-function showVeteranSelect(eligible){
-  const d=document.getElementById("dialog");
-  let html=`<h2>🌟 伝説の生還者</h2>
-    <p style="text-align:center">次のステージに連れて行くユニットを1体選べます</p>
-    <div class="row">`;
-  eligible.forEach((u,i)=>{
-    html+=`<button class="gold" onclick="chooseVeteran(${i})">
-      <img src="${sprUrl[u.type][BLUE]}">
-      <span>${UNIT_DEF[u.type].name}（伝説）<br><small>HP${u.hp}／経験値${u.exp}</small></span></button>`;
-  });
-  html+=`<button onclick="chooseVeteran(-1)">誰も連れて行かない</button>`;
-  html+=`</div>`;
-  d.innerHTML=html;
-  window.__veteranEligible=eligible;
-  document.getElementById("overlay").classList.remove("hidden");
-}
-function chooseVeteran(i){
-  const eligible=window.__veteranEligible||[];
-  if(i>=0&&eligible[i]){
-    const u=eligible[i];
-    veteranCarry={type:u.type,hp:u.hp,exp:u.exp,rank:u.rank};
-    veteranCarryForStage=currentStage+1;
-  }else{
-    veteranCarry=null;veteranCarryForStage=-1;
-  }
-  showEndDialog(BLUE);
+  setTimeout(()=>{showEndDialog(winner);},900);
 }
 function showEndDialog(winner){
   const d=document.getElementById("dialog");
