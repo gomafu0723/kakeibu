@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>ミニウォーズDX</title>
 <style>
   :root{
@@ -80,6 +83,30 @@
   .dialog button.gold .pr{color:#7a5b00;}
   .dialog button.center{justify-content:center;text-align:center;}
   .dialog small{font-weight:normal;opacity:.85;}
+
+  /* ---- タイトル画面 ---- */
+  #titleScreen{text-align:center;}
+  .tsLogo{font-size:34px;font-weight:900;letter-spacing:.06em;line-height:1.1;
+    background:linear-gradient(180deg,#fff6d0 0%,#ffd76a 45%,#e0952a 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    text-shadow:0 3px 0 rgba(0,0,0,.35);margin:2px 0 0;}
+  .tsLogoSub{font-size:15px;font-weight:800;color:#cfd8ff;letter-spacing:.35em;
+    margin:2px 0 10px;text-shadow:0 2px 3px rgba(0,0,0,.5);}
+  .tsChapter{display:inline-block;padding:4px 14px;border-radius:99px;
+    background:linear-gradient(180deg,#3a4cb0,#26307a);
+    border:1px solid rgba(255,215,106,.55);
+    font-size:12px;font-weight:bold;color:#ffe9a8;margin-bottom:6px;}
+  .tsVer{font-size:11px;color:#9fb0e8;margin-bottom:12px;letter-spacing:.05em;}
+  .tsUnits{display:flex;justify-content:center;gap:6px;margin:10px 0 14px;
+    padding:8px 4px;border-radius:10px;background:rgba(0,0,0,.25);
+    box-shadow:inset 0 1px 3px rgba(0,0,0,.4);}
+  .tsUnits img{height:26px;image-rendering:pixelated;
+    filter:drop-shadow(0 2px 2px rgba(0,0,0,.5));}
+  .tsRules{font-size:12px;line-height:1.75;text-align:left;
+    background:rgba(0,0,0,.22);border-radius:10px;padding:10px 12px;
+    margin-bottom:14px;box-shadow:inset 0 1px 3px rgba(0,0,0,.35);}
+  .tsRules b{color:#ffd76a;}
+  .tsHint{font-size:11px;color:#93a2d6;margin-top:10px;}
 </style>
 </head>
 <body>
@@ -104,19 +131,25 @@
 
 <div id="overlay">
   <div class="dialog" id="dialog">
-    <h2>ミニウォーズ DX</h2>
-    <p>🔵 青軍（あなた）対 🔴 赤軍（CPU）<br>
-    ・<b>全15ステージ・経済戦争III</b>！敵は毎ターン増援を生産<br>
-    ・<b>中立都市の争奪</b>と<b>敵工場の奪取</b>が勝利の鍵<br>
-    ・ユニット9種類、兵科の相性が勝敗のカギ<br>
-    ・ダメージには運がからむ。<b style="color:#ffd76a">クリティカル</b>もあり！<br>
-    ・同じ種類の味方に重なると<b>合流</b>してHP回復<br>
-    ・砲兵・ロケット砲は移動したターンは撃てない<br>
-    ・歩兵・バズーカ兵で都市を占領 → 毎ターン収入<br>
-    ・戦闘で経験値！<b style="color:#ffd76a">★ランクアップ</b>で攻防強化<br>
-    ・<b style="color:#ffd76a">敵HQの占領</b>か敵全滅で勝利！<br>
-    ・🏠ホームでいつでも中断、つづきから再開できます</p>
-    <div class="row" id="titleRow"><button class="gold center" onclick="openStageSelect()">▶ ステージをえらぶ</button></div>
+    <div id="titleScreen">
+      <div class="tsChapter">経済戦争 III</div>
+      <h1 class="tsLogo">ミニウォーズ</h1>
+      <div class="tsLogoSub">D X</div>
+      <div class="tsVer" id="tsVer"></div>
+      <div class="tsUnits" id="tsUnits"></div>
+      <div class="tsRules">
+        🔵 <b>青軍（あなた）</b> 対 🔴 <b>赤軍（CPU）</b><br>
+        ・敵は工場から<b>毎ターン増援</b>を生産し続ける<br>
+        ・<b>中立都市の争奪</b>と<b>敵工場の奪取</b>が勝利の鍵<br>
+        ・兵科の相性が勝敗を分ける（全11種）<br>
+        ・戦闘で経験値、<b>★ランクアップ</b>で強化<br>
+        ・<b>敵HQ占領</b>または<b>敵全滅</b>で勝利
+      </div>
+      <div class="row" id="titleRow">
+        <button class="gold center" onclick="openStageSelect()">▶ ステージをえらぶ</button>
+      </div>
+      <div class="tsHint">🏠ホームでいつでも中断・再開できます</div>
+    </div>
   </div>
 </div>
 
@@ -1349,7 +1382,10 @@ function bgmSetMute(m){
 ==================================================== */
 /* ステージ内容を作り直すたびにこの数字を上げる。
    保存キーにこの版番号を含めるので、古いクリア記録は自動的に無効化される。 */
-const STAGE_SET_VERSION=7;
+const STAGE_SET_VERSION=8;
+/* 画面表示用のバージョン情報（ファイルを更新したらここを変える） */
+const BUILD_VER="v8";
+const BUILD_DATE="2025-08-06";
 function scoreKey(idx){return 'mwdx_v'+STAGE_SET_VERSION+'_s'+idx;}
 function saveStageScore(idx,turns){
   try{
@@ -1874,9 +1910,44 @@ function showEndDialog(winner){
 /* ====================================================
    ステージ選択（全20）
 ==================================================== */
+/* オーバーレイの欄外(暗い部分)をタップしたら閉じる。
+   overlayClosable が true のときだけ有効。 */
+let overlayClosable=false;
+function showTitleScreen(){
+  overlayClosable=false;
+  const tb=document.getElementById("turnbadge");
+  if(tb)tb.innerHTML=`ミニウォーズDX <small style="opacity:.7;font-size:10px">${BUILD_VER}</small>`;
+  const d=document.getElementById("dialog");
+  d.innerHTML=TITLE_HTML;
+  const v=document.getElementById("tsVer");
+  if(v)v.textContent=`${BUILD_VER}　更新 ${BUILD_DATE}　全${STAGES.length}ステージ`;
+  const u=document.getElementById("tsUnits");
+  if(u){
+    for(const t of ["inf","tank","htank","art","heli","bomber","medic"]){
+      if(!sprUrl[t])continue;
+      const img=document.createElement("img");
+      img.src=sprUrl[t][BLUE];
+      u.appendChild(img);
+    }
+  }
+  const sv=loadSaveData();
+  if(sv&&STAGES[sv.stage]){
+    const row=document.getElementById("titleRow");
+    if(row&&row.insertBefore){
+      const btn=document.createElement("button");
+      btn.className="gold center";
+      btn.textContent=`▶ つづきから（STAGE ${sv.stage+1}　${STAGES[sv.stage].name}）`;
+      btn.onclick=resumeGame;
+      row.insertBefore(btn,row.firstChild);
+    }
+  }
+  document.getElementById("overlay").classList.remove("hidden");
+}
 function openStageSelect(allowClose){
   const d=document.getElementById("dialog");
   const sv=loadSaveData();
+  // ゲーム中に開いた場合のみ、欄外タップで閉じられる
+  overlayClosable=!!(allowClose&&map.length&&!ended);
   let html=`<h2>ステージ選択</h2>`;
   if(sv&&STAGES[sv.stage]){
     html+=`<div class="row"><button class="gold center" onclick="resumeGame()">
@@ -1897,6 +1968,7 @@ function openStageSelect(allowClose){
   });
   if(allowClose&&map.length&&!ended)
     html+=`<button class="warn center" onclick="closeOverlay()">とじる（ゲームに戻る）</button>`;
+  html+=`<button class="center" onclick="showTitleScreen()">🏳 タイトル画面へ</button>`;
   html+=`</div>`;
   d.innerHTML=html;
   document.getElementById("overlay").classList.remove("hidden");
@@ -2252,7 +2324,7 @@ function produce(type,x,y){
   updateUI(UNIT_DEF[type].name+"を生産しました（次のターンから行動できます）");
   autosave();
 }
-function closeOverlay(){document.getElementById("overlay").classList.add("hidden");}
+function closeOverlay(){document.getElementById("overlay").classList.add("hidden");overlayClosable=false;}
 
 /* ====================================================
    UI
@@ -2694,25 +2766,37 @@ requestAnimationFrame(loop);
 try{
   for(let i=0;i<STAGES.length;i++){if(localStorage.getItem(scoreKey(i))!==null)cleared.add(i);}
   // 古い版のスコアキーは掃除しておく（星の誤引き継ぎ防止）
-  for(let k=Object.keys(localStorage).length-1;k>=0;k--){
-    const key=Object.keys(localStorage)[k];
-    if(/^mwdx_(s\d+|v\d+_s\d+)$/.test(key)&&key.indexOf('mwdx_v'+STAGE_SET_VERSION+'_')!==0){
-      localStorage.removeItem(key);
-    }
+  // ※先に全キーを控えてから消す（消しながら走査すると取りこぼす）
+  const allKeys=[];
+  for(let k=0;k<localStorage.length;k++){
+    const key=localStorage.key(k);
+    if(key)allKeys.push(key);
+  }
+  const keep='mwdx_v'+STAGE_SET_VERSION+'_';
+  for(const key of allKeys){
+    if(key.indexOf('mwdx_')!==0)continue;      // このゲーム以外は触らない
+    if(key==='mwdx_save')continue;             // 途中セーブは残す
+    if(key.indexOf(keep)===0)continue;         // 現行版の記録は残す
+    localStorage.removeItem(key);
   }
 }catch(e){}
-// タイトル画面に「つづきから」ボタンを追加（途中セーブがある場合）
-(function initTitleContinue(){
-  const sv=loadSaveData();
-  if(!sv||!STAGES[sv.stage])return;
-  const row=document.getElementById("titleRow");
-  if(!row)return;
-  const btn=document.createElement("button");
-  btn.className="gold center";
-  btn.textContent=`▶ つづきから（STAGE ${sv.stage+1}　${STAGES[sv.stage].name}）`;
-  btn.onclick=resumeGame;
-  row.insertBefore(btn,row.firstChild);
+/* タイトル画面のHTMLを保存しておき、いつでも復元できるようにする */
+const TITLE_HTML=(function(){
+  const el=document.getElementById("titleScreen");
+  return el?el.outerHTML:"";
 })();
+/* オーバーレイの欄外（暗い部分）タップで閉じる */
+(function initOverlayOutsideTap(){
+  const ov=document.getElementById("overlay");
+  if(!ov)return;
+  ov.addEventListener("pointerdown",e=>{
+    if(e.target!==ov)return;          // ダイアログ内のタップは無視
+    if(!overlayClosable)return;       // 閉じてよい場面だけ
+    closeOverlay();
+  });
+})();
+// タイトル画面を初期描画（バージョン・ユニット絵・つづきから）
+showTitleScreen();
 </script>
 </body>
 </html>
