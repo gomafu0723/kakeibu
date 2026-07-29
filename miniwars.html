@@ -2088,6 +2088,25 @@ function handleTap(x,y){
     }
   }
 }
+const SELL_REFUND_RATE=0.5; // 売却で戻ってくる割合（コストの半額）
+function sellUnit(u){
+  const refund=Math.round(UNIT_DEF[u.type].cost*SELL_REFUND_RATE);
+  funds[BLUE]+=refund;
+  u.hp=0;
+  const idx=units.indexOf(u);
+  if(idx>=0)units.splice(idx,1);
+  SND.coin();
+  addPopup(u.px,u.py,"+"+refund+"G","#ffd76a");
+  updateTop();
+  cancelSel();
+  updateUI(UNIT_DEF[u.type].name+"を売却し、"+refund+"G獲得しました");
+  autosave();
+}
+function trySellUnit(u){
+  const refund=Math.round(UNIT_DEF[u.type].cost*SELL_REFUND_RATE);
+  if(confirm(UNIT_DEF[u.type].name+"を売却しますか？\n+"+refund+"G獲得（元には戻せません）"))
+    sellUnit(u);
+}
 function selectUnit(u){
   SND.select();
   sel={unit:u};mode="move";moveData=calcMove(u);
@@ -2099,6 +2118,7 @@ function selectUnit(u){
     <span><b>${ud.name}</b>${stars} HP${u.hp}/${MAX_HP}　攻撃${effAtk(u)}${rngTxt}／移動${ud.move}<br>
     <small>${rk.name}　EXP ${u.exp}${next?`（次まで${next.exp-u.exp}）`:"（最高）"}　${terrainLine(u)}</small></span>`);
   setBtns([{label:"ここで行動",fn:()=>{mode="anim";afterMove(u,false,u.x,u.y);}},
+           {label:"💰 売却",fn:()=>trySellUnit(u)},
            {label:"選択解除",fn:cancelSel}]);
 }
 function undoPending(){
