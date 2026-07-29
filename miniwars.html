@@ -1190,7 +1190,7 @@ function bgmSetMute(m){
    保存キーにこの版番号を含めるので、古いクリア記録は自動的に無効化される。 */
 const STAGE_SET_VERSION=11;
 /* 画面表示用のバージョン情報（ファイルを更新したらここを変える） */
-const BUILD_VER="v12";
+const BUILD_VER="v13";
 const BUILD_DATE="2026-07-29";
 function scoreKey(idx){return 'mwdx_v'+STAGE_SET_VERSION+'_s'+idx;}
 function saveStageScore(idx,turns){
@@ -1773,9 +1773,21 @@ function checkEnded(){
   if(ended)return true;
   const blue=units.some(u=>u.pid===BLUE&&u.hp>0);
   const red=units.some(u=>u.pid===RED&&u.hp>0);
-  // 勝利条件はシンプルに「敵ユニットが0体」または「敵HQ占領」（HQ占領はtryCapture側でgameOverを直接呼ぶ）
-  if(!blue){gameOver(RED);return true;}
+  // 敵(赤)はユニット0体になった瞬間に即敗北（従来通り・シンプルな勝利条件）
   if(!red){gameOver(BLUE);return true;}
+  // 自軍(青)はユニット0体でも、工場かHQを1つでも持っていれば復活の目があるので即敗北にしない
+  // （ユニット売却による資金繰りや、初期兵力0のステージで理不尽に負けないようにするため）
+  const blueCanRebuild=hasProductionTile(BLUE);
+  if(!blue&&!blueCanRebuild){gameOver(RED);return true;}
+  return false;
+}
+function hasProductionTile(pid){
+  for(const k in owner){
+    if(owner[k]!==pid)continue;
+    const[x,y]=k.split(",").map(Number);
+    const t=map[y][x];
+    if(t===T.FACTORY||t===T.HQ)return true;
+  }
   return false;
 }
 function gameOver(winner){
