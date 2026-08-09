@@ -1210,7 +1210,7 @@ function bgmSetMute(m){
    保存キーにこの版番号を含めるので、古いクリア記録は自動的に無効化される。 */
 const STAGE_SET_VERSION=13;
 /* 画面表示用のバージョン情報（ファイルを更新したらここを変える） */
-const BUILD_VER="v24";
+const BUILD_VER="v25";
 const BUILD_DATE="2026-08-09";
 function scoreKey(idx){return 'mwdx_v'+STAGE_SET_VERSION+'_s'+idx;}
 function saveStageScore(idx,turns){
@@ -1546,10 +1546,10 @@ function tryCapture(u){
   addPopup(u.x,u.y,cp.amount+"/"+CAPTURE_NEED,"#ffd76a");
   return`占領中… ${cp.amount}/${CAPTURE_NEED}`;
 }
-/* 開発できるか判定：都市/工場で、自軍の所有物で、まだLv2でなく、占領可能なユニット種 */
+/* 開発できるか判定：都市/工場/本拠地で、自軍の所有物で、まだLv2でなく、占領可能なユニット種 */
 function canDevelopHere(u){
   const t=map[u.y][u.x];
-  if(!(t===T.CITY||t===T.FACTORY))return false;
+  if(!(t===T.CITY||t===T.FACTORY||t===T.HQ))return false;
   if(getOwner(u.x,u.y)!==u.pid)return false;
   if(getPropLevel(u.x,u.y)>=1)return false;
   return !!UNIT_DEF[u.type].canCapture;
@@ -1565,8 +1565,9 @@ function tryDevelop(u){
     SND.rankup();
     addPopup(u.x,u.y,"Lv.2化！","#ffd76a");
     terrainDirty=true;
+    const canProduce=(map[u.y][u.x]===T.FACTORY||map[u.y][u.x]===T.HQ);
     return TERRAIN_INFO[map[u.y][u.x]].name+"が発展した！（回復↑／防御↑"+
-      (map[u.y][u.x]===T.FACTORY?"／生産費↓":"")+"）";
+      (canProduce?"／生産費↓":"")+"）";
   }
   developProgress[k]=dp;
   SND.select();
@@ -2226,6 +2227,19 @@ function handleTap(x,y){
     let html=`<span><b>${ti.name}</b>　防御 ★${ti.def}`;
     const o=getOwner(x,y);
     if(o!==null)html+=`（${PLAYER_NAME[o]}領）`;
+    if(isProp(t)){
+      const lvl=getPropLevel(x,y);
+      if(lvl>=1){
+        html+=` <b style="color:#ffd76a">🏗Lv.2</b>`;
+        html+=`<br><small>回復+${LV2_HEAL}／防御+${LV2_DEF_BONUS}`+
+          ((t===T.FACTORY||t===T.HQ)?`／生産費${Math.round((1-LV2_COST_MULT)*100)}%引き`:"")+"</small>";
+      }else{
+        const dp=developProgress[key(x,y)];
+        if(dp)html+=`<br><small style="color:#9ad6ff">開発中… ${dp.amount}/${DEVELOP_NEED}</small>`;
+      }
+      const cp=captureProgress[key(x,y)];
+      if(cp)html+=`<br><small style="color:#ffd76a">占領進行中… ${cp.amount}/${CAPTURE_NEED}（${PLAYER_NAME[cp.pid]}）</small>`;
+    }
     html+="</span>";
     updateUI(html);
     if((t===T.FACTORY||t===T.HQ)&&o===BLUE&&!unitAt(x,y)){
@@ -2369,7 +2383,8 @@ function goHome(){
 function openProduce(x,y){
   const d=document.getElementById("dialog");
   const lv2=getPropLevel(x,y)>=1;
-  let html=`<h2>ユニット生産${lv2?'　<small style="color:#ffd76a">🏗Lv.2工場（生産費20%引き）</small>':''}</h2>
+  const propName=TERRAIN_INFO[map[y][x]].name;
+  let html=`<h2>ユニット生産${lv2?`　<small style="color:#ffd76a">🏗Lv.2${propName}（生産費20%引き）</small>`:''}</h2>
     <p style="text-align:center;margin-bottom:8px">資金：💰${funds[BLUE]}G</p><div class="row">`;
   for(const k in UNIT_DEF){
     const ud=UNIT_DEF[k];
@@ -2593,51 +2608,116 @@ function drawTree(g,x,y,s){
 function drawBuilding(g,px,py,S,t,o,lvl){
   const main=o===null?"#969cad":PLAYER_COLOR[o];
   const dark=o===null?"#6a7080":PLAYER_DARK[o];
+  const lv2=lvl>=1;
   g.fillStyle="rgba(0,0,0,.2)";
   g.fillRect(px+S*.12,py+S*.82,S*.76,S*.1);
   if(t===T.CITY){
-    g.fillStyle="#d6d9e2";
-    g.fillRect(px+S*.18,py+S*.34,S*.64,S*.52);
-    g.fillStyle=main;
-    g.fillRect(px+S*.12,py+S*.2,S*.76,S*.18);
-    g.fillStyle="#4a5168";
-    for(let i=0;i<3;i++)g.fillRect(px+S*(.26+i*.18),py+S*.48,S*.1,S*.12);
-    g.fillStyle="#ffd76a";
-    g.fillRect(px+S*.44,py+S*.48,S*.1,S*.12);
-    g.fillStyle="#4a5168";
-    g.fillRect(px+S*.42,py+S*.68,S*.16,S*.18);
+    if(lv2){
+      // Lv2：高層ビルが増築され、窓が輝く近未来的な都市に
+      g.fillStyle="#c2c8d6";
+      g.fillRect(px+S*.14,py+S*.16,S*.6,S*.7);
+      g.fillStyle="#d6d9e2";
+      g.fillRect(px+S*.42,py+S*.02,S*.4,S*.84);
+      g.fillStyle=main;
+      g.fillRect(px+S*.1,py+S*.06,S*.78,S*.12);
+      g.fillStyle="#ffe9a0";
+      for(let i=0;i<3;i++)g.fillRect(px+S*(.2+i*.14),py+S*.32,S*.08,S*.1);
+      for(let i=0;i<2;i++)g.fillRect(px+S*(.48+i*.14),py+S*.12,S*.08,S*.1);
+      for(let i=0;i<2;i++)g.fillRect(px+S*(.48+i*.14),py+S*.3,S*.08,S*.1);
+      g.fillStyle="#4a5168";
+      g.fillRect(px+S*.4,py+S*.68,S*.2,S*.18);
+      g.fillStyle="#ffd76a";
+      g.fillRect(px+S*.1,py+S*.16,S*.78,S*.025);
+    }else{
+      g.fillStyle="#d6d9e2";
+      g.fillRect(px+S*.18,py+S*.34,S*.64,S*.52);
+      g.fillStyle=main;
+      g.fillRect(px+S*.12,py+S*.2,S*.76,S*.18);
+      g.fillStyle="#4a5168";
+      for(let i=0;i<3;i++)g.fillRect(px+S*(.26+i*.18),py+S*.48,S*.1,S*.12);
+      g.fillStyle="#ffd76a";
+      g.fillRect(px+S*.44,py+S*.48,S*.1,S*.12);
+      g.fillStyle="#4a5168";
+      g.fillRect(px+S*.42,py+S*.68,S*.16,S*.18);
+    }
   }else if(t===T.FACTORY){
-    g.fillStyle="#b8bdc9";
-    g.fillRect(px+S*.14,py+S*.42,S*.72,S*.44);
-    g.fillStyle=dark;
-    g.beginPath();g.moveTo(px+S*.14,py+S*.42);
-    g.lineTo(px+S*.38,py+S*.26);g.lineTo(px+S*.38,py+S*.42);
-    g.lineTo(px+S*.62,py+S*.26);g.lineTo(px+S*.62,py+S*.42);
-    g.lineTo(px+S*.86,py+S*.26);g.lineTo(px+S*.86,py+S*.42);
-    g.closePath();g.fill();
-    g.fillStyle="#6a7080";
-    g.fillRect(px+S*.2,py+S*.14,S*.12,S*.28);
-    g.fillStyle=main;
-    g.fillRect(px+S*.14,py+S*.6,S*.72,S*.1);
+    if(lv2){
+      // Lv2：煙突が2本に増え、炉が輝く大規模工場に
+      g.fillStyle="#b8bdc9";
+      g.fillRect(px+S*.1,py+S*.38,S*.8,S*.48);
+      g.fillStyle=dark;
+      g.beginPath();g.moveTo(px+S*.1,py+S*.38);
+      g.lineTo(px+S*.3,py+S*.22);g.lineTo(px+S*.3,py+S*.38);
+      g.lineTo(px+S*.5,py+S*.22);g.lineTo(px+S*.5,py+S*.38);
+      g.lineTo(px+S*.7,py+S*.22);g.lineTo(px+S*.7,py+S*.38);
+      g.lineTo(px+S*.9,py+S*.22);g.lineTo(px+S*.9,py+S*.38);
+      g.closePath();g.fill();
+      g.fillStyle="#5a6070";
+      g.fillRect(px+S*.16,py+S*.06,S*.11,S*.32);
+      g.fillRect(px+S*.68,py+S*.1,S*.11,S*.28);
+      g.fillStyle="#ff9a5a";
+      g.beginPath();g.arc(px+S*.215,py+S*.06,S*.045,0,7);g.fill();
+      g.beginPath();g.arc(px+S*.735,py+S*.1,S*.04,0,7);g.fill();
+      g.fillStyle=main;
+      g.fillRect(px+S*.1,py+S*.58,S*.8,S*.11);
+      g.fillStyle="#ffe9a0";
+      g.fillRect(px+S*.2,py+S*.74,S*.1,S*.08);
+      g.fillRect(px+S*.4,py+S*.74,S*.1,S*.08);
+      g.fillRect(px+S*.6,py+S*.74,S*.1,S*.08);
+    }else{
+      g.fillStyle="#b8bdc9";
+      g.fillRect(px+S*.14,py+S*.42,S*.72,S*.44);
+      g.fillStyle=dark;
+      g.beginPath();g.moveTo(px+S*.14,py+S*.42);
+      g.lineTo(px+S*.38,py+S*.26);g.lineTo(px+S*.38,py+S*.42);
+      g.lineTo(px+S*.62,py+S*.26);g.lineTo(px+S*.62,py+S*.42);
+      g.lineTo(px+S*.86,py+S*.26);g.lineTo(px+S*.86,py+S*.42);
+      g.closePath();g.fill();
+      g.fillStyle="#6a7080";
+      g.fillRect(px+S*.2,py+S*.14,S*.12,S*.28);
+      g.fillStyle=main;
+      g.fillRect(px+S*.14,py+S*.6,S*.72,S*.1);
+    }
   }else{
-    g.fillStyle=main;
-    g.fillRect(px+S*.16,py+S*.36,S*.68,S*.5);
-    g.fillStyle=dark;
-    g.fillRect(px+S*.16,py+S*.36,S*.68,S*.1);
-    g.fillStyle="#fff";
-    g.fillRect(px+S*.42,py+S*.6,S*.16,S*.26);
-    g.fillStyle="#3a3f55";
-    g.fillRect(px+S*.46,py+S*.04,S*.05,S*.34);
-    g.fillStyle=main;
-    g.beginPath();g.moveTo(px+S*.51,py+S*.06);
-    g.lineTo(px+S*.82,py+S*.14);g.lineTo(px+S*.51,py+S*.24);
-    g.closePath();g.fill();
-    g.fillStyle="#ffd76a";
-    drawStar(g,px+S*.5,py+S*.48,S*.1);
-  }
-  if(lvl>=1&&t!==T.HQ){
-    g.fillStyle="#3a2c00";drawStar(g,px+S*.84,py+S*.16,S*.13);
-    g.fillStyle="#ffd76a";drawStar(g,px+S*.84,py+S*.16,S*.1);
+    if(lv2){
+      // Lv2：本拠地が要塞化。土台が広がり、旗が大きく豪華に
+      g.fillStyle=dark;
+      g.fillRect(px+S*.08,py+S*.5,S*.84,S*.36);
+      g.fillStyle=main;
+      g.fillRect(px+S*.12,py+S*.28,S*.76,S*.46);
+      g.fillStyle=dark;
+      g.fillRect(px+S*.12,py+S*.28,S*.76,S*.09);
+      g.fillStyle="#ffe9a0";
+      g.fillRect(px+S*.2,py+S*.62,S*.12,S*.24);
+      g.fillRect(px+S*.68,py+S*.62,S*.12,S*.24);
+      g.fillStyle="#fff";
+      g.fillRect(px+S*.42,py+S*.56,S*.16,S*.3);
+      g.fillStyle="#3a3f55";
+      g.fillRect(px+S*.45,py-S*.02,S*.06,S*.42);
+      g.fillStyle="#ffd76a";
+      g.beginPath();g.moveTo(px+S*.51,py-S*.02);
+      g.lineTo(px+S*.92,py+S*.1);g.lineTo(px+S*.51,py+S*.22);
+      g.closePath();g.fill();
+      g.strokeStyle="#3a2c00";g.lineWidth=Math.max(1,S*.01);
+      g.beginPath();g.moveTo(px+S*.51,py-S*.02);
+      g.lineTo(px+S*.92,py+S*.1);g.lineTo(px+S*.51,py+S*.22);
+      g.closePath();g.stroke();
+    }else{
+      g.fillStyle=main;
+      g.fillRect(px+S*.16,py+S*.36,S*.68,S*.5);
+      g.fillStyle=dark;
+      g.fillRect(px+S*.16,py+S*.36,S*.68,S*.1);
+      g.fillStyle="#fff";
+      g.fillRect(px+S*.42,py+S*.6,S*.16,S*.26);
+      g.fillStyle="#3a3f55";
+      g.fillRect(px+S*.46,py+S*.04,S*.05,S*.34);
+      g.fillStyle=main;
+      g.beginPath();g.moveTo(px+S*.51,py+S*.06);
+      g.lineTo(px+S*.82,py+S*.14);g.lineTo(px+S*.51,py+S*.24);
+      g.closePath();g.fill();
+      g.fillStyle="#ffd76a";
+      drawStar(g,px+S*.5,py+S*.48,S*.1);
+    }
   }
 }
 function drawStar(g,cx,cy,r){
