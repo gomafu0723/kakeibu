@@ -878,6 +878,7 @@ const DEVELOP_NEED=70;
 const LV2_HEAL=8;           // Lv2拠点での回復量（通常は4）
 const LV2_COST_MULT=0.8;    // Lv2工場での生産費（20%引き）
 const LV2_DEF_BONUS=2;      // Lv2拠点にいるユニットの防御ボーナス
+const LV2_INCOME_BONUS=500; // Lv2拠点1つあたりの追加収入(通常1000G→1500G)
 let propLevel={};           // "x,y" -> 0 or 1（Lv2かどうか）
 let developProgress={};     // "x,y" -> {pid, amount}
 function getPropLevel(x,y){return propLevel[key(x,y)]||0;}
@@ -1210,8 +1211,8 @@ function bgmSetMute(m){
    保存キーにこの版番号を含めるので、古いクリア記録は自動的に無効化される。 */
 const STAGE_SET_VERSION=13;
 /* 画面表示用のバージョン情報（ファイルを更新したらここを変える） */
-const BUILD_VER="v25";
-const BUILD_DATE="2026-08-09";
+const BUILD_VER="v26";
+const BUILD_DATE="2026-08-10";
 function scoreKey(idx){return 'mwdx_v'+STAGE_SET_VERSION+'_s'+idx;}
 function saveStageScore(idx,turns){
   try{
@@ -1566,7 +1567,7 @@ function tryDevelop(u){
     addPopup(u.x,u.y,"Lv.2化！","#ffd76a");
     terrainDirty=true;
     const canProduce=(map[u.y][u.x]===T.FACTORY||map[u.y][u.x]===T.HQ);
-    return TERRAIN_INFO[map[u.y][u.x]].name+"が発展した！（回復↑／防御↑"+
+    return TERRAIN_INFO[map[u.y][u.x]].name+"が発展した！（収入↑／回復↑／防御↑"+
       (canProduce?"／生産費↓":"")+"）";
   }
   developProgress[k]=dp;
@@ -1623,7 +1624,7 @@ function doMerge(u,t){
 ==================================================== */
 function beginTurn(pid){
   let income=0;
-  for(const k in owner)if(owner[k]===pid)income+=1000;
+  for(const k in owner)if(owner[k]===pid)income+=1000+(propLevel[k]>=1?LV2_INCOME_BONUS:0);
   funds[pid]+=income;
   for(const u of units)if(u.pid===pid)u.acted=false;
   for(const u of units){
@@ -2231,7 +2232,7 @@ function handleTap(x,y){
       const lvl=getPropLevel(x,y);
       if(lvl>=1){
         html+=` <b style="color:#ffd76a">🏗Lv.2</b>`;
-        html+=`<br><small>回復+${LV2_HEAL}／防御+${LV2_DEF_BONUS}`+
+        html+=`<br><small>収入+${LV2_INCOME_BONUS}G／回復+${LV2_HEAL}／防御+${LV2_DEF_BONUS}`+
           ((t===T.FACTORY||t===T.HQ)?`／生産費${Math.round((1-LV2_COST_MULT)*100)}%引き`:"")+"</small>";
       }else{
         const dp=developProgress[key(x,y)];
