@@ -1257,8 +1257,8 @@ function bgmSetMute(m){
    保存キーにこの版番号を含めるので、古いクリア記録は自動的に無効化される。 */
 const STAGE_SET_VERSION=18;
 /* 画面表示用のバージョン情報（ファイルを更新したらここを変える） */
-const BUILD_VER="v32";
-const BUILD_DATE="2026-09-12";
+const BUILD_VER="v33";
+const BUILD_DATE="2026-09-14";
 function scoreKey(idx){return 'mwdx_v'+STAGE_SET_VERSION+'_s'+idx;}
 function saveStageScore(idx,turns){
   try{
@@ -1428,6 +1428,7 @@ function startGame(idx){
 function moveCost(u,t){
   const mt=UNIT_DEF[u.type].moveType;
   if(mt==="air")return 1;
+  if(mt==="none")return Infinity; // ICBM等、そもそも移動しないユニット
   return TERRAIN_INFO[t].cost[mt];
 }
 function canMerge(u,occ){
@@ -1436,6 +1437,11 @@ function canMerge(u,occ){
 }
 function calcMove(u){
   const def=UNIT_DEF[u.type];
+  const origin=key(u.x,u.y);
+  if(def.move<=0){
+    // 移動力0のユニット(ICBM等)はその場から動けない。BFSは行わず即返す
+    return{reach:new Set([origin]),merge:new Set(),parent:new Map(),origin};
+  }
   const dist=new Map(),parent=new Map();
   dist.set(key(u.x,u.y),0);
   const q=[{x:u.x,y:u.y,c:0}];
