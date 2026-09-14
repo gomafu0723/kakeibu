@@ -399,11 +399,11 @@ const PX={
   medicheli:[
   "..KKKKKKKKKKK...",
   "......KKK.......",
-  "....KKHWWKK.....",
-  "...KHAWRRWKK....",
-  "...KWWRRRRWKKK..",
-  "....KWWRRWKKGGK.",
-  ".....KWWWK..KKK.",
+  "....KKHTTKK.....",
+  "...KHATTTTKK....",
+  "...KTTWRRWTKKK..",
+  "....KTWRRWTKKGGK",
+  ".....KTTTK..KKK.",
   "......KGK.......",
   ".....KGGGK......",
   "....KK...KK.....",
@@ -1257,7 +1257,7 @@ function bgmSetMute(m){
    保存キーにこの版番号を含めるので、古いクリア記録は自動的に無効化される。 */
 const STAGE_SET_VERSION=18;
 /* 画面表示用のバージョン情報（ファイルを更新したらここを変える） */
-const BUILD_VER="v33";
+const BUILD_VER="v34";
 const BUILD_DATE="2026-09-14";
 function scoreKey(idx){return 'mwdx_v'+STAGE_SET_VERSION+'_s'+idx;}
 function saveStageScore(idx,turns){
@@ -1633,7 +1633,7 @@ function tryDevelop(u){
 function canMineHere(u){
   const t=map[u.y][u.x];
   if(!(t===T.MTN||t===T.FOREST))return false;
-  return u.type==="inf"||u.type==="medic";
+  return u.type==="inf"||u.type==="medic"||u.type==="medicheli";
 }
 function tryMine(u){
   const r=Math.random();
