@@ -1452,8 +1452,8 @@ function bgmSetMute(m){
    保存キーにこの版番号を含めるので、古いクリア記録は自動的に無効化される。 */
 const STAGE_SET_VERSION=20;
 /* 画面表示用のバージョン情報（ファイルを更新したらここを変える） */
-const BUILD_VER="v36";
-const BUILD_DATE="2026-09-21";
+const BUILD_VER="v38";
+const BUILD_DATE="2026-09-22";
 function scoreKey(idx){return 'mwdx_v'+STAGE_SET_VERSION+'_s'+idx;}
 function saveStageScore(idx,turns){
   try{
@@ -1557,6 +1557,7 @@ function autosave(){
       developProgress:Object.assign({},developProgress),
       icbmStrikes:icbmStrikes.slice(),
       eliminated:[...eliminated],
+      recentEliminations:recentEliminations.slice(),
       savedAt:Date.now(),
     };
     localStorage.setItem(SAVE_KEY,JSON.stringify(data));
@@ -1583,9 +1584,10 @@ function resumeGame(){
   developProgress=data.developProgress||{};
   icbmStrikes=data.icbmStrikes||[];
   eliminated=new Set(data.eliminated||[]);
+  recentEliminations=data.recentEliminations||[];
   turn=BLUE;turnCount=data.turnCount||1;
   sel=null;mode="idle";moveData=null;attackTargets=[];
-  ended=false;particles=[];popups=[];rings=[];anims=[];shake=0;icbmStrikes=[];eliminated=new Set();
+  ended=false;particles=[];popups=[];rings=[];anims=[];shake=0;icbmStrikes=[];eliminated=new Set();recentEliminations=[];
   applyPalette(currentStage);
   resize();terrainDirty=true;
   updateTop();setBtns([]);
@@ -1604,7 +1606,7 @@ function startGame(idx){
   unlockAudio();
   loadStage(STAGES[idx]);
   turn=BLUE;turnCount=1;sel=null;mode="idle";captureProgress={};
-  ended=false;particles=[];popups=[];rings=[];anims=[];shake=0;icbmStrikes=[];eliminated=new Set();
+  ended=false;particles=[];popups=[];rings=[];anims=[];shake=0;icbmStrikes=[];eliminated=new Set();recentEliminations=[];
   beginTurn(BLUE);
   bgmStop();
   bgmSelectForStage(idx);
@@ -1803,13 +1805,22 @@ function tryCapture(u){
   return`占領中… ${cp.amount}/${CAPTURE_NEED}`;
 }
 /* 陣営を脱落させる（HQ占領・全滅どちらの経路からも呼ばれる） */
+let recentEliminations=[]; // 青のターン中でない時に起きた脱落（次の青ターン開始時にまとめて通知）
 function eliminateFaction(pid){
   if(pid===null||pid===undefined||eliminated.has(pid))return;
   eliminated.add(pid);
   for(const u of units)if(u.pid===pid)u.hp=0;
   units=units.filter(u=>u.hp>0);
+  // 残っている所有地(HQ以外の都市・工場)は中立(グレー)に戻す。
+  // HQ占領経路の場合、HQ自体は既に占領者の色になっているのでここでは触らない
+  for(const k in owner){
+    if(owner[k]!==pid)continue;
+    const[x,y]=k.split(",").map(Number);
+    setOwner(x,y,null);
+  }
   const hq=HQ_POS[pid];
   if(hq)addPopup(hq.x,hq.y,PLAYER_NAME[pid]+"陣営壊滅！","#ff8a3d");
+  if(turn!==BLUE)recentEliminations.push(pid); // 青のターン中でなければ後で通知する対象に
 }
 /* 開発できるか判定：都市/工場/本拠地で、自軍の所有物で、まだLv2でなく、占領可能なユニット種 */
 function canDevelopHere(u){
@@ -1952,7 +1963,15 @@ function endTurn(){
     turn=BLUE;turnCount++;beginTurn(BLUE);updateTop();turnBusy=true;
     SND.turn();
     showBanner(`DAY ${turnCount} ─ 青軍ターン`,PLAYER_COLOR[BLUE],()=>{
-      turnBusy=false;updateUI("🔵 あなたのターンです");autosave();});
+      if(recentEliminations.length){
+        const names=[...new Set(recentEliminations)].map(p=>PLAYER_NAME[p]).join("・");
+        recentEliminations=[];
+        showBanner(`⚠️ ${names}が他陣営との戦いで壊滅していた！`,"#ff8a3d",()=>{
+          turnBusy=false;updateUI("🔵 あなたのターンです");autosave();});
+      }else{
+        turnBusy=false;updateUI("🔵 あなたのターンです");autosave();
+      }
+    });
   }else{
     turn=next;beginTurn(next);updateTop();turnBusy=true;
     updateUI(`${PLAYER_NAME[next]}のターン…`);
