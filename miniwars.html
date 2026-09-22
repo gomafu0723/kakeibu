@@ -70,7 +70,7 @@
 
   #overlay{position:fixed;inset:0;background:rgba(0,0,0,.78);
     display:flex;justify-content:center;align-items:center;z-index:10;}
-  #overlay.hidden{display:none;}
+  .hidden{display:none;}
   .dialog{background:var(--panel);border:3px solid var(--gold);
     border-radius:12px;padding:18px;width:min(340px,92vw);text-align:center;
     max-height:86vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
@@ -1461,7 +1461,7 @@ function bgmSetMute(m){
    保存キーにこの版番号を含めるので、古いクリア記録は自動的に無効化される。 */
 const STAGE_SET_VERSION=20;
 /* 画面表示用のバージョン情報（ファイルを更新したらここを変える） */
-const BUILD_VER="v39";
+const BUILD_VER="v40";
 const BUILD_DATE="2026-09-22";
 function scoreKey(idx){return 'mwdx_v'+STAGE_SET_VERSION+'_s'+idx;}
 function saveStageScore(idx,turns){
