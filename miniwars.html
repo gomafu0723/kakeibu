@@ -149,13 +149,22 @@
         ・<b>敵HQ占領</b>または<b>敵全滅</b>で勝利
       </div>
       <div class="row" id="titleRow">
-        <button class="gold center" onclick="openStageSelect()">▶ ステージをえらぶ</button>
+        <button class="gold center" onclick="openStageSelect()">🎮 1人で遊ぶ</button>
+        <button class="center" onclick="openMultiplayerMenu()">🌐 みんなで遊ぶ</button>
       </div>
       <div class="tsHint">🏠ホームでいつでも中断・再開できます</div>
     </div>
   </div>
 </div>
 
+<div id="mpDialogWrap" class="hidden" style="position:fixed;inset:0;z-index:50;">
+  <div id="mpOverlayBg" style="position:absolute;inset:0;background:rgba(0,0,0,.7);"></div>
+  <div id="mpDialog" style="position:relative;max-width:420px;margin:18vh auto 0;
+      background:#191d3e;border:2px solid var(--gold2);border-radius:14px;padding:20px;
+      box-shadow:0 8px 30px rgba(0,0,0,.6);"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.2/peerjs.min.js"></script>
 <script>
 "use strict";
 const MAX_HP=20;
@@ -1452,7 +1461,7 @@ function bgmSetMute(m){
    保存キーにこの版番号を含めるので、古いクリア記録は自動的に無効化される。 */
 const STAGE_SET_VERSION=20;
 /* 画面表示用のバージョン情報（ファイルを更新したらここを変える） */
-const BUILD_VER="v38";
+const BUILD_VER="v39";
 const BUILD_DATE="2026-09-22";
 function scoreKey(idx){return 'mwdx_v'+STAGE_SET_VERSION+'_s'+idx;}
 function saveStageScore(idx,turns){
@@ -2342,6 +2351,168 @@ function showTitleScreen(){
   }
   document.getElementById("overlay").classList.remove("hidden");
 }
+/* ====================================================
+   通信対戦（PeerJS・ホスト権威型）
+   ミニクックと同じ方式：1台がホストとなり4桁コードでルームを作成、
+   他の端末はそのコードを入力して参加する。
+==================================================== */
+const MP_PREFIX="mwdx26-";
+const MP_ICE_CONFIG={iceServers:[
+  {urls:"stun:stun.relay.metered.ca:80"},
+  {urls:"turn:global.relay.metered.ca:80",
+   username:"53bd37890330caaac4a8a4c",credential:"UIcHnN4nxBrB8cBS"},
+  {urls:"turn:global.relay.metered.ca:80?transport=tcp",
+   username:"53bd37890330caaac4a8a4c",credential:"UIcHnN4nxBrB8cBS"},
+  {urls:"turn:global.relay.metered.ca:443",
+   username:"53bd37890330caaac4a8a4c",credential:"UIcHnN4nxBrB8cBS"},
+  {urls:"turns:global.relay.metered.ca:443?transport=tcp",
+   username:"53bd37890330caaac4a8a4c",credential:"UIcHnN4nxBrB8cBS"},
+]};
+let mpPeer=null;          // 自分自身のPeerJSインスタンス
+let mpConns=[];           // ホスト側：接続してきた各参加者とのDataConnection一覧
+let mpHostConn=null;      // 参加者側：ホストとのDataConnection
+let mpIsHost=false;
+let mpRoomCode=null;
+
+function openMultiplayerMenu(){
+  mpRenderMenu();
+  document.getElementById("mpDialogWrap").classList.remove("hidden");
+}
+function closeMultiplayerMenu(){
+  document.getElementById("mpDialogWrap").classList.add("hidden");
+  mpTeardown();
+}
+function mpTeardown(){
+  try{if(mpPeer)mpPeer.destroy();}catch(e){}
+  mpPeer=null;mpConns=[];mpHostConn=null;mpIsHost=false;mpRoomCode=null;
+}
+function mpRenderMenu(){
+  const d=document.getElementById("mpDialog");
+  d.innerHTML=`
+    <h2 style="text-align:center;margin-top:0">🌐 みんなで遊ぶ</h2>
+    <p style="font-size:12px;color:#93a2d6;text-align:center;margin-bottom:16px">
+      1人がルームを作り、他の人はそのコードを入力して参加します</p>
+    <div class="row">
+      <button class="gold center" onclick="mpShowCreateRoom()">🏠 ルームを作る</button>
+      <button class="center" onclick="mpShowJoinRoom()">🔑 ルームに参加する</button>
+    </div>
+    <div class="row"><button class="center" onclick="closeMultiplayerMenu()">閉じる</button></div>`;
+}
+/* ---- ホスト：ルーム作成 ---- */
+function mpShowCreateRoom(retryCount){
+  retryCount=retryCount||0;
+  const d=document.getElementById("mpDialog");
+  d.innerHTML=`<h2 style="text-align:center;margin-top:0">🏠 ルームを作成中…</h2>
+    <p style="text-align:center;color:#93a2d6">少々お待ちください</p>`;
+  if(typeof Peer==="undefined"){
+    d.innerHTML=`<h2 style="text-align:center;margin-top:0">⚠️ 通信の準備に失敗しました</h2>
+      <p style="text-align:center;color:#93a2d6">通信ライブラリを読み込めませんでした。<br>ネット接続を確認してもう一度お試しください。</p>
+      <div class="row"><button class="center" onclick="mpRenderMenu()">戻る</button></div>`;
+    return;
+  }
+  const code=String(Math.floor(1000+Math.random()*9000));
+  mpTeardown();
+  mpIsHost=true;
+  mpPeer=new Peer(MP_PREFIX+code,{config:MP_ICE_CONFIG,debug:0});
+  mpPeer.on("open",()=>{
+    mpRoomCode=code;
+    mpRenderHostWaiting();
+  });
+  mpPeer.on("connection",conn=>{
+    mpConns.push(conn);
+    conn.on("open",()=>{
+      mpRenderHostWaiting();
+    });
+    conn.on("close",()=>{
+      mpConns=mpConns.filter(c=>c!==conn);
+      mpRenderHostWaiting();
+    });
+  });
+  mpPeer.on("error",err=>{
+    if(err.type==="unavailable-id"&&retryCount<5){
+      mpShowCreateRoom(retryCount+1); // コードがたまたま衝突した場合は作り直す
+      return;
+    }
+    mpRenderError("ルームの作成に失敗しました（"+err.type+"）");
+  });
+}
+function mpRenderHostWaiting(){
+  const d=document.getElementById("mpDialog");
+  d.innerHTML=`<h2 style="text-align:center;margin-top:0">🏠 ルームを作成しました</h2>
+    <p style="text-align:center;font-size:13px;color:#93a2d6">このコードを、参加する人に伝えてください</p>
+    <p style="text-align:center;font-size:42px;font-weight:bold;letter-spacing:.15em;
+      color:#ffd76a;margin:10px 0">${mpRoomCode}</p>
+    <p style="text-align:center;font-size:13px;color:#7dff9a">
+      参加者：${mpConns.length}人 接続中</p>
+    <div class="row"><button class="center" onclick="closeMultiplayerMenu()">ルームを閉じる</button></div>
+    <p style="text-align:center;font-size:11px;color:#93a2d6;margin-top:10px">
+      （陣営の割り当て・対戦開始は次のアップデートで実装予定です）</p>`;
+}
+/* ---- 参加者：ルーム参加 ---- */
+function mpShowJoinRoom(){
+  const d=document.getElementById("mpDialog");
+  d.innerHTML=`<h2 style="text-align:center;margin-top:0">🔑 ルームに参加</h2>
+    <p style="text-align:center;font-size:13px;color:#93a2d6">ホストから聞いた4桁のコードを入力してください</p>
+    <input id="mpCodeInput" type="tel" inputmode="numeric" maxlength="4" placeholder="0000"
+      style="display:block;width:160px;margin:14px auto;padding:10px;font-size:28px;
+      text-align:center;letter-spacing:.2em;border-radius:8px;border:2px solid var(--gold2);
+      background:#0c0e22;color:#fff;">
+    <div class="row"><button class="gold center" onclick="mpDoJoin()">接続する</button></div>
+    <div class="row"><button class="center" onclick="mpRenderMenu()">戻る</button></div>`;
+  setTimeout(()=>{const i=document.getElementById("mpCodeInput");if(i)i.focus();},50);
+}
+function mpDoJoin(){
+  const input=document.getElementById("mpCodeInput");
+  const code=(input?input.value:"").trim();
+  if(!/^\d{4}$/.test(code)){
+    mpRenderError("4桁のコードを入力してください");
+    return;
+  }
+  if(typeof Peer==="undefined"){
+    mpRenderError("通信ライブラリを読み込めませんでした。ネット接続を確認してください。");
+    return;
+  }
+  const d=document.getElementById("mpDialog");
+  d.innerHTML=`<h2 style="text-align:center;margin-top:0">🔑 接続中…</h2>
+    <p style="text-align:center;color:#93a2d6">コード ${code} のルームに接続しています</p>`;
+  mpTeardown();
+  mpIsHost=false;
+  mpPeer=new Peer({config:MP_ICE_CONFIG});
+  mpPeer.on("open",()=>{
+    const conn=mpPeer.connect(MP_PREFIX+code,{reliable:true});
+    mpHostConn=conn;
+    conn.on("open",()=>{
+      mpRenderJoinedOk(code);
+    });
+    conn.on("error",()=>{
+      mpRenderError("ルームへの接続に失敗しました。コードを確認してください。");
+    });
+  });
+  mpPeer.on("error",err=>{
+    mpRenderError("接続に失敗しました（"+err.type+"）");
+  });
+  // 一定時間つながらない場合はタイムアウト表示
+  setTimeout(()=>{
+    if(mpHostConn&&!mpHostConn.open){
+      mpRenderError("接続がタイムアウトしました。コードやネット環境を確認してください。");
+    }
+  },15000);
+}
+function mpRenderJoinedOk(code){
+  const d=document.getElementById("mpDialog");
+  d.innerHTML=`<h2 style="text-align:center;margin-top:0">✅ 接続しました！</h2>
+    <p style="text-align:center;color:#93a2d6">ルーム ${code} のホストとつながりました</p>
+    <div class="row"><button class="center" onclick="closeMultiplayerMenu()">閉じる</button></div>
+    <p style="text-align:center;font-size:11px;color:#93a2d6;margin-top:10px">
+      （対戦の開始は次のアップデートで実装予定です）</p>`;
+}
+function mpRenderError(msg){
+  const d=document.getElementById("mpDialog");
+  d.innerHTML=`<h2 style="text-align:center;margin-top:0">⚠️ エラー</h2>
+    <p style="text-align:center;color:#ff8a92">${msg}</p>
+    <div class="row"><button class="center" onclick="mpRenderMenu()">戻る</button></div>`;
+}
+
 function openStageSelect(allowClose){
   const d=document.getElementById("dialog");
   const sv=loadSaveData();
