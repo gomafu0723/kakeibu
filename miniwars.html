@@ -1464,7 +1464,7 @@ function bgmSetMute(m){
    保存キーにこの版番号を含めるので、古いクリア記録は自動的に無効化される。 */
 const STAGE_SET_VERSION=20;
 /* 画面表示用のバージョン情報（ファイルを更新したらここを変える） */
-const BUILD_VER="v46";
+const BUILD_VER="v47";
 const BUILD_DATE="2026-09-22";
 function scoreKey(idx){return 'mwdx_v'+STAGE_SET_VERSION+'_s'+idx;}
 function saveStageScore(idx,turns){
@@ -2313,7 +2313,7 @@ function gameOver(winner){
   bgmStop();
   if(winner===BLUE){saveStageScore(currentStage,turnCount);}
   else{cleared.add(currentStage);}
-  if(mpActive)mpBroadcastState();
+  if(mpActive){mpBroadcastState();mpStopBroadcastLoop();}
   setTimeout(()=>{showEndDialog(winner);},900);
 }
 function showEndDialog(winner){
@@ -2402,6 +2402,7 @@ function closeMultiplayerMenu(){
 }
 function mpTeardown(){
   try{if(mpPeer)mpPeer.destroy();}catch(e){}
+  mpStopBroadcastLoop();
   mpPeer=null;mpConns=[];mpHostConn=null;mpIsHost=false;mpRoomCode=null;
   mpFactionCount=2;mpAssign={1:"cpu",2:"cpu",3:"cpu"};mpStageIdx=null;
   mpActive=false;mpMyPid=null;mpAssignFinal={};
@@ -2563,7 +2564,25 @@ function mpStartGame(){
   mpActive=true;mpMyPid=BLUE;
   document.getElementById("mpDialogWrap").classList.add("hidden");
   startGame(mpStageIdx);
+  // 人が参加する陣営は、開始資金を青軍と同額にそろえる(CPU戦前提の偏りをPvPでは撤廃)
+  for(const k of Object.keys(mpAssignFinal)){
+    const pid=Number(k);
+    if(pid===BLUE)continue;
+    if(mpAssignFinal[k]!=="cpu"&&mpAssignFinal[k]!=="host"){
+      funds[pid]=funds[BLUE];
+    }
+  }
   mpBroadcastState(); // 開始直後の状態(ユニット・拠点の色など)を全参加者へ即送信
+  mpStartBroadcastLoop(); // 以後、青軍自身の細かな動きも含めて定期的に全員へ同期する
+}
+/* 通信対戦中、ホストの手番の動きも含めて定期的に状態を送り続けるループ */
+let mpBroadcastTimer=null;
+function mpStartBroadcastLoop(){
+  if(mpBroadcastTimer)clearInterval(mpBroadcastTimer);
+  mpBroadcastTimer=setInterval(()=>{if(mpActive&&mpIsHost&&!ended)mpBroadcastState();},1000);
+}
+function mpStopBroadcastLoop(){
+  if(mpBroadcastTimer){clearInterval(mpBroadcastTimer);mpBroadcastTimer=null;}
 }
 /* ---- 通信対戦：状態の同期(ホストが権威。全処理はホストのみで行う) ---- */
 function mpSerializeState(){
