@@ -1464,7 +1464,7 @@ function bgmSetMute(m){
    保存キーにこの版番号を含めるので、古いクリア記録は自動的に無効化される。 */
 const STAGE_SET_VERSION=20;
 /* 画面表示用のバージョン情報（ファイルを更新したらここを変える） */
-const BUILD_VER="v45";
+const BUILD_VER="v46";
 const BUILD_DATE="2026-09-22";
 function scoreKey(idx){return 'mwdx_v'+STAGE_SET_VERSION+'_s'+idx;}
 function saveStageScore(idx,turns){
@@ -2620,6 +2620,7 @@ function mpPeerJoinGame(data){
   currentStage=data.stageIdx;
   units=[];owner={};funds=[];propLevel={};developProgress={};captureProgress={};
   eliminated=new Set();icbmStrikes=[];ended=false;sel=null;mode="idle";moveData=null;attackTargets=[];
+  turnBusy=false; // 参加者側は常にfalse(自分のターンかどうかはturn===mpMyPidで判定するため)
   document.getElementById("overlay").classList.add("hidden");
   document.getElementById("mpDialogWrap").classList.add("hidden");
   resize();terrainDirty=true;
