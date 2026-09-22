@@ -1464,7 +1464,7 @@ function bgmSetMute(m){
    保存キーにこの版番号を含めるので、古いクリア記録は自動的に無効化される。 */
 const STAGE_SET_VERSION=20;
 /* 画面表示用のバージョン情報（ファイルを更新したらここを変える） */
-const BUILD_VER="v44";
+const BUILD_VER="v45";
 const BUILD_DATE="2026-09-22";
 function scoreKey(idx){return 'mwdx_v'+STAGE_SET_VERSION+'_s'+idx;}
 function saveStageScore(idx,turns){
@@ -2563,6 +2563,7 @@ function mpStartGame(){
   mpActive=true;mpMyPid=BLUE;
   document.getElementById("mpDialogWrap").classList.add("hidden");
   startGame(mpStageIdx);
+  mpBroadcastState(); // 開始直後の状態(ユニット・拠点の色など)を全参加者へ即送信
 }
 /* ---- 通信対戦：状態の同期(ホストが権威。全処理はホストのみで行う) ---- */
 function mpSerializeState(){
