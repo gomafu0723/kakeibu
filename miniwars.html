@@ -1464,7 +1464,7 @@ function bgmSetMute(m){
    保存キーにこの版番号を含めるので、古いクリア記録は自動的に無効化される。 */
 const STAGE_SET_VERSION=20;
 /* 画面表示用のバージョン情報（ファイルを更新したらここを変える） */
-const BUILD_VER="v49";
+const BUILD_VER="v50";
 const BUILD_DATE="2026-09-22";
 function scoreKey(idx){return 'mwdx_v'+STAGE_SET_VERSION+'_s'+idx;}
 function saveStageScore(idx,turns){
@@ -1555,7 +1555,7 @@ function clearSave(){
   try{localStorage.removeItem(SAVE_KEY);}catch(e){}
 }
 function autosave(){
-  if(ended||turn!==BLUE)return;
+  if(ended||turn!==BLUE||mpActive)return;
   try{
     const data={
       stage:currentStage,
@@ -2284,15 +2284,20 @@ function checkEnded(){
     if(eliminated.has(pid))continue;
     const alive=units.some(u=>u.pid===pid&&u.hp>0);
     const canRebuild=hasProductionTile(pid);
-    // 自軍(青)はユニット0体でも、工場かHQを1つでも持っていれば復活の目があるので即敗北にしない
+    // ユニット0体でも、工場かHQを1つでも持っていれば復活の目があるので即敗北にしない
     if(!alive&&!canRebuild)eliminateFaction(pid);
+  }
+  const remaining=factions.filter(p=>!eliminated.has(p));
+  if(mpActive){
+    // 通信対戦：青軍を特別扱いせず、誰であれ最後の1陣営が残るまで続ける(真の全員対戦)
+    if(remaining.length<=1){gameOver(remaining[0]!==undefined?remaining[0]:BLUE);return true;}
+    return false;
   }
   if(eliminated.has(BLUE)){
     const survivor=factions.find(p=>!eliminated.has(p));
     gameOver(survivor===undefined?RED:survivor);
     return true;
   }
-  const remaining=factions.filter(p=>!eliminated.has(p));
   if(remaining.length<=1){gameOver(BLUE);return true;}
   return false;
 }
@@ -2312,13 +2317,25 @@ function gameOver(winner){
   winnerCache=winner;
   clearSave();
   bgmStop();
-  if(winner===BLUE){saveStageScore(currentStage,turnCount);}
-  else{cleared.add(currentStage);}
+  if(!mpActive){
+    if(winner===BLUE){saveStageScore(currentStage,turnCount);}
+    else{cleared.add(currentStage);}
+  }
   if(mpActive){mpBroadcastState();mpStopBroadcastLoop();}
   setTimeout(()=>{showEndDialog(winner);},900);
 }
 function showEndDialog(winner){
   const d=document.getElementById("dialog");
+  if(mpActive){
+    const iWon=(winner===BLUE);
+    d.innerHTML=`<h2>${iWon?"🎉 勝利！":"💀 敗北…"}</h2>
+      <p style="text-align:center">${PLAYER_NAME[winner]}の勝ちです（DAY ${turnCount}）</p>
+      <div class="row">
+        <button class="gold center" onclick="mpTeardown();showTitleScreen();">🏳 タイトルへ戻る</button>
+      </div>`;
+    document.getElementById("overlay").classList.remove("hidden");
+    return;
+  }
   let btns="";
   if(winner===BLUE){
     if(currentStage+1<STAGES.length)
@@ -2627,6 +2644,8 @@ function mpHostHandleInput(conn,data){
   }else if(data.type==="btn"){
     const b=lastBtnList[data.index];
     if(b&&b.fn)b.fn();
+  }else if(data.type==="endTurn"){
+    endTurn();
   }
   activeTapPid=BLUE; // ホスト自身の以後の操作は通常通りBLUEに戻す
   mpBroadcastState();
@@ -2698,10 +2717,25 @@ function mpRenderRemoteBtns(btns,interactive){
     btn.onclick=()=>{if(mpHostConn)mpHostConn.send({type:"btn",index:idx});};
     b.appendChild(btn);
   });
+  const end=document.createElement("button");
+  end.textContent="ターン終了";end.className="warn";
+  end.onclick=()=>{
+    const remain=units.filter(u=>u.pid===mpMyPid&&u.hp>0&&!u.acted).length;
+    if(remain>0){
+      if(!confirm("まだ行動していない味方が "+remain+" 部隊います。\nこのままターンを終了しますか？"))return;
+    }
+    if(mpHostConn)mpHostConn.send({type:"endTurn"});
+  };
+  b.appendChild(end);
 }
 function mpRenderEndResult(winner){
   const win=(winner===mpMyPid);
   updateUI(win?"🎉 あなたの勝利です！":`${PLAYER_NAME[winner]}の勝利でした`);
+  const b=document.getElementById("btns");b.innerHTML="";
+  const btn=document.createElement("button");
+  btn.textContent="🏳 タイトルへ戻る";btn.className="gold";
+  btn.onclick=()=>{mpTeardown();showTitleScreen();};
+  b.appendChild(btn);
 }
 /* ---- 参加者：ルーム参加 ---- */
 function mpShowJoinRoom(){
@@ -3187,7 +3221,7 @@ function finishAction(msg){
   if(ended)return;
   if(checkEnded())return;
   autosave();
-  const remain=units.filter(u=>u.pid===BLUE&&u.hp>0&&!u.acted).length;
+  const remain=units.filter(u=>u.pid===activeTapPid&&u.hp>0&&!u.acted).length;
   if(remain===0)updateUI(msg+"<br><small>全ユニット行動済み。「ターン終了」を押してください</small>");
 }
 function cancelSel(){sel=null;mode="idle";moveData=null;attackTargets=[];
@@ -3244,8 +3278,9 @@ function updateTop(){
   const tb=document.getElementById("turnbadge");
   tb.textContent=`S${currentStage+1} DAY ${turnCount}　${PLAYER_NAME[turn]}`;
   tb.style.background=PLAYER_COLOR[turn];
-  document.getElementById("funds").textContent=funds[BLUE];
-  let p=0;for(const k in owner)if(owner[k]===BLUE)p++;
+  const myPid=mpActive?mpMyPid:BLUE;
+  document.getElementById("funds").textContent=funds[myPid];
+  let p=0;for(const k in owner)if(owner[k]===myPid)p++;
   document.getElementById("props").textContent=p;
 }
 function updateUI(html){document.getElementById("info").innerHTML=html;}
@@ -3265,7 +3300,7 @@ function setBtns(list){
   end.textContent="ターン終了";end.className="warn";
   end.onclick=()=>{
     if(busy())return;
-    const remain=units.filter(u=>u.pid===BLUE&&u.hp>0&&!u.acted).length;
+    const remain=units.filter(u=>u.pid===activeTapPid&&u.hp>0&&!u.acted).length;
     if(remain>0){
       if(!confirm("まだ行動していない味方が "+remain+" 部隊います。\nこのままターンを終了しますか？"))return;
     }
