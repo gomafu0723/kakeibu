@@ -1461,7 +1461,7 @@ function bgmSetMute(m){
    保存キーにこの版番号を含めるので、古いクリア記録は自動的に無効化される。 */
 const STAGE_SET_VERSION=20;
 /* 画面表示用のバージョン情報（ファイルを更新したらここを変える） */
-const BUILD_VER="v40";
+const BUILD_VER="v41";
 const BUILD_DATE="2026-09-22";
 function scoreKey(idx){return 'mwdx_v'+STAGE_SET_VERSION+'_s'+idx;}
 function saveStageScore(idx,turns){
@@ -2385,6 +2385,7 @@ function closeMultiplayerMenu(){
 function mpTeardown(){
   try{if(mpPeer)mpPeer.destroy();}catch(e){}
   mpPeer=null;mpConns=[];mpHostConn=null;mpIsHost=false;mpRoomCode=null;
+  mpFactionCount=2;mpAssign={1:"cpu",2:"cpu",3:"cpu"};mpStageIdx=null;
 }
 function mpRenderMenu(){
   const d=document.getElementById("mpDialog");
@@ -2425,6 +2426,7 @@ function mpShowCreateRoom(retryCount){
     });
     conn.on("close",()=>{
       mpConns=mpConns.filter(c=>c!==conn);
+      for(const k of Object.keys(mpAssign))if(mpAssign[k]===conn.peer)mpAssign[k]="cpu";
       mpRenderHostWaiting();
     });
   });
@@ -2436,6 +2438,12 @@ function mpShowCreateRoom(retryCount){
     mpRenderError("ルームの作成に失敗しました（"+err.type+"）");
   });
 }
+let mpFactionCount=2;               // 2〜4
+let mpAssign={1:"cpu",2:"cpu",3:"cpu"}; // pid(1〜3) -> "cpu" または conn.peer(参加者ID)
+function mpConnLabel(peerId){
+  const idx=mpConns.findIndex(c=>c.peer===peerId);
+  return idx>=0?`参加者${idx+1}`:"（切断済み）";
+}
 function mpRenderHostWaiting(){
   const d=document.getElementById("mpDialog");
   d.innerHTML=`<h2 style="text-align:center;margin-top:0">🏠 ルームを作成しました</h2>
@@ -2444,9 +2452,89 @@ function mpRenderHostWaiting(){
       color:#ffd76a;margin:10px 0">${mpRoomCode}</p>
     <p style="text-align:center;font-size:13px;color:#7dff9a">
       参加者：${mpConns.length}人 接続中</p>
-    <div class="row"><button class="center" onclick="closeMultiplayerMenu()">ルームを閉じる</button></div>
-    <p style="text-align:center;font-size:11px;color:#93a2d6;margin-top:10px">
-      （陣営の割り当て・対戦開始は次のアップデートで実装予定です）</p>`;
+    <div class="row">
+      <button class="gold center" onclick="mpShowAssign()">▶ 陣営を決めて始める</button>
+      <button class="center" onclick="closeMultiplayerMenu()">ルームを閉じる</button>
+    </div>`;
+}
+/* ---- ホスト：陣営割り当て・ステージ選択 ---- */
+function mpEligibleStages(){
+  return STAGES.map((s,i)=>({s,i})).filter(o=>o.s.hq.length===mpFactionCount);
+}
+function mpSetFactionCount(n){
+  mpFactionCount=n;
+  for(const k of Object.keys(mpAssign)){
+    if(Number(k)>=n)mpAssign[k]="cpu"; // 陣営数を減らしたら、使わない枠はCPUに戻す
+  }
+  mpShowAssign();
+}
+function mpSetAssign(pid,value){
+  // 同じ参加者を二つの陣営に重複割り当てしないよう、既存の割り当ては外す
+  if(value!=="cpu"){
+    for(const k of Object.keys(mpAssign))if(mpAssign[k]===value)mpAssign[k]="cpu";
+  }
+  mpAssign[pid]=value;
+  mpShowAssign();
+}
+function mpShowAssign(){
+  if(!mpStageIdx||!mpEligibleStages().some(o=>o.i===mpStageIdx))
+    mpStageIdx=(mpEligibleStages()[0]||{}).i;
+  const d=document.getElementById("mpDialog");
+  let html=`<h2 style="text-align:center;margin-top:0">⚔️ 陣営を決める</h2>
+    <p style="text-align:center;font-size:12px;color:#93a2d6;margin-bottom:10px">総陣営数</p>
+    <div class="row" style="flex-direction:row;justify-content:center;gap:8px;margin-bottom:14px">`;
+  for(let n=2;n<=4;n++){
+    html+=`<button class="${mpFactionCount===n?"gold":""}" style="flex:1"
+      onclick="mpSetFactionCount(${n})">${n}陣営</button>`;
+  }
+  html+=`</div>`;
+  html+=`<p style="text-align:center;font-size:12px;color:#93a2d6;margin-bottom:6px">各陣営の担当</p>`;
+  html+=`<p style="font-size:13px;margin-bottom:6px">🔵 青軍：<b style="color:#ffd76a">あなた（ホスト）</b></p>`;
+  for(let pid=1;pid<mpFactionCount;pid++){
+    const cur=mpAssign[pid]||"cpu";
+    html+=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <span style="width:64px;font-size:13px">${PLAYER_NAME[pid]}：</span>
+      <select onchange="mpSetAssign(${pid},this.value)" style="flex:1;padding:6px;border-radius:8px;
+        background:#0c0e22;color:#fff;border:1px solid var(--gold2)">
+        <option value="cpu" ${cur==="cpu"?"selected":""}>CPU</option>`;
+    for(const c of mpConns){
+      const taken=Object.values(mpAssign).includes(c.peer)&&cur!==c.peer;
+      html+=`<option value="${c.peer}" ${cur===c.peer?"selected":""} ${taken?"disabled":""}>
+        ${mpConnLabel(c.peer)}${taken?"（他の陣営に割当済）":""}</option>`;
+    }
+    html+=`</select></div>`;
+  }
+  const elig=mpEligibleStages();
+  html+=`<p style="text-align:center;font-size:12px;color:#93a2d6;margin:12px 0 6px">ステージ</p>`;
+  if(elig.length){
+    html+=`<select onchange="mpStageIdx=Number(this.value)" style="width:100%;padding:8px;
+      border-radius:8px;background:#0c0e22;color:#fff;border:1px solid var(--gold2);margin-bottom:14px">`;
+    for(const o of elig){
+      html+=`<option value="${o.i}" ${mpStageIdx===o.i?"selected":""}>${o.s.name}</option>`;
+    }
+    html+=`</select>`;
+  }else{
+    html+=`<p style="text-align:center;color:#ff8a92;font-size:12px;margin-bottom:14px">
+      ${mpFactionCount}陣営用のステージがありません</p>`;
+  }
+  html+=`<div class="row">
+    <button class="gold center" ${elig.length?"":"disabled"} onclick="mpStartGame()">🚀 対戦を開始する</button>
+    <button class="center" onclick="mpRenderHostWaiting()">戻る</button>
+  </div>`;
+  d.innerHTML=html;
+}
+let mpStageIdx=null;
+function mpStartGame(){
+  if(mpStageIdx===null||mpStageIdx===undefined)return;
+  const payload={type:"game_start",stageIdx:mpStageIdx,assign:Object.assign({0:"host"},mpAssign),
+    factionCount:mpFactionCount};
+  for(const c of mpConns){
+    try{c.send(payload);}catch(e){}
+  }
+  const d=document.getElementById("mpDialog");
+  d.innerHTML=`<h2 style="text-align:center;margin-top:0">🚀 対戦準備中…</h2>
+    <p style="text-align:center;color:#93a2d6">全員の同期を待っています</p>`;
+  // 実際の対戦同期は次のアップデートで実装
 }
 /* ---- 参加者：ルーム参加 ---- */
 function mpShowJoinRoom(){
@@ -2484,6 +2572,14 @@ function mpDoJoin(){
     conn.on("open",()=>{
       mpRenderJoinedOk(code);
     });
+    conn.on("data",data=>{
+      if(data&&data.type==="game_start"){
+        mpRenderWaitingForStart(data);
+      }
+    });
+    conn.on("close",()=>{
+      mpRenderError("ホストとの接続が切れました。");
+    });
     conn.on("error",()=>{
       mpRenderError("ルームへの接続に失敗しました。コードを確認してください。");
     });
@@ -2502,9 +2598,23 @@ function mpRenderJoinedOk(code){
   const d=document.getElementById("mpDialog");
   d.innerHTML=`<h2 style="text-align:center;margin-top:0">✅ 接続しました！</h2>
     <p style="text-align:center;color:#93a2d6">ルーム ${code} のホストとつながりました</p>
-    <div class="row"><button class="center" onclick="closeMultiplayerMenu()">閉じる</button></div>
+    <p style="text-align:center;font-size:12px;color:#93a2d6;margin-top:10px">
+      ホストが陣営を決めて対戦を始めるのを待っています…</p>
+    <div class="row"><button class="center" onclick="closeMultiplayerMenu()">閉じる</button></div>`;
+}
+function mpRenderWaitingForStart(data){
+  const stage=STAGES[data.stageIdx];
+  let myPid=null;
+  for(const k of Object.keys(data.assign))if(data.assign[k]===mpPeer.id)myPid=Number(k);
+  const d=document.getElementById("mpDialog");
+  d.innerHTML=`<h2 style="text-align:center;margin-top:0">🚀 対戦が決まりました！</h2>
+    <p style="text-align:center;font-size:13px">ステージ：<b>${stage?stage.name:"？"}</b></p>
+    <p style="text-align:center;font-size:13px">あなたの担当：
+      <b style="color:${myPid!==null?PLAYER_COLOR[myPid]:"#93a2d6"}">
+      ${myPid!==null?PLAYER_NAME[myPid]:"（観戦）"}</b></p>
     <p style="text-align:center;font-size:11px;color:#93a2d6;margin-top:10px">
-      （対戦の開始は次のアップデートで実装予定です）</p>`;
+      （実際の対戦画面への切り替えは次のアップデートで実装予定です）</p>
+    <div class="row"><button class="center" onclick="closeMultiplayerMenu()">閉じる</button></div>`;
 }
 function mpRenderError(msg){
   const d=document.getElementById("mpDialog");
