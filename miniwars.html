@@ -229,11 +229,11 @@ function rankUpFx(u){
       life:.5+Math.random()*.4,maxLife:1,size:.07+Math.random()*.1,color:"#ffd76a"});
   }
 }
-const BLUE=0, RED=1;
-const PLAYER_NAME=["青軍","赤軍"];
-const PLAYER_COLOR=["#3b6fe0","#e04a55"];
-const PLAYER_DARK=["#24489e","#9c2c38"];
-const PLAYER_LIGHT=["#7fa8f5","#f2848e"];
+const BLUE=0, RED=1, GREEN=2, YELLOW=3;
+const PLAYER_NAME=["青軍","赤軍","緑軍","黄軍"];
+const PLAYER_COLOR=["#3b6fe0","#e04a55","#3ecf5f","#e8c23d"];
+const PLAYER_DARK=["#24489e","#9c2c38","#227a35","#9c7a15"];
+const PLAYER_LIGHT=["#7fa8f5","#f2848e","#8ee89f","#f0d789"];
 
 /* ====================================================
    ピクセルアート・スプライト
@@ -432,7 +432,7 @@ function buildSprites(){
   const SC=6;
   for(const type in PX){
     sprCv[type]=[]; sprUrl[type]=[];
-    for(let pid=0;pid<2;pid++){
+    for(let pid=0;pid<4;pid++){
       const pal={K:"#16161c",S:"#e8b88a",G:"#aeb4bc",W:"#e8e8ee",A:"#9adcf0",R:"#e0424f",
         M:"#4c525e",g:"#cfd4dc",Y:"#ffd76a",
         T:PLAYER_COLOR[pid],t:PLAYER_DARK[pid],H:PLAYER_LIGHT[pid]};
@@ -908,6 +908,194 @@ const STAGES=[
  owners:[[21, 34, 0], [14, 36, 0], [28, 36, 0], [21, 31, 0], [10, 34, 0], [21, 11, 1], [12, 20, 1], [30, 20, 1], [21, 20, 1], [15, 5, 1], [27, 5, 1], [21, 4, 1], [12, 10, 1], [7, 20, 1], [35, 20, 1], [33, 4, 1], [25, 0, 1], [32, 0, 1], [7, 4, 1], [13, 18, 1], [27, 15, 1], [24, 0, 1], [18, 14, 1], [12, 6, 1], [13, 6, 1], [6, 0, 1], [17, 16, 1], [25, 16, 1], [7, 12, 1], [10, 0, 1], [25, 18, 1], [24, 9, 1], [15, 34, 0], [13, 35, 0], [17, 35, 0], [17, 32, 0], [20, 26, 0], [15, 35, 0], [25, 26, 0], [18, 35, 0], [22, 29, 0], [9, 38, 0], [26, 34, 0]],
  units:[["htank", 0, 20, 39], ["rocket", 0, 23, 36], ["aa", 0, 19, 36], ["heli", 0, 22, 39], ["tank", 0, 21, 35], ["htank", 0, 19, 38], ["medicheli", 0, 23, 37], ["htank", 0, 19, 35], ["rocket", 0, 21, 39], ["aa", 0, 22, 35], ["heli", 0, 19, 37], ["tank", 0, 23, 38], ["htank", 0, 24, 37], ["medicheli", 0, 24, 35], ["htank", 0, 18, 36], ["rocket", 0, 23, 35], ["aa", 0, 18, 37], ["heli", 0, 23, 39], ["tank", 0, 20, 34], ["htank", 0, 16, 37], ["medicheli", 0, 20, 35], ["aa", 1, 21, 13], ["htank", 1, 23, 10], ["tank", 1, 19, 11], ["htank", 1, 13, 21], ["tank", 1, 12, 18], ["aa", 1, 11, 21], ["htank", 1, 32, 20], ["tank", 1, 28, 19], ["htank", 1, 30, 22], ["tank", 1, 22, 18], ["aa", 1, 19, 21], ["htank", 1, 23, 21], ["heli", 1, 20, 0], ["rocket", 1, 20, 6], ["htank", 1, 24, 2], ["htank", 1, 18, 2], ["rocket", 1, 23, 6], ["aa", 1, 22, 0], ["heli", 1, 18, 5], ["htank", 1, 24, 3], ["rocket", 1, 19, 1], ["heli", 1, 21, 6], ["rocket", 1, 23, 1], ["htank", 1, 18, 3], ["htank", 1, 23, 5], ["rocket", 1, 21, 0], ["aa", 1, 19, 6], ["heli", 1, 21, 7], ["htank", 1, 18, 1], ["rocket", 1, 22, 6], ["heli", 1, 24, 5], ["rocket", 1, 18, 4], ["htank", 1, 24, 4], ["htank", 1, 19, 0], ["bomber", 1, 20, 5], ["bomber", 1, 23, 2], ["bomber", 1, 19, 3], ["bomber", 1, 22, 5], ["bomber", 1, 21, 1], ["bomber", 1, 19, 5], ["bomber", 1, 23, 3]],
  funds:[40500, 38500]},
+
+{name:"三国の草原",diff:10,desc:"三方から睨み合う開けた草原。中央の資源地帯が激戦区となる",
+ map:[
+ "000000000000000400000000000000000000",
+ "000000000000000000000000000000000000",
+ "000000000000000005000000000000000000",
+ "000000000000040000000400000000000000",
+ "000040000000000000005011100000040000",
+ "000000000400000000000011110000000000",
+ "000000001110000000000001110000000000",
+ "000000001110000000000001110000000000",
+ "000000000011100000000000000000000000",
+ "000000000011100111110000000000000000",
+ "000000000011100111410000000000000000",
+ "000000000000000111411000000001100000",
+ "000000000000000000111000000001100000",
+ "000000000000000000000000000001100000",
+ "000000000000000001100000011000000000",
+ "000000000000000001100000011100000000",
+ "000000400000000001100001114100000000",
+ "000000000000000000000001111100400000",
+ "000000000040000000400001114000000000",
+ "000000000000000000000000000000000000",
+ "000000000000000000000000000000000000",
+ "000040000000000000050000000000000000",
+ "000000000000000000000000000000000000",
+ "400000000000000000000000000000000004",
+ "000000110000000000000000000000000000",
+ "000000110000110000000000000000000000",
+ "000500000000110000400000000000005000",
+ "000000000000110000000000000000000000",
+ "000000000000000000000000000000000000",
+ "000000400000000000000000000004000000",
+ "000000000000000000000000000000000000",
+ "000040000000000000000000000000040000",
+ "000000000000000000000000000000000000",
+ "000000000000000000000000000000000000",
+ "000000000000000000000000000000000000",
+ "000000050000000000000000000000000000",
+ ],
+ hq:[{x:17,y:5}, {x:30,y:24}, {x:5,y:24}],
+ owners:[[17, 2, 0], [13, 3, 0], [21, 3, 0], [32, 26, 1], [35, 23, 1], [29, 29, 1], [3, 26, 2], [0, 23, 2], [6, 29, 2], [9, 5, 0], [15, 0, 0], [20, 4, 0], [30, 17, 1], [26, 16, 1], [19, 21, 1], [4, 21, 2], [6, 16, 2], [7, 35, 2]],
+ units:[["tank", 0, 19, 7], ["htank", 0, 17, 3], ["rocket", 0, 15, 7], ["aa", 0, 19, 5], ["heli", 0, 15, 4], ["tank", 0, 17, 7], ["tank", 0, 18, 3], ["htank", 0, 15, 6], ["rocket", 0, 19, 6], ["aa", 0, 16, 3], ["htank", 1, 33, 24], ["rocket", 1, 28, 22], ["aa", 1, 30, 27], ["heli", 1, 32, 22], ["htank", 1, 27, 24], ["rocket", 1, 32, 26], ["htank", 1, 29, 21], ["bomber", 1, 29, 26], ["bomber", 1, 32, 23], ["htank", 2, 5, 27], ["rocket", 2, 7, 22], ["aa", 2, 2, 24], ["heli", 2, 7, 26], ["htank", 2, 5, 21], ["rocket", 2, 3, 26], ["htank", 2, 8, 24], ["bomber", 2, 3, 23], ["bomber", 2, 5, 26]],
+ funds:[26000, 20000, 20000]},
+
+{name:"三又河川",diff:10,desc:"Y字の大河が土地を三分割する。橋の攻防が全ての鍵を握る",
+ map:[
+ "00000000000000000777000000000004000000",
+ "00000005000000000777000000000000000000",
+ "00000000000000000777000000000000000000",
+ "00000000000000400777004000000000000000",
+ "00000000000000000000000000011000000000",
+ "00000000000000000000700000011000000000",
+ "00000040000001100000700000000004000000",
+ "00001100000001100737701100000400000000",
+ "00001100000000000037701104000000000000",
+ "00000400000000000037700000000000000000",
+ "00000000000000000037700000000050000000",
+ "00000000000000000037700000000000000000",
+ "00000000000000000037700000000000110000",
+ "00000000000000000037700000000000110000",
+ "00000000000000007737110000000000110000",
+ "00000000000000777737117700000000000000",
+ "00000000000077777737777777000000000000",
+ "00004400000777777704777777700000000000",
+ "00000040777777770000007777777700040000",
+ "00000077777777000004000077777777000000",
+ "00400777777711000000000007777777700000",
+ "00077777770011000000000000007777777000",
+ "07777777000000000000000000000077777770",
+ "07777770000000000000000000005007777770",
+ "07777000000000000000000000001100077770",
+ "00000000000000000000000000001400000000",
+ "00000000000000000000000000400000000000",
+ "00005000000000000004000000000000050000",
+ "00000000000000000000000110000000000000",
+ "00000000000000000000000110000000000000",
+ "00000004000000000000000000000040000000",
+ "00000040000000000000000000000004000000",
+ "00000000000000000000000000000000000000",
+ "00000000000000000000000000000000000000",
+ "00000000000000000000000000000000000000",
+ "00000000000000000000000000000000000000",
+ "00000004500000000000000000000000000000",
+ "00000000000000000000000000000000000000",
+ ],
+ hq:[{x:18,y:5}, {x:31,y:25}, {x:6,y:25}],
+ owners:[[14, 3, 0], [22, 3, 0], [33, 27, 1], [30, 30, 1], [4, 27, 2], [7, 30, 2], [31, 0, 0], [19, 17, 0], [7, 1, 0], [30, 10, 0], [33, 18, 1], [19, 27, 1], [26, 26, 1], [28, 23, 1], [5, 17, 2], [2, 20, 2], [4, 17, 2], [8, 36, 2]],
+ units:[["tank", 0, 18, 7], ["htank", 0, 20, 3], ["rocket", 0, 16, 5], ["aa", 0, 16, 7], ["heli", 0, 18, 3], ["tank", 0, 16, 3], ["tank", 0, 18, 8], ["htank", 0, 16, 4], ["rocket", 0, 15, 5], ["aa", 0, 15, 7], ["heli", 0, 16, 6], ["htank", 1, 34, 26], ["rocket", 1, 29, 27], ["aa", 1, 34, 25], ["heli", 1, 29, 23], ["htank", 1, 31, 28], ["rocket", 1, 33, 27], ["htank", 1, 28, 26], ["rocket", 1, 33, 26], ["bomber", 1, 30, 23], ["bomber", 1, 30, 27], ["htank", 2, 9, 24], ["rocket", 2, 6, 28], ["aa", 2, 8, 23], ["heli", 2, 3, 25], ["htank", 2, 8, 27], ["rocket", 2, 9, 25], ["htank", 2, 5, 27], ["rocket", 2, 8, 22], ["bomber", 2, 4, 24], ["bomber", 2, 7, 27]],
+ funds:[27000, 21000, 21000]},
+
+{name:"四方の要衝",diff:10,desc:"四隅に陣取る四陣営が中央の広場を巡って睨み合う",
+ map:[
+ "0000400000000000000000000000000000000000",
+ "0000000000000000000000000000000000000000",
+ "0000040000000000000000000000000000000005",
+ "0000000000000000000000000005000000000000",
+ "0000000000000000000022000000000000000000",
+ "0000000000000000000022000000000000000000",
+ "0000000000000002200000400000022000000000",
+ "0000020000500002200000000000022000000000",
+ "0000020000000502200000000000000000000000",
+ "0000000000000000000000022222200000000000",
+ "0000000400004000000000022222200040000000",
+ "0000000000000000000000022222240000040000",
+ "0000000000004000000040002220400000000000",
+ "0000000000000000000000002220022000000000",
+ "0000000000000000000000000000022232000000",
+ "0000000000000000000000000000022232000000",
+ "0000000000000000000000000000000232000000",
+ "0000000000000000000000000040000000220000",
+ "0000000000000000000000002220000000220000",
+ "0000000000000000000000002220022200220000",
+ "0000000000004000000040002220422200000000",
+ "0000000000000000000000000000022200000000",
+ "0000000000000000000000050000000000000004",
+ "0000000000000000000000000400000000000000",
+ "0000000000000000000000000000000032000000",
+ "0000000000000222000000000000000032000000",
+ "0000000320000222000000000000000000000000",
+ "0000000320000000000000000000000000000000",
+ "0005002320004000000040000000400000000000",
+ "0000002320004000000000000004000040000000",
+ "0000002320000000000000000000000000000000",
+ "0000000000000004000000000000000000000000",
+ "0000020000500000000000000000050000000000",
+ "0000020000000000022000000000000000000000",
+ "0000022200000000022000004000000000000000",
+ "0000000000000000000000000000040000000000",
+ "0000000000000000000000000000000000000000",
+ "0400000000000000000000000000000000000000",
+ "0000000000000000000000000000000000000000",
+ "0000000000000000004000000000000000000000",
+ ],
+ hq:[{x:7,y:7}, {x:32,y:7}, {x:7,y:32}, {x:32,y:32}],
+ owners:[[10, 7, 0], [7, 10, 0], [12, 10, 0], [32, 10, 1], [10, 32, 2], [12, 29, 2], [29, 32, 3], [32, 29, 3], [27, 29, 3], [4, 0, 0], [5, 2, 0], [13, 8, 0], [29, 11, 1], [22, 6, 1], [35, 11, 1], [39, 2, 1], [27, 3, 1], [18, 39, 2], [15, 31, 2], [1, 37, 2], [3, 28, 2], [25, 23, 3], [39, 22, 3], [23, 22, 3]],
+ units:[["htank", 0, 6, 5], ["rocket", 0, 9, 7], ["aa", 0, 5, 5], ["heli", 0, 7, 9], ["tank", 0, 8, 5], ["htank", 0, 7, 4], ["medicheli", 0, 9, 8], ["htank", 0, 7, 5], ["rocket", 0, 6, 9], ["aa", 0, 9, 6], ["heli", 0, 5, 6], ["tank", 0, 8, 9], ["htank", 1, 33, 4], ["rocket", 1, 34, 9], ["aa", 1, 32, 4], ["heli", 1, 30, 9], ["htank", 1, 35, 7], ["rocket", 1, 34, 5], ["htank", 1, 33, 10], ["bomber", 1, 33, 5], ["bomber", 1, 30, 8], ["htank", 2, 7, 29], ["rocket", 2, 10, 31], ["aa", 2, 10, 32], ["heli", 2, 5, 30], ["htank", 2, 7, 35], ["rocket", 2, 9, 30], ["htank", 2, 4, 32], ["bomber", 2, 9, 33], ["bomber", 2, 6, 30], ["htank", 3, 35, 32], ["rocket", 3, 30, 30], ["aa", 3, 32, 35], ["heli", 3, 34, 30], ["htank", 3, 29, 32], ["rocket", 3, 34, 34], ["htank", 3, 32, 29], ["bomber", 3, 31, 34], ["bomber", 3, 34, 32]],
+ funds:[29000, 20000, 20000, 20000]},
+
+{name:"大陸決戦",diff:10,desc:"四陣営混戦の最終決戦。開けた大陸の中心を巡る全面対決",
+ map:[
+ "005000000000000000000000000004000000000000",
+ "000000000000000000000000000000000000000000",
+ "000000000000000000000000000000000000000400",
+ "000000000000400000000040000000000005000000",
+ "000000000000000000000000000000000000000000",
+ "000000004040000000000220000000000050000000",
+ "000000000000000000000220000000000000000000",
+ "000000000000000000022220000000000000000000",
+ "000000000002200000022200222000500000000000",
+ "000000000022200000022200222000000000000000",
+ "000000000022000000000000222000000000000000",
+ "000000004022040000000000000040040400000000",
+ "000000000000000000000000000000000000000000",
+ "000000000004000000000000000000000000000000",
+ "005000000000000000003330000000000000000000",
+ "000000023000400000023330000000000000400000",
+ "000000023000000000773337700000000000000000",
+ "000000023000000027777777770000000000000000",
+ "000000000000000077777777777000000000000000",
+ "000000000000000077777777777000000000000000",
+ "050000000000003337777777773334000000000000",
+ "000000400000003337777777773330000004000000",
+ "000000000000003337777777773330222000000000",
+ "000000000000000077777777777000222000000000",
+ "000000000022200077777777777022222000000000",
+ "000000000022202227777777775022222000000000",
+ "000000003200002220773337722222222000000000",
+ "000000003200000000003330222202224004000000",
+ "000000003200000000003330222202220000000004",
+ "000000000000000000000000222000004050000000",
+ "000000404000045222000000000040000400000000",
+ "000000000004022222000000400000040000000000",
+ "400000000000022200000000000000000000000000",
+ "000000000005040000000000000000500000000000",
+ "000000000004000000000000000000000000000000",
+ "000000022200022200400400000000000000000000",
+ "000000022200022200000000000000000000000000",
+ "000000000000000000000000000000000000000000",
+ "000000000000000000000000000000000000000000",
+ "500000000000000000000000000000000000000000",
+ "000000000000000000000000000000000000000000",
+ "000000000000000000000000000000000000000000",
+ ],
+ hq:[{x:8,y:8}, {x:33,y:8}, {x:8,y:33}, {x:33,y:33}],
+ owners:[[8, 11, 0], [13, 11, 0], [10, 5, 0], [30, 8, 1], [33, 11, 1], [28, 11, 1], [11, 33, 2], [8, 30, 2], [13, 30, 2], [30, 33, 3], [33, 30, 3], [28, 30, 3], [8, 5, 0], [11, 13, 0], [1, 20, 0], [2, 0, 0], [2, 14, 0], [22, 3, 1], [39, 2, 1], [29, 20, 1], [34, 5, 1], [35, 3, 1], [6, 30, 2], [0, 32, 2], [11, 34, 2], [14, 30, 2], [0, 39, 2], [24, 31, 3], [32, 29, 3], [41, 28, 3], [34, 29, 3], [26, 25, 3]],
+ units:[["htank", 0, 6, 8], ["rocket", 0, 9, 10], ["aa", 0, 8, 6], ["heli", 0, 6, 10], ["tank", 0, 10, 8], ["htank", 0, 6, 7], ["medicheli", 0, 8, 10], ["htank", 0, 9, 6], ["rocket", 0, 6, 9], ["aa", 0, 6, 5], ["heli", 0, 7, 6], ["tank", 0, 7, 10], ["htank", 0, 10, 7], ["medicheli", 0, 10, 6], ["htank", 1, 35, 6], ["rocket", 1, 30, 8], ["aa", 1, 35, 10], ["heli", 1, 33, 5], ["htank", 1, 32, 10], ["rocket", 1, 36, 7], ["htank", 1, 31, 7], ["rocket", 1, 34, 10], ["bomber", 1, 34, 6], ["bomber", 1, 31, 9], ["bomber", 1, 35, 9], ["htank", 2, 6, 35], ["rocket", 2, 11, 33], ["aa", 2, 6, 31], ["heli", 2, 8, 36], ["htank", 2, 9, 31], ["rocket", 2, 5, 34], ["htank", 2, 10, 34], ["rocket", 2, 7, 31], ["bomber", 2, 7, 35], ["bomber", 2, 10, 32], ["bomber", 2, 6, 32], ["htank", 3, 35, 31], ["rocket", 3, 30, 33], ["aa", 3, 35, 35], ["heli", 3, 33, 30], ["htank", 3, 32, 35], ["rocket", 3, 36, 32], ["htank", 3, 31, 32], ["rocket", 3, 34, 35], ["bomber", 3, 34, 31], ["bomber", 3, 31, 34], ["bomber", 3, 35, 34]],
+ funds:[31000, 22000, 22000, 22000]},
 ];
 /*STAGES_END*/
 
@@ -916,6 +1104,7 @@ const STAGES=[
 ==================================================== */
 let COLS=9, ROWS=12;
 let HQ_POS=[{x:4,y:11},{x:4,y:0}];
+let eliminated=new Set(); // 脱落した陣営のpid集合（3〜4陣営戦で使用）
 let map=[], owner={}, units=[], turn=BLUE, turnCount=1;
 let funds=[0,0];
 let sel=null, moveData=null, mode="idle", attackTargets=[];
@@ -1261,9 +1450,9 @@ function bgmSetMute(m){
 ==================================================== */
 /* ステージ内容を作り直すたびにこの数字を上げる。
    保存キーにこの版番号を含めるので、古いクリア記録は自動的に無効化される。 */
-const STAGE_SET_VERSION=19;
+const STAGE_SET_VERSION=20;
 /* 画面表示用のバージョン情報（ファイルを更新したらここを変える） */
-const BUILD_VER="v35";
+const BUILD_VER="v36";
 const BUILD_DATE="2026-09-21";
 function scoreKey(idx){return 'mwdx_v'+STAGE_SET_VERSION+'_s'+idx;}
 function saveStageScore(idx,turns){
@@ -1329,15 +1518,14 @@ function loadStage(s){
   COLS=s.map[0].length;ROWS=s.map.length;
   map=s.map.map(r=>[...r].map(Number));
   HQ_POS=s.hq;
-  map[s.hq[0].y][s.hq[0].x]=T.HQ;
-  map[s.hq[1].y][s.hq[1].x]=T.HQ;
+  eliminated=new Set();
+  for(let i=0;i<s.hq.length;i++) map[s.hq[i].y][s.hq[i].x]=T.HQ;
   owner={};
   propLevel={};developProgress={};
-  setOwner(s.hq[0].x,s.hq[0].y,BLUE);
-  setOwner(s.hq[1].x,s.hq[1].y,RED);
+  for(let i=0;i<s.hq.length;i++) setOwner(s.hq[i].x,s.hq[i].y,i);
   (s.owners||[]).forEach(o=>setOwner(o[0],o[1],o[2]));
   units=(s.units||[]).map(a=>mkUnit(a[0],a[1],a[2],a[3]));
-  funds=[s.funds[0],s.funds[1]];
+  funds=s.funds.slice();
 }
 /* ====================================================
    途中セーブ（localStorage・1スロット）
@@ -1360,7 +1548,7 @@ function autosave(){
     const data={
       stage:currentStage,
       turnCount,
-      funds:[funds[BLUE],funds[RED]],
+      funds:funds.slice(),
       owner:Object.assign({},owner),
       units:units.filter(u=>u.hp>0).map(u=>(
         {type:u.type,pid:u.pid,x:u.x,y:u.y,hp:u.hp,acted:u.acted,exp:u.exp,rank:u.rank})),
@@ -1368,6 +1556,7 @@ function autosave(){
       propLevel:Object.assign({},propLevel),
       developProgress:Object.assign({},developProgress),
       icbmStrikes:icbmStrikes.slice(),
+      eliminated:[...eliminated],
       savedAt:Date.now(),
     };
     localStorage.setItem(SAVE_KEY,JSON.stringify(data));
@@ -1388,14 +1577,15 @@ function resumeGame(){
   owner=data.owner||{};
   units=(data.units||[]).map(a=>({type:a.type,pid:a.pid,x:a.x,y:a.y,px:a.x,py:a.y,
     hp:a.hp,acted:!!a.acted,flash:0,exp:a.exp||0,rank:a.rank||0}));
-  funds=[data.funds[0],data.funds[1]];
+  funds=data.funds.slice();
   captureProgress=data.captureProgress||{};
   propLevel=data.propLevel||{};
   developProgress=data.developProgress||{};
   icbmStrikes=data.icbmStrikes||[];
+  eliminated=new Set(data.eliminated||[]);
   turn=BLUE;turnCount=data.turnCount||1;
   sel=null;mode="idle";moveData=null;attackTargets=[];
-  ended=false;particles=[];popups=[];rings=[];anims=[];shake=0;icbmStrikes=[];
+  ended=false;particles=[];popups=[];rings=[];anims=[];shake=0;icbmStrikes=[];eliminated=new Set();
   applyPalette(currentStage);
   resize();terrainDirty=true;
   updateTop();setBtns([]);
@@ -1414,7 +1604,7 @@ function startGame(idx){
   unlockAudio();
   loadStage(STAGES[idx]);
   turn=BLUE;turnCount=1;sel=null;mode="idle";captureProgress={};
-  ended=false;particles=[];popups=[];rings=[];anims=[];shake=0;icbmStrikes=[];
+  ended=false;particles=[];popups=[];rings=[];anims=[];shake=0;icbmStrikes=[];eliminated=new Set();
   beginTurn(BLUE);
   bgmStop();
   bgmSelectForStage(idx);
@@ -1594,18 +1784,32 @@ function tryCapture(u){
   if(!cp||cp.pid!==u.pid)cp={pid:u.pid,amount:0};
   cp.amount+=u.hp;
   if(cp.amount>=CAPTURE_NEED){
+    const priorOwner=getOwner(u.x,u.y);
     delete captureProgress[k];
     setOwner(u.x,u.y,u.pid);
     SND.capture();
     addPopup(u.x,u.y,"占領！","#ffd76a");
     gainCaptureExp(u);
-    if(t===T.HQ){gameOver(u.pid);return"HQ占領！";}
+    if(t===T.HQ){
+      const beatenName=priorOwner!==null?PLAYER_NAME[priorOwner]:"";
+      eliminateFaction(priorOwner);
+      return beatenName+"のHQを占領！陣営を撃破した！";
+    }
     return TERRAIN_INFO[t].name+"を占領した！";
   }
   captureProgress[k]=cp;
   SND.select();
   addPopup(u.x,u.y,cp.amount+"/"+CAPTURE_NEED,"#ffd76a");
   return`占領中… ${cp.amount}/${CAPTURE_NEED}`;
+}
+/* 陣営を脱落させる（HQ占領・全滅どちらの経路からも呼ばれる） */
+function eliminateFaction(pid){
+  if(pid===null||pid===undefined||eliminated.has(pid))return;
+  eliminated.add(pid);
+  for(const u of units)if(u.pid===pid)u.hp=0;
+  units=units.filter(u=>u.hp>0);
+  const hq=HQ_POS[pid];
+  if(hq)addPopup(hq.x,hq.y,PLAYER_NAME[pid]+"陣営壊滅！","#ff8a3d");
 }
 /* 開発できるか判定：都市/工場/本拠地で、自軍の所有物で、まだLv2でなく、占領可能なユニット種 */
 function canDevelopHere(u){
@@ -1732,19 +1936,28 @@ function beginTurn(pid){
     }
   }
 }
+/* 現在のturnの次に行動すべき陣営を返す（脱落陣営はスキップ） */
+function nextTurnPid(cur){
+  const order=HQ_POS.map((_,i)=>i).filter(p=>!eliminated.has(p));
+  if(!order.length)return cur;
+  let idx=order.indexOf(cur);
+  if(idx===-1)idx=0;
+  return order[(idx+1)%order.length];
+}
 function endTurn(){
   if(ended)return;
   sel=null;mode="idle";moveData=null;setBtns([]);
-  if(turn===BLUE){
-    turn=RED;beginTurn(RED);updateTop();turnBusy=true;
-    updateUI("🔴 赤軍のターン…");
-    SND.turn();
-    showBanner("赤軍ターン",PLAYER_COLOR[RED],()=>aiStart());
-  }else{
+  const next=nextTurnPid(turn);
+  if(next===BLUE){
     turn=BLUE;turnCount++;beginTurn(BLUE);updateTop();turnBusy=true;
     SND.turn();
     showBanner(`DAY ${turnCount} ─ 青軍ターン`,PLAYER_COLOR[BLUE],()=>{
       turnBusy=false;updateUI("🔵 あなたのターンです");autosave();});
+  }else{
+    turn=next;beginTurn(next);updateTop();turnBusy=true;
+    updateUI(`${PLAYER_NAME[next]}のターン…`);
+    SND.turn();
+    showBanner(`${PLAYER_NAME[next]}ターン`,PLAYER_COLOR[next],()=>aiStart(next));
   }
 }
 function showBanner(txt,color,cb){
@@ -1765,6 +1978,7 @@ function showBanner(txt,color,cb){
    CPU（赤軍）AI
 ==================================================== */
 let aiList=[];
+let aiTurnPid=RED;
 /* 座標(x,y)に対する相手軍の脅威度（到達+射程の余裕を合算） */
 function aiThreatLevel(x,y,pid){
   let threat=0;
@@ -1776,6 +1990,15 @@ function aiThreatLevel(x,y,pid){
     if(d<=reach)threat+=Math.max(0,reach-d+1);
   }
   return threat;
+}
+/* 自分(myPid)以外の全ての存命陣営からの脅威度を合算（3〜4陣営の全員が敵、を反映） */
+function aiThreatLevelAll(x,y,myPid){
+  let t=0;
+  for(let p=0;p<HQ_POS.length;p++){
+    if(p===myPid||eliminated.has(p))continue;
+    t+=aiThreatLevel(x,y,p);
+  }
+  return t;
 }
 /* AI専用の簡易ダメージ予測（プレイヤーには表示しない） */
 function aiPredictDamage(a,d){
@@ -1818,14 +2041,15 @@ function aiTargetsFromPos(u,x,y){
     return d>=mn&&d<=mx;
   });
 }
-function aiStart(){
-  aiList=units.filter(u=>u.pid===RED&&u.hp>0);
+function aiStart(pid){
+  aiTurnPid=pid;
+  aiList=units.filter(u=>u.pid===pid&&u.hp>0);
   aiNext();
 }
 function aiNext(){
   if(ended)return;
   const u=aiList.shift();
-  if(!u){aiProduce();return;}
+  if(!u){aiProduce(aiTurnPid);return;}
   if(u.hp<=0){aiNext();return;}
   aiActUnit(u,()=>setTimeout(aiNext,150));
 }
@@ -1838,6 +2062,7 @@ function aiDoHeal(medic,target){
 }
 function aiActUnit(u,next){
   const ud=UNIT_DEF[u.type];
+  const myPid=u.pid;
   const fragile=(u.type==="rocket"||u.type==="medic"||u.type==="medicheli"||UNIT_DEF[u.type].strategic);
   // 医療兵はその場に負傷した味方が隣接していれば最優先で回復する
   if(ud.heal){
@@ -1859,13 +2084,21 @@ function aiActUnit(u,next){
   const md=calcMove(u);
   const rng=ud.range;
   const lowHp=u.hp<MAX_HP*0.4;
+  // 最も近い「他陣営」のHQ（前進時の目標）
+  let nearestEnemyHQ=null, nearestEnemyHQd=1e9;
+  for(let p=0;p<HQ_POS.length;p++){
+    if(p===myPid||eliminated.has(p))continue;
+    const hp=HQ_POS[p];
+    const d=Math.abs(hp.x-u.x)+Math.abs(hp.y-u.y);
+    if(d<nearestEnemyHQd){nearestEnemyHQd=d;nearestEnemyHQ=hp;}
+  }
   let best=null,bestScore=-1e9;
   for(const k of md.reach){
     if(md.merge.has(k))continue;
     const[x,y]=k.split(",").map(Number);
     let score=0;
     const t=map[y][x];
-    if(ud.canCapture&&isProp(t)&&getOwner(x,y)!==RED)score+=200;
+    if(ud.canCapture&&isProp(t)&&getOwner(x,y)!==myPid)score+=200;
 
     // この位置から攻撃可能か（撃破できるなら大きく加点＝進んで仕留めに行く）
     const reachTargets=aiTargetsFromPos(u,x,y);
@@ -1876,31 +2109,31 @@ function aiActUnit(u,next){
     }
 
     let nd=99;
-    for(const e of units)if(e.pid===BLUE&&e.hp>0)
+    for(const e of units)if(e.pid!==myPid&&!eliminated.has(e.pid)&&e.hp>0)
       nd=Math.min(nd,Math.abs(e.x-x)+Math.abs(e.y-y));
 
     if(ud.heal){
       // 医療兵は負傷している味方に近づくことを最優先する
       let hd=99;
-      for(const e of units)if(e.pid===RED&&e.hp>0&&e.hp<MAX_HP&&e!==u)
+      for(const e of units)if(e.pid===myPid&&e.hp>0&&e.hp<MAX_HP&&e!==u)
         hd=Math.min(hd,Math.abs(e.x-x)+Math.abs(e.y-y));
       if(hd<99)score+=Math.max(0,150-hd*10);
-      score-=aiThreatLevel(x,y,BLUE)*4; // 医療兵は特に危険地帯を避ける
-    }else if(lowHp&&!reachTargets.length&&!(ud.canCapture&&isProp(t)&&getOwner(x,y)!==RED)){
+      score-=aiThreatLevelAll(x,y,myPid)*4; // 医療兵は特に危険地帯を避ける
+    }else if(lowHp&&!reachTargets.length&&!(ud.canCapture&&isProp(t)&&getOwner(x,y)!==myPid)){
       // HPが低く、仕留められる相手も占領先もないなら後退して立て直す
       score+=nd*4;
-      score-=(Math.abs(HQ_POS[RED].x-x)+Math.abs(HQ_POS[RED].y-y))*2;
+      score-=(Math.abs(HQ_POS[myPid].x-x)+Math.abs(HQ_POS[myPid].y-y))*2;
     }else if(isIndirect(u)){
       if(nd>=rng[0]&&nd<=rng[1])score+=80;
       else if(nd<rng[0])score-=30;
       else score-=nd*5;
     }else{
       score-=nd*5;
-      score-=(Math.abs(HQ_POS[BLUE].x-x)+Math.abs(HQ_POS[BLUE].y-y))*2;
+      if(nearestEnemyHQ)score-=(Math.abs(nearestEnemyHQ.x-x)+Math.abs(nearestEnemyHQ.y-y))*2;
     }
 
     // 脆いユニットは敵の脅威範囲を避ける（無駄死に防止）
-    if(fragile)score-=aiThreatLevel(x,y,BLUE)*3;
+    if(fragile)score-=aiThreatLevelAll(x,y,myPid)*3;
 
     if(score>bestScore){bestScore=score;best=k;}
   }
@@ -1923,7 +2156,7 @@ function aiActUnit(u,next){
       }
     }
     const c=tryCapture(u);
-    if(c)updateUI("赤軍："+c);
+    if(c)updateUI(PLAYER_NAME[myPid]+"："+c);
     u.acted=true;
     if(checkEnded())return;
     next();
@@ -1935,63 +2168,63 @@ function aiActUnit(u,next){
     animateMove(u,path,finish);
   }else finish();
 }
-/* 自軍(青)の現在の兵科構成を見て、相性の良いユニットを重点的に選ぶ */
-function aiPickType(){
-  const blueTypes=units.filter(u=>u.pid===BLUE&&u.hp>0).map(u=>u.type);
-  const blueHasAir=blueTypes.some(t=>UNIT_DEF[t].cls==="air");
-  const redDamaged=units.some(u=>u.pid===RED&&u.hp>0&&u.hp<MAX_HP);
+/* 相手陣営(複数)の現在の兵科構成を見て、相性の良いユニットを重点的に選ぶ */
+function aiPickType(pid){
+  const enemyTypes=units.filter(u=>u.pid!==pid&&!eliminated.has(u.pid)&&u.hp>0).map(u=>u.type);
+  const enemyHasAir=enemyTypes.some(t=>UNIT_DEF[t].cls==="air");
+  const myDamaged=units.some(u=>u.pid===pid&&u.hp>0&&u.hp<MAX_HP);
   const pool=[];
-  const add=(t,w)=>{if(w>0&&funds[RED]>=UNIT_DEF[t].cost)for(let i=0;i<Math.round(w);i++)pool.push(t);};
+  const add=(t,w)=>{if(w>0&&funds[pid]>=UNIT_DEF[t].cost)for(let i=0;i<Math.round(w);i++)pool.push(t);};
   const candidates=["tank","htank","inf","heli","rocket","aa","bomber","medic","medicheli"];
   for(const t of candidates){
     let w=2; // 基礎ウェイト
-    if(blueTypes.length){
-      // 現在の青軍構成に対する平均的な相性の良さでウェイトを補正
+    if(enemyTypes.length){
+      // 現在の相手陣営構成に対する平均的な相性の良さでウェイトを補正
       let effSum=0;
-      for(const bt of blueTypes)effSum+=UNIT_DEF[t].vs[UNIT_DEF[bt].cls]||0;
-      const effAvg=effSum/blueTypes.length;
+      for(const et of enemyTypes)effSum+=UNIT_DEF[t].vs[UNIT_DEF[et].cls]||0;
+      const effAvg=effSum/enemyTypes.length;
       w=Math.max(0.5,effAvg*3);
     }
-    if(blueHasAir&&t==="aa")w+=5;
+    if(enemyHasAir&&t==="aa")w+=5;
     if(t==="rocket")w*=0.8; // 間接火力は取り回しが悪いので少し控えめ
     if(t==="bomber"){
       // 高額な最強ユニット。資金にかなり余裕がある時だけ積極的に狙う
-      w = funds[RED]>=UNIT_DEF.bomber.cost*1.3 ? 4 : 0.3;
+      w = funds[pid]>=UNIT_DEF.bomber.cost*1.3 ? 4 : 0.3;
     }
     if(t==="medic"){
       // 支援ユニット。負傷している味方がいる時は重視、いなくても少しは選ぶ
-      w = redDamaged ? 1.5 : 0.6;
+      w = myDamaged ? 1.5 : 0.6;
     }
     if(t==="medicheli"){
-      w = redDamaged ? 1.2 : 0.3;
+      w = myDamaged ? 1.2 : 0.3;
     }
     add(t,w);
   }
-  if(!pool.length&&funds[RED]>=1000)pool.push("inf");
+  if(!pool.length&&funds[pid]>=1000)pool.push("inf");
   return pool.length?pool[Math.floor(Math.random()*pool.length)]:null;
 }
-function aiProduce(){
+function aiProduce(pid){
   if(ended)return;
   const spots=[];
   for(const k in owner){
-    if(owner[k]!==RED)continue;
+    if(owner[k]!==pid)continue;
     const[x,y]=k.split(",").map(Number);
     const t=map[y][x];
     if((t===T.FACTORY||t===T.HQ)&&!unitAt(x,y))spots.push({x,y});
   }
-  // 自軍(青)に近い工場ほど脅威に晒されやすいので優先的に埋める
-  spots.sort((a,b)=>aiThreatLevel(b.x,b.y,BLUE)-aiThreatLevel(a.x,a.y,BLUE));
+  // 他陣営に近い工場ほど脅威に晒されやすいので優先的に埋める
+  spots.sort((a,b)=>aiThreatLevelAll(b.x,b.y,pid)-aiThreatLevelAll(a.x,a.y,pid));
   // 時々「貯金ターン」にして、高額ユニット(爆撃機など)のために資金を温存する
   // (脅威度の高い工場は貯金中でも守るため、最低1つは稼働させる)
   const saving = Math.random()<0.35;
   const fillCount = saving ? Math.max(1,Math.ceil(spots.length*0.35)) : spots.length;
   for(let i=0;i<spots.length && i<fillCount;i++){
     const s=spots[i];
-    const type=aiPickType();
+    const type=aiPickType(pid);
     if(type){
       const cost=getPropLevel(s.x,s.y)>=1?Math.round(UNIT_DEF[type].cost*LV2_COST_MULT):UNIT_DEF[type].cost;
-      funds[RED]-=cost;
-      const nu=mkUnit(type,RED,s.x,s.y);nu.acted=true;units.push(nu);
+      funds[pid]-=cost;
+      const nu=mkUnit(type,pid,s.x,s.y);nu.acted=true;units.push(nu);
       addPopup(s.x,s.y,"生産","#fff");
     }
   }
@@ -2003,14 +2236,21 @@ function aiProduce(){
 ==================================================== */
 function checkEnded(){
   if(ended)return true;
-  const blue=units.some(u=>u.pid===BLUE&&u.hp>0);
-  const red=units.some(u=>u.pid===RED&&u.hp>0);
-  // 敵(赤)はユニット0体になった瞬間に即敗北（従来通り・シンプルな勝利条件）
-  if(!red){gameOver(BLUE);return true;}
-  // 自軍(青)はユニット0体でも、工場かHQを1つでも持っていれば復活の目があるので即敗北にしない
-  // （ユニット売却による資金繰りや、初期兵力0のステージで理不尽に負けないようにするため）
-  const blueCanRebuild=hasProductionTile(BLUE);
-  if(!blue&&!blueCanRebuild){gameOver(RED);return true;}
+  const factions=HQ_POS.map((_,i)=>i);
+  for(const pid of factions){
+    if(eliminated.has(pid))continue;
+    const alive=units.some(u=>u.pid===pid&&u.hp>0);
+    const canRebuild=hasProductionTile(pid);
+    // 自軍(青)はユニット0体でも、工場かHQを1つでも持っていれば復活の目があるので即敗北にしない
+    if(!alive&&!canRebuild)eliminateFaction(pid);
+  }
+  if(eliminated.has(BLUE)){
+    const survivor=factions.find(p=>!eliminated.has(p));
+    gameOver(survivor===undefined?RED:survivor);
+    return true;
+  }
+  const remaining=factions.filter(p=>!eliminated.has(p));
+  if(remaining.length<=1){gameOver(BLUE);return true;}
   return false;
 }
 function hasProductionTile(pid){
@@ -2316,14 +2556,14 @@ function handleTap(x,y){
   const u=unitAt(x,y);
   if(u&&u.pid===BLUE&&!u.acted){
     selectUnit(u);
-  }else if(u&&u.pid===RED){
+  }else if(u&&u.pid!==BLUE){
     SND.select();
     cancelSel();
     const ud=UNIT_DEF[u.type];
     const stars=u.rank?` <span style="color:#ffd76a">${"★".repeat(u.rank)}</span>`:"";
     const rngTxt=isIndirect(u)?`／射程${ud.range[0]}-${ud.range[1]}`:"";
-    updateUI(`<img src="${sprUrl[u.type][RED]}">
-      <span><b style="color:#ff8a92">敵${ud.name}</b>${stars} HP${u.hp}/${MAX_HP}　攻撃${effAtk(u)}${rngTxt}／移動${ud.move}<br>
+    updateUI(`<img src="${sprUrl[u.type][u.pid]}">
+      <span><b style="color:#ff8a92">${PLAYER_NAME[u.pid]}の${ud.name}</b>${stars} HP${u.hp}/${MAX_HP}　攻撃${effAtk(u)}${rngTxt}／移動${ud.move}<br>
       <small>${ud.desc}　${terrainLine(u)}</small></span>`);
   }else{
     cancelSel();
