@@ -1464,7 +1464,7 @@ function bgmSetMute(m){
    保存キーにこの版番号を含めるので、古いクリア記録は自動的に無効化される。 */
 const STAGE_SET_VERSION=20;
 /* 画面表示用のバージョン情報（ファイルを更新したらここを変える） */
-const BUILD_VER="v51";
+const BUILD_VER="v52";
 const BUILD_DATE="2026-09-22";
 function scoreKey(idx){return 'mwdx_v'+STAGE_SET_VERSION+'_s'+idx;}
 function saveStageScore(idx,turns){
@@ -2675,6 +2675,7 @@ function mpPeerJoinGame(data){
   units=[];owner={};funds=[];propLevel={};developProgress={};captureProgress={};
   eliminated=new Set();icbmStrikes=[];ended=false;sel=null;mode="idle";moveData=null;attackTargets=[];prodOpen=null;
   turnBusy=false; // 参加者側は常にfalse(自分のターンかどうかはturn===mpMyPidで判定するため)
+  applyPalette(currentStage);
   document.getElementById("overlay").classList.add("hidden");
   document.getElementById("mpDialogWrap").classList.add("hidden");
   resize();terrainDirty=true;
@@ -2699,6 +2700,7 @@ function mpPeerApplyState(st){
   if(myTurn&&st.prodOpen&&st.prodOpen.pid===mpMyPid){
     mpRenderProdMenu(st.prodOpen,st.prodOptions);
   }else if(myTurn){
+    document.getElementById("overlay").classList.add("hidden");
     mode=st.mode;
     if(st.selUnit){
       const u=units.find(uu=>uu.x===st.selUnit.x&&uu.y===st.selUnit.y&&uu.pid===st.selUnit.pid);
@@ -2710,6 +2712,7 @@ function mpPeerApplyState(st){
     updateUI(st.info);
     mpRenderRemoteBtns(st.btns,true);
   }else{
+    document.getElementById("overlay").classList.add("hidden");
     sel=null;mode="idle";moveData=null;attackTargets=[];
     updateUI(ended?st.info:`${PLAYER_NAME[turn]}の番です…`);
     mpRenderRemoteBtns([],false);
@@ -2720,19 +2723,27 @@ function mpPeerApplyState(st){
 }
 function mpRenderProdMenu(prodOpen,prodOptions){
   sel=null;mode="idle";moveData=null;attackTargets=[];
-  updateUI("🏭 ユニット購入　💰"+funds[prodOpen.pid]+"G　買いたいものを選んでください");
-  const b=document.getElementById("btns");b.innerHTML="";
-  (prodOptions||[]).forEach(opt=>{
-    const btn=document.createElement("button");
-    btn.textContent=`${opt.name}(${opt.cost}G)`;
-    if(!opt.afford)btn.disabled=true;
-    btn.onclick=()=>{if(mpHostConn)mpHostConn.send({type:"produce",unitType:opt.type});};
-    b.appendChild(btn);
+  const d=document.getElementById("dialog");
+  let html=`<h2>ユニット生産</h2>
+    <p style="text-align:center;margin-bottom:8px">資金：💰${funds[prodOpen.pid]}G</p><div class="row">`;
+  (prodOptions||[]).forEach((opt,idx)=>{
+    html+=`<button ${opt.afford?"":"disabled"} data-mpprod="${idx}">
+      <img src="${sprUrl[opt.type][prodOpen.pid]}">
+      <span>${opt.name}<br><small>${opt.desc}</small></span>
+      <span class="pr">${opt.cost}G</span></button>`;
   });
-  const cancel=document.createElement("button");
-  cancel.textContent="やめる";cancel.className="warn";
-  cancel.onclick=()=>{if(mpHostConn)mpHostConn.send({type:"produceCancel"});};
-  b.appendChild(cancel);
+  html+=`<button class="warn center" data-mpprodcancel="1">やめる</button></div>`;
+  d.innerHTML=html;
+  const btns=d.querySelectorAll("button[data-mpprod]");
+  btns.forEach(btn=>{
+    const idx=Number(btn.getAttribute("data-mpprod"));
+    btn.onclick=()=>{if(mpHostConn)mpHostConn.send({type:"produce",unitType:prodOptions[idx].type});};
+  });
+  const cancelBtn=d.querySelector("button[data-mpprodcancel]");
+  if(cancelBtn)cancelBtn.onclick=()=>{if(mpHostConn)mpHostConn.send({type:"produceCancel"});};
+  document.getElementById("overlay").classList.remove("hidden");
+  updateUI("🏭 ユニット購入中…");
+  setBtns([]);
 }
 function mpRenderRemoteBtns(btns,interactive){
   const b=document.getElementById("btns");b.innerHTML="";
@@ -3270,6 +3281,11 @@ let prodOpen=null; // {x,y,pid} 生産画面が開いている間の対象タイ
 function openProduce(x,y,pid){
   pid=pid===undefined?BLUE:pid;
   prodOpen={x,y,pid};
+  if(mpActive&&mpIsHost&&pid!==BLUE){
+    // 他陣営(参加者)の生産画面はホスト自身の画面には出さない。
+    // 状態(prodOpen)だけ保持し、次のブロードキャストで参加者側に送られる。
+    return;
+  }
   const d=document.getElementById("dialog");
   const lv2=getPropLevel(x,y)>=1;
   const propName=TERRAIN_INFO[map[y][x]].name;
