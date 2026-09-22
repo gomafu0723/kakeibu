@@ -1464,7 +1464,7 @@ function bgmSetMute(m){
    保存キーにこの版番号を含めるので、古いクリア記録は自動的に無効化される。 */
 const STAGE_SET_VERSION=20;
 /* 画面表示用のバージョン情報（ファイルを更新したらここを変える） */
-const BUILD_VER="v42";
+const BUILD_VER="v43";
 const BUILD_DATE="2026-09-22";
 function scoreKey(idx){return 'mwdx_v'+STAGE_SET_VERSION+'_s'+idx;}
 function saveStageScore(idx,turns){
@@ -2550,7 +2550,10 @@ let mpActive=false;    // 通信対戦が進行中か
 let mpMyPid=null;      // 自分が担当する陣営(hostは常にBLUE、参加者は割り当てられたpid)
 let mpAssignFinal={};  // 開始時に確定した割り当て(pid -> "host"|peerId|"cpu")
 function mpStartGame(){
-  if(mpStageIdx===null||mpStageIdx===undefined)return;
+  if(mpStageIdx===null||mpStageIdx===undefined||!STAGES[mpStageIdx]){
+    mpRenderError("ステージが選択されていません。もう一度「陣営を決めて始める」からやり直してください。");
+    return;
+  }
   mpAssignFinal=Object.assign({0:"host"},mpAssign);
   const payload={type:"game_start",stageIdx:mpStageIdx,assign:mpAssignFinal,
     factionCount:mpFactionCount};
