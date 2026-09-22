@@ -1464,7 +1464,7 @@ function bgmSetMute(m){
    保存キーにこの版番号を含めるので、古いクリア記録は自動的に無効化される。 */
 const STAGE_SET_VERSION=20;
 /* 画面表示用のバージョン情報（ファイルを更新したらここを変える） */
-const BUILD_VER="v48";
+const BUILD_VER="v49";
 const BUILD_DATE="2026-09-22";
 function scoreKey(idx){return 'mwdx_v'+STAGE_SET_VERSION+'_s'+idx;}
 function saveStageScore(idx,turns){
@@ -2306,6 +2306,7 @@ function hasProductionTile(pid){
   return false;
 }
 let winnerCache=null;
+let activeTapPid=BLUE; // 現在のhandleTap呼び出しが「誰の入力として」処理されているか(通常は常にBLUE、通信対戦でリレー中のみ変わる)
 function gameOver(winner){
   if(ended)return;ended=true;
   winnerCache=winner;
@@ -2564,18 +2565,11 @@ function mpStartGame(){
   mpActive=true;mpMyPid=BLUE;
   document.getElementById("mpDialogWrap").classList.add("hidden");
   startGame(mpStageIdx);
-  // みんなで遊ぶ時は、CPU/人を問わず全陣営の「総資産(資金+初期ユニットの価値)」を
-  // 最も強い陣営にそろえる(青が必ずしも最強とは限らないため、青基準にはしない)
-  function mpAssetValue(pid){
-    let v=funds[pid];
-    for(const u of units)if(u.pid===pid)v+=UNIT_DEF[u.type].cost;
-    return v;
-  }
-  let mpMaxAsset=0;
-  for(let pid=0;pid<mpFactionCount;pid++)mpMaxAsset=Math.max(mpMaxAsset,mpAssetValue(pid));
-  for(let pid=0;pid<mpFactionCount;pid++){
-    funds[pid]+=Math.max(0,mpMaxAsset-mpAssetValue(pid));
-  }
+  // みんなで遊ぶ時は、CPU/人を問わず全陣営の「資金」の数字そのものを完全にそろえる
+  // (画面に表示されるのは資金の数字だけなので、比べた時に一致して見えるよう単純にそろえる)
+  let mpMaxFunds=0;
+  for(let pid=0;pid<mpFactionCount;pid++)mpMaxFunds=Math.max(mpMaxFunds,funds[pid]);
+  for(let pid=0;pid<mpFactionCount;pid++)funds[pid]=mpMaxFunds;
   mpBroadcastState(); // 開始直後の状態(ユニット・拠点の色など)を全参加者へ即送信
   mpStartBroadcastLoop(); // 以後、青軍自身の細かな動きも含めて定期的に全員へ同期する
 }
@@ -2621,12 +2615,20 @@ function mpHostHandleInput(conn,data){
   if(!mpActive||ended)return;
   const pidForConn=Object.keys(mpAssignFinal).find(k=>mpAssignFinal[k]===conn.peer);
   if(pidForConn===undefined||Number(pidForConn)!==turn)return; // 今のターンの担当者以外は無視
+  activeTapPid=Number(pidForConn); // この入力は「その参加者の陣営」として処理する
   if(data.type==="tap"){
     handleTap(data.x,data.y);
+    // 生産画面は参加者側からまだ操作できないため、誤操作防止のため開いたら即閉じる
+    const ov=document.getElementById("overlay");
+    if(ov&&!ov.classList.contains("hidden")){
+      closeOverlay();
+      updateUI("工場・HQでのユニット購入は、この後のアップデートで対応予定です。それ以外の操作はできます。");
+    }
   }else if(data.type==="btn"){
     const b=lastBtnList[data.index];
     if(b&&b.fn)b.fn();
   }
+  activeTapPid=BLUE; // ホスト自身の以後の操作は通常通りBLUEに戻す
   mpBroadcastState();
 }
 /* ---- 参加者：ゲーム開始受信・状態反映 ---- */
@@ -2993,7 +2995,7 @@ function handleTap(x,y){
   if(mode==="acted"||mode==="mergeAsk"){
     // 行動前なら他のユニットをタップして選び直せる（移動は取り消し）
     const u2=unitAt(x,y);
-    if(u2&&u2.pid===BLUE&&!u2.acted){
+    if(u2&&u2.pid===activeTapPid&&!u2.acted){
       undoPending();
       selectUnit(u2);
     }else SND.cancel();
@@ -3027,9 +3029,9 @@ function handleTap(x,y){
     return;
   }
   const u=unitAt(x,y);
-  if(u&&u.pid===BLUE&&!u.acted){
+  if(u&&u.pid===activeTapPid&&!u.acted){
     selectUnit(u);
-  }else if(u&&u.pid!==BLUE){
+  }else if(u&&u.pid!==activeTapPid){
     SND.select();
     cancelSel();
     const ud=UNIT_DEF[u.type];
@@ -3059,15 +3061,15 @@ function handleTap(x,y){
     }
     html+="</span>";
     updateUI(html);
-    if((t===T.FACTORY||t===T.HQ)&&o===BLUE&&!unitAt(x,y)){
-      openProduce(x,y);
+    if((t===T.FACTORY||t===T.HQ)&&o===activeTapPid&&!unitAt(x,y)){
+      openProduce(x,y,activeTapPid);
     }
   }
 }
 const SELL_REFUND_RATE=0.5; // 売却で戻ってくる割合（コストの半額）
 function sellUnit(u){
   const refund=Math.round(UNIT_DEF[u.type].cost*SELL_REFUND_RATE);
-  funds[BLUE]+=refund;
+  funds[u.pid]+=refund;
   u.hp=0;
   const idx=units.indexOf(u);
   if(idx>=0)units.splice(idx,1);
@@ -3090,7 +3092,7 @@ function selectUnit(u){
   const rk=RANKS[u.rank],next=RANKS[u.rank+1];
   const stars=u.rank?` <span style="color:#ffd76a">${"★".repeat(u.rank)}</span>`:"";
   const rngTxt=isIndirect(u)?`／射程${ud.range[0]}-${ud.range[1]}`:"";
-  updateUI(`<img src="${sprUrl[u.type][BLUE]}">
+  updateUI(`<img src="${sprUrl[u.type][u.pid]}">
     <span><b>${ud.name}</b>${stars} HP${u.hp}/${MAX_HP}　攻撃${effAtk(u)}${rngTxt}／移動${ud.move}<br>
     <small>${rk.name}　EXP ${u.exp}${next?`（次まで${next.exp-u.exp}）`:"（最高）"}　${terrainLine(u)}</small></span>`);
   setBtns([{label:"ここで行動",fn:()=>{mode="anim";afterMove(u,false,u.x,u.y);}},
@@ -3202,18 +3204,19 @@ function goHome(){
 /* ====================================================
    生産
 ==================================================== */
-function openProduce(x,y){
+function openProduce(x,y,pid){
+  pid=pid===undefined?BLUE:pid;
   const d=document.getElementById("dialog");
   const lv2=getPropLevel(x,y)>=1;
   const propName=TERRAIN_INFO[map[y][x]].name;
   let html=`<h2>ユニット生産${lv2?`　<small style="color:#ffd76a">🏗Lv.2${propName}（生産費20%引き）</small>`:''}</h2>
-    <p style="text-align:center;margin-bottom:8px">資金：💰${funds[BLUE]}G</p><div class="row">`;
+    <p style="text-align:center;margin-bottom:8px">資金：💰${funds[pid]}G</p><div class="row">`;
   for(const k in UNIT_DEF){
     const ud=UNIT_DEF[k];
     const cost=lv2?Math.round(ud.cost*LV2_COST_MULT):ud.cost;
-    const dis=funds[BLUE]<cost?"disabled":"";
-    html+=`<button ${dis} onclick="produce('${k}',${x},${y})">
-      <img src="${sprUrl[k][BLUE]}">
+    const dis=funds[pid]<cost?"disabled":"";
+    html+=`<button ${dis} onclick="produce('${k}',${x},${y},${pid})">
+      <img src="${sprUrl[k][pid]}">
       <span>${ud.name}<br><small>${ud.desc}</small></span>
       <span class="pr">${cost}G${lv2?'<br><small style="text-decoration:line-through;opacity:.6">'+ud.cost+'G</small>':''}</span></button>`;
   }
@@ -3221,10 +3224,11 @@ function openProduce(x,y){
   d.innerHTML=html;
   document.getElementById("overlay").classList.remove("hidden");
 }
-function produce(type,x,y){
+function produce(type,x,y,pid){
+  pid=pid===undefined?BLUE:pid;
   const cost=getPropLevel(x,y)>=1?Math.round(UNIT_DEF[type].cost*LV2_COST_MULT):UNIT_DEF[type].cost;
-  funds[BLUE]-=cost;
-  const u=mkUnit(type,BLUE,x,y);u.acted=true;u.flash=1;units.push(u);
+  funds[pid]-=cost;
+  const u=mkUnit(type,pid,x,y);u.acted=true;u.flash=1;units.push(u);
   SND.coin();
   addPopup(x,y,"生産！","#7dff9a");
   closeOverlay();updateTop();
