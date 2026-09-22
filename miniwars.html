@@ -1464,7 +1464,7 @@ function bgmSetMute(m){
    保存キーにこの版番号を含めるので、古いクリア記録は自動的に無効化される。 */
 const STAGE_SET_VERSION=20;
 /* 画面表示用のバージョン情報（ファイルを更新したらここを変える） */
-const BUILD_VER="v50";
+const BUILD_VER="v51";
 const BUILD_DATE="2026-09-22";
 function scoreKey(idx){return 'mwdx_v'+STAGE_SET_VERSION+'_s'+idx;}
 function saveStageScore(idx,turns){
@@ -1599,7 +1599,7 @@ function resumeGame(){
   recentEliminations=data.recentEliminations||[];
   turn=BLUE;turnCount=data.turnCount||1;
   sel=null;mode="idle";moveData=null;attackTargets=[];
-  ended=false;particles=[];popups=[];rings=[];anims=[];shake=0;icbmStrikes=[];eliminated=new Set();recentEliminations=[];
+  ended=false;particles=[];popups=[];rings=[];anims=[];shake=0;icbmStrikes=[];eliminated=new Set();recentEliminations=[];prodOpen=null;
   applyPalette(currentStage);
   resize();terrainDirty=true;
   updateTop();setBtns([]);
@@ -1618,7 +1618,7 @@ function startGame(idx){
   unlockAudio();
   loadStage(STAGES[idx]);
   turn=BLUE;turnCount=1;sel=null;mode="idle";captureProgress={};
-  ended=false;particles=[];popups=[];rings=[];anims=[];shake=0;icbmStrikes=[];eliminated=new Set();recentEliminations=[];
+  ended=false;particles=[];popups=[];rings=[];anims=[];shake=0;icbmStrikes=[];eliminated=new Set();recentEliminations=[];prodOpen=null;
   beginTurn(BLUE);
   bgmStop();
   bgmSelectForStage(idx);
@@ -2620,7 +2620,19 @@ function mpSerializeState(){
     mode,
     info:document.getElementById("info").innerHTML,
     btns:lastBtnList.map(b=>({label:b.label,warn:!!b.warn,gold:!!b.gold})),
+    prodOpen:prodOpen,
+    prodOptions:prodOpen?mpProdOptions(prodOpen):null,
   };
+}
+function mpProdOptions(po){
+  const lv2=getPropLevel(po.x,po.y)>=1;
+  const opts=[];
+  for(const k in UNIT_DEF){
+    const ud=UNIT_DEF[k];
+    const cost=lv2?Math.round(ud.cost*LV2_COST_MULT):ud.cost;
+    opts.push({type:k,name:ud.name,desc:ud.desc,cost,afford:funds[po.pid]>=cost});
+  }
+  return opts;
 }
 function mpBroadcastState(){
   if(!mpActive||!mpIsHost)return;
@@ -2635,17 +2647,15 @@ function mpHostHandleInput(conn,data){
   activeTapPid=Number(pidForConn); // この入力は「その参加者の陣営」として処理する
   if(data.type==="tap"){
     handleTap(data.x,data.y);
-    // 生産画面は参加者側からまだ操作できないため、誤操作防止のため開いたら即閉じる
-    const ov=document.getElementById("overlay");
-    if(ov&&!ov.classList.contains("hidden")){
-      closeOverlay();
-      updateUI("工場・HQでのユニット購入は、この後のアップデートで対応予定です。それ以外の操作はできます。");
-    }
   }else if(data.type==="btn"){
     const b=lastBtnList[data.index];
     if(b&&b.fn)b.fn();
   }else if(data.type==="endTurn"){
     endTurn();
+  }else if(data.type==="produce"){
+    if(prodOpen&&prodOpen.pid===activeTapPid)produce(data.unitType,prodOpen.x,prodOpen.y,prodOpen.pid);
+  }else if(data.type==="produceCancel"){
+    if(prodOpen&&prodOpen.pid===activeTapPid)closeOverlay();
   }
   activeTapPid=BLUE; // ホスト自身の以後の操作は通常通りBLUEに戻す
   mpBroadcastState();
@@ -2663,7 +2673,7 @@ function mpPeerJoinGame(data){
   for(let i=0;i<s.hq.length;i++)map[s.hq[i].y][s.hq[i].x]=T.HQ;
   currentStage=data.stageIdx;
   units=[];owner={};funds=[];propLevel={};developProgress={};captureProgress={};
-  eliminated=new Set();icbmStrikes=[];ended=false;sel=null;mode="idle";moveData=null;attackTargets=[];
+  eliminated=new Set();icbmStrikes=[];ended=false;sel=null;mode="idle";moveData=null;attackTargets=[];prodOpen=null;
   turnBusy=false; // 参加者側は常にfalse(自分のターンかどうかはturn===mpMyPidで判定するため)
   document.getElementById("overlay").classList.add("hidden");
   document.getElementById("mpDialogWrap").classList.add("hidden");
@@ -2686,7 +2696,9 @@ function mpPeerApplyState(st){
   terrainDirty=true;
   updateTop();
   const myTurn=(turn===mpMyPid)&&!ended;
-  if(myTurn){
+  if(myTurn&&st.prodOpen&&st.prodOpen.pid===mpMyPid){
+    mpRenderProdMenu(st.prodOpen,st.prodOptions);
+  }else if(myTurn){
     mode=st.mode;
     if(st.selUnit){
       const u=units.find(uu=>uu.x===st.selUnit.x&&uu.y===st.selUnit.y&&uu.pid===st.selUnit.pid);
@@ -2705,6 +2717,22 @@ function mpPeerApplyState(st){
   if(ended&&!wasEnded){
     setTimeout(()=>{mpRenderEndResult(st.winner);},900);
   }
+}
+function mpRenderProdMenu(prodOpen,prodOptions){
+  sel=null;mode="idle";moveData=null;attackTargets=[];
+  updateUI("🏭 ユニット購入　💰"+funds[prodOpen.pid]+"G　買いたいものを選んでください");
+  const b=document.getElementById("btns");b.innerHTML="";
+  (prodOptions||[]).forEach(opt=>{
+    const btn=document.createElement("button");
+    btn.textContent=`${opt.name}(${opt.cost}G)`;
+    if(!opt.afford)btn.disabled=true;
+    btn.onclick=()=>{if(mpHostConn)mpHostConn.send({type:"produce",unitType:opt.type});};
+    b.appendChild(btn);
+  });
+  const cancel=document.createElement("button");
+  cancel.textContent="やめる";cancel.className="warn";
+  cancel.onclick=()=>{if(mpHostConn)mpHostConn.send({type:"produceCancel"});};
+  b.appendChild(cancel);
 }
 function mpRenderRemoteBtns(btns,interactive){
   const b=document.getElementById("btns");b.innerHTML="";
@@ -3238,8 +3266,10 @@ function goHome(){
 /* ====================================================
    生産
 ==================================================== */
+let prodOpen=null; // {x,y,pid} 生産画面が開いている間の対象タイル・陣営(通信対戦の同期用)
 function openProduce(x,y,pid){
   pid=pid===undefined?BLUE:pid;
+  prodOpen={x,y,pid};
   const d=document.getElementById("dialog");
   const lv2=getPropLevel(x,y)>=1;
   const propName=TERRAIN_INFO[map[y][x]].name;
@@ -3261,15 +3291,17 @@ function openProduce(x,y,pid){
 function produce(type,x,y,pid){
   pid=pid===undefined?BLUE:pid;
   const cost=getPropLevel(x,y)>=1?Math.round(UNIT_DEF[type].cost*LV2_COST_MULT):UNIT_DEF[type].cost;
+  if(funds[pid]<cost)return; // 資金不足なら何もしない(安全策)
   funds[pid]-=cost;
   const u=mkUnit(type,pid,x,y);u.acted=true;u.flash=1;units.push(u);
   SND.coin();
   addPopup(x,y,"生産！","#7dff9a");
+  prodOpen=null;
   closeOverlay();updateTop();
   updateUI(UNIT_DEF[type].name+"を生産しました（次のターンから行動できます）");
   autosave();
 }
-function closeOverlay(){document.getElementById("overlay").classList.add("hidden");overlayClosable=false;}
+function closeOverlay(){document.getElementById("overlay").classList.add("hidden");overlayClosable=false;prodOpen=null;}
 
 /* ====================================================
    UI
