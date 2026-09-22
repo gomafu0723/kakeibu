@@ -1165,7 +1165,10 @@ function getOwner(x,y){const v=owner[key(x,y)];return v===undefined?null:v;}
 function mkUnit(type,pid,x,y){return{type,pid,x,y,px:x,py:y,hp:MAX_HP,acted:false,flash:0,exp:0,rank:0};}
 function unitAt(x,y){return units.find(u=>u.x===x&&u.y===y&&u.hp>0);}
 function isProp(t){return t===T.CITY||t===T.FACTORY||t===T.HQ;}
-function busy(){return anims.length>0||turnBusy||ended||turn!==BLUE;}
+function busy(){
+  const myTurn = mpActive ? (turn===mpMyPid) : (turn===BLUE);
+  return anims.length>0||turnBusy||ended||!myTurn;
+}
 
 /* ====================================================
    サウンド＋iPhone消音モード対策
@@ -1461,7 +1464,7 @@ function bgmSetMute(m){
    保存キーにこの版番号を含めるので、古いクリア記録は自動的に無効化される。 */
 const STAGE_SET_VERSION=20;
 /* 画面表示用のバージョン情報（ファイルを更新したらここを変える） */
-const BUILD_VER="v41";
+const BUILD_VER="v42";
 const BUILD_DATE="2026-09-22";
 function scoreKey(idx){return 'mwdx_v'+STAGE_SET_VERSION+'_s'+idx;}
 function saveStageScore(idx,turns){
@@ -1976,16 +1979,28 @@ function endTurn(){
         const names=[...new Set(recentEliminations)].map(p=>PLAYER_NAME[p]).join("・");
         recentEliminations=[];
         showBanner(`⚠️ ${names}が他陣営との戦いで壊滅していた！`,"#ff8a3d",()=>{
-          turnBusy=false;updateUI("🔵 あなたのターンです");autosave();});
+          turnBusy=false;updateUI("🔵 あなたのターンです");autosave();
+          if(mpActive)mpBroadcastState();
+        });
       }else{
         turnBusy=false;updateUI("🔵 あなたのターンです");autosave();
+        if(mpActive)mpBroadcastState();
       }
     });
   }else{
     turn=next;beginTurn(next);updateTop();turnBusy=true;
     updateUI(`${PLAYER_NAME[next]}のターン…`);
     SND.turn();
-    showBanner(`${PLAYER_NAME[next]}ターン`,PLAYER_COLOR[next],()=>aiStart(next));
+    const assignee=mpActive?mpAssignFinal[next]:null;
+    const isRemotePeer=assignee&&assignee!=="cpu"&&assignee!=="host";
+    showBanner(`${PLAYER_NAME[next]}ターン`,PLAYER_COLOR[next],()=>{
+      if(isRemotePeer){
+        turnBusy=false;
+        mpBroadcastState();
+      }else{
+        aiStart(next);
+      }
+    });
   }
 }
 function showBanner(txt,color,cb){
@@ -2079,7 +2094,7 @@ function aiNext(){
   const u=aiList.shift();
   if(!u){aiProduce(aiTurnPid);return;}
   if(u.hp<=0){aiNext();return;}
-  aiActUnit(u,()=>setTimeout(aiNext,150));
+  aiActUnit(u,()=>{if(mpActive)mpBroadcastState();setTimeout(aiNext,150);});
 }
 function aiDoHeal(medic,target){
   const amt=Math.min(UNIT_DEF[medic.type].heal,MAX_HP-target.hp);
@@ -2290,12 +2305,15 @@ function hasProductionTile(pid){
   }
   return false;
 }
+let winnerCache=null;
 function gameOver(winner){
   if(ended)return;ended=true;
+  winnerCache=winner;
   clearSave();
   bgmStop();
   if(winner===BLUE){saveStageScore(currentStage,turnCount);}
   else{cleared.add(currentStage);}
+  if(mpActive)mpBroadcastState();
   setTimeout(()=>{showEndDialog(winner);},900);
 }
 function showEndDialog(winner){
@@ -2386,6 +2404,7 @@ function mpTeardown(){
   try{if(mpPeer)mpPeer.destroy();}catch(e){}
   mpPeer=null;mpConns=[];mpHostConn=null;mpIsHost=false;mpRoomCode=null;
   mpFactionCount=2;mpAssign={1:"cpu",2:"cpu",3:"cpu"};mpStageIdx=null;
+  mpActive=false;mpMyPid=null;mpAssignFinal={};
 }
 function mpRenderMenu(){
   const d=document.getElementById("mpDialog");
@@ -2423,6 +2442,9 @@ function mpShowCreateRoom(retryCount){
     mpConns.push(conn);
     conn.on("open",()=>{
       mpRenderHostWaiting();
+    });
+    conn.on("data",data=>{
+      mpHostHandleInput(conn,data);
     });
     conn.on("close",()=>{
       mpConns=mpConns.filter(c=>c!==conn);
@@ -2524,17 +2546,132 @@ function mpShowAssign(){
   d.innerHTML=html;
 }
 let mpStageIdx=null;
+let mpActive=false;    // 通信対戦が進行中か
+let mpMyPid=null;      // 自分が担当する陣営(hostは常にBLUE、参加者は割り当てられたpid)
+let mpAssignFinal={};  // 開始時に確定した割り当て(pid -> "host"|peerId|"cpu")
 function mpStartGame(){
   if(mpStageIdx===null||mpStageIdx===undefined)return;
-  const payload={type:"game_start",stageIdx:mpStageIdx,assign:Object.assign({0:"host"},mpAssign),
+  mpAssignFinal=Object.assign({0:"host"},mpAssign);
+  const payload={type:"game_start",stageIdx:mpStageIdx,assign:mpAssignFinal,
     factionCount:mpFactionCount};
   for(const c of mpConns){
     try{c.send(payload);}catch(e){}
   }
-  const d=document.getElementById("mpDialog");
-  d.innerHTML=`<h2 style="text-align:center;margin-top:0">🚀 対戦準備中…</h2>
-    <p style="text-align:center;color:#93a2d6">全員の同期を待っています</p>`;
-  // 実際の対戦同期は次のアップデートで実装
+  mpActive=true;mpMyPid=BLUE;
+  document.getElementById("mpDialogWrap").classList.add("hidden");
+  startGame(mpStageIdx);
+}
+/* ---- 通信対戦：状態の同期(ホストが権威。全処理はホストのみで行う) ---- */
+function mpSerializeState(){
+  return{
+    owner:Object.assign({},owner),
+    units:units.map(u=>Object.assign({},u)),
+    funds:funds.slice(),
+    turn,turnCount,
+    propLevel:Object.assign({},propLevel),
+    developProgress:Object.assign({},developProgress),
+    captureProgress:Object.assign({},captureProgress),
+    eliminated:[...eliminated],
+    icbmStrikes:icbmStrikes.slice(),
+    ended,winner:ended?winnerCache:null,
+    reach:(mode==="move"&&moveData)?[...moveData.reach]:null,
+    merge:(mode==="move"&&moveData)?[...moveData.merge]:null,
+    origin:(mode==="move"&&moveData)?moveData.origin:null,
+    selUnit:sel?{type:sel.unit.type,pid:sel.unit.pid,x:sel.unit.x,y:sel.unit.y}:null,
+    attackTargets:attackTargets.map(u=>({x:u.x,y:u.y,pid:u.pid,type:u.type,hp:u.hp})),
+    mode,
+    info:document.getElementById("info").innerHTML,
+    btns:lastBtnList.map(b=>({label:b.label,warn:!!b.warn,gold:!!b.gold})),
+  };
+}
+function mpBroadcastState(){
+  if(!mpActive||!mpIsHost)return;
+  const snap={type:"state",state:mpSerializeState()};
+  for(const c of mpConns){try{c.send(snap);}catch(e){}}
+}
+/* ホストが、参加者から送られてきた入力(タップ・ボタン)を処理する */
+function mpHostHandleInput(conn,data){
+  if(!mpActive||ended)return;
+  const pidForConn=Object.keys(mpAssignFinal).find(k=>mpAssignFinal[k]===conn.peer);
+  if(pidForConn===undefined||Number(pidForConn)!==turn)return; // 今のターンの担当者以外は無視
+  if(data.type==="tap"){
+    handleTap(data.x,data.y);
+  }else if(data.type==="btn"){
+    const b=lastBtnList[data.index];
+    if(b&&b.fn)b.fn();
+  }
+  mpBroadcastState();
+}
+/* ---- 参加者：ゲーム開始受信・状態反映 ---- */
+function mpPeerJoinGame(data){
+  mpMyPid=null;
+  for(const k of Object.keys(data.assign))if(data.assign[k]===mpPeer.id)mpMyPid=Number(k);
+  mpAssignFinal=data.assign;
+  mpActive=true;
+  const s=STAGES[data.stageIdx];
+  COLS=s.map[0].length;ROWS=s.map.length;
+  map=s.map.map(r=>[...r].map(Number));
+  HQ_POS=s.hq;
+  for(let i=0;i<s.hq.length;i++)map[s.hq[i].y][s.hq[i].x]=T.HQ;
+  currentStage=data.stageIdx;
+  units=[];owner={};funds=[];propLevel={};developProgress={};captureProgress={};
+  eliminated=new Set();icbmStrikes=[];ended=false;sel=null;mode="idle";moveData=null;attackTargets=[];
+  document.getElementById("overlay").classList.add("hidden");
+  document.getElementById("mpDialogWrap").classList.add("hidden");
+  resize();terrainDirty=true;
+  updateTop();
+  updateUI("ホストの手番を待っています…");
+  setBtns([]);
+}
+function mpPeerApplyState(st){
+  owner=st.owner;
+  units=st.units;
+  funds=st.funds;
+  turn=st.turn;turnCount=st.turnCount;
+  propLevel=st.propLevel;developProgress=st.developProgress;
+  captureProgress=st.captureProgress;
+  eliminated=new Set(st.eliminated);
+  icbmStrikes=st.icbmStrikes;
+  const wasEnded=ended;
+  ended=st.ended;
+  terrainDirty=true;
+  updateTop();
+  const myTurn=(turn===mpMyPid)&&!ended;
+  if(myTurn){
+    mode=st.mode;
+    if(st.selUnit){
+      const u=units.find(uu=>uu.x===st.selUnit.x&&uu.y===st.selUnit.y&&uu.pid===st.selUnit.pid);
+      sel=u?{unit:u,ox:st.origin?Number(st.origin.split(",")[0]):u.x,
+        oy:st.origin?Number(st.origin.split(",")[1]):u.y,moved:false}:null;
+    }else sel=null;
+    moveData=st.reach?{reach:new Set(st.reach),merge:new Set(st.merge),origin:st.origin,parent:new Map()}:null;
+    attackTargets=st.attackTargets||[];
+    updateUI(st.info);
+    mpRenderRemoteBtns(st.btns,true);
+  }else{
+    sel=null;mode="idle";moveData=null;attackTargets=[];
+    updateUI(ended?st.info:`${PLAYER_NAME[turn]}の番です…`);
+    mpRenderRemoteBtns([],false);
+  }
+  if(ended&&!wasEnded){
+    setTimeout(()=>{mpRenderEndResult(st.winner);},900);
+  }
+}
+function mpRenderRemoteBtns(btns,interactive){
+  const b=document.getElementById("btns");b.innerHTML="";
+  if(!interactive)return;
+  btns.forEach((it,idx)=>{
+    const btn=document.createElement("button");
+    btn.textContent=it.label;
+    if(it.warn)btn.className="warn";
+    if(it.gold)btn.className="gold";
+    btn.onclick=()=>{if(mpHostConn)mpHostConn.send({type:"btn",index:idx});};
+    b.appendChild(btn);
+  });
+}
+function mpRenderEndResult(winner){
+  const win=(winner===mpMyPid);
+  updateUI(win?"🎉 あなたの勝利です！":`${PLAYER_NAME[winner]}の勝利でした`);
 }
 /* ---- 参加者：ルーム参加 ---- */
 function mpShowJoinRoom(){
@@ -2574,7 +2711,9 @@ function mpDoJoin(){
     });
     conn.on("data",data=>{
       if(data&&data.type==="game_start"){
-        mpRenderWaitingForStart(data);
+        mpPeerJoinGame(data);
+      }else if(data&&data.type==="state"){
+        mpPeerApplyState(data.state);
       }
     });
     conn.on("close",()=>{
@@ -2774,7 +2913,13 @@ function endPointer(e){
       const r=cv.getBoundingClientRect();
       const x=Math.floor((e.clientX-r.left)/r.width*COLS);
       const y=Math.floor((e.clientY-r.top)/r.height*ROWS);
-      if(x>=0&&y>=0&&x<COLS&&y<ROWS)handleTap(x,y);
+      if(x>=0&&y>=0&&x<COLS&&y<ROWS){
+        if(mpActive&&!mpIsHost){
+          if(mpHostConn)mpHostConn.send({type:"tap",x,y});
+        }else{
+          handleTap(x,y);
+        }
+      }
     }
     dragStart=null;pinchPrev=null;
   }else if(pointers.size===1){
@@ -3072,7 +3217,9 @@ function updateTop(){
   document.getElementById("props").textContent=p;
 }
 function updateUI(html){document.getElementById("info").innerHTML=html;}
+let lastBtnList=[];
 function setBtns(list){
+  lastBtnList=list;
   const b=document.getElementById("btns");b.innerHTML="";
   for(const it of list){
     const btn=document.createElement("button");
