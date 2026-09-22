@@ -31,6 +31,13 @@
     white-space:nowrap;}
   .funds{color:var(--gold);white-space:nowrap;}
   #mutebtn,#menubtn,#homebtn{background:none;border:none;font-size:18px;box-shadow:none;padding:2px 4px;}
+  /* GUEST_MODE：ヘッダー・フッターを可能な限りコンパクトにし、マップ表示を最大化する */
+  body.guestMode #topbar{padding:4px 10px;}
+  body.guestMode #homebtn,body.guestMode #menubtn{display:none;}
+  body.guestMode #bottom{height:104px;padding:6px 8px;}
+  body.guestMode #info{height:32px;font-size:12px;padding:3px 7px;}
+  body.guestMode #btns{margin-top:5px;gap:5px;}
+  body.guestMode #btns button{font-size:12px;padding:6px 8px;}
 
   #mapwrap{flex:1;position:relative;overflow:hidden;touch-action:none;
     clip-path:inset(0px);isolation:isolate;z-index:1;background:
@@ -239,6 +246,7 @@ function rankUpFx(u){
   }
 }
 const GUEST_MODE=false; // 家族配布用ファイルではtrueにする(「ルームに参加する」以外を一切出さない)
+if(GUEST_MODE)document.body.classList.add("guestMode");
 const BLUE=0, RED=1, GREEN=2, YELLOW=3;
 const PLAYER_NAME=["青軍","赤軍","緑軍","黄軍"];
 const PLAYER_COLOR=["#3b6fe0","#e04a55","#3ecf5f","#e8c23d"];
@@ -1465,7 +1473,7 @@ function bgmSetMute(m){
    保存キーにこの版番号を含めるので、古いクリア記録は自動的に無効化される。 */
 const STAGE_SET_VERSION=20;
 /* 画面表示用のバージョン情報（ファイルを更新したらここを変える） */
-const BUILD_VER="v53";
+const BUILD_VER="v54";
 const BUILD_DATE="2026-09-22";
 function scoreKey(idx){return 'mwdx_v'+STAGE_SET_VERSION+'_s'+idx;}
 function saveStageScore(idx,turns){
@@ -2621,7 +2629,7 @@ function mpStartGame(){
 let mpBroadcastTimer=null;
 function mpStartBroadcastLoop(){
   if(mpBroadcastTimer)clearInterval(mpBroadcastTimer);
-  mpBroadcastTimer=setInterval(()=>{if(mpActive&&mpIsHost&&!ended)mpBroadcastState();},1000);
+  mpBroadcastTimer=setInterval(()=>{if(mpActive&&mpIsHost&&!ended)mpBroadcastState();},200);
 }
 function mpStopBroadcastLoop(){
   if(mpBroadcastTimer){clearInterval(mpBroadcastTimer);mpBroadcastTimer=null;}
