@@ -1179,7 +1179,8 @@ function setOwner(x,y,p){
   owner[k]=p;terrainDirty=true;
 }
 function getOwner(x,y){const v=owner[key(x,y)];return v===undefined?null:v;}
-function mkUnit(type,pid,x,y){return{type,pid,x,y,px:x,py:y,hp:MAX_HP,acted:false,flash:0,exp:0,rank:0};}
+let unitIdSeq=1;
+function mkUnit(type,pid,x,y){return{id:unitIdSeq++,type,pid,x,y,px:x,py:y,hp:MAX_HP,acted:false,flash:0,exp:0,rank:0};}
 function unitAt(x,y){return units.find(u=>u.x===x&&u.y===y&&u.hp>0);}
 function isProp(t){return t===T.CITY||t===T.FACTORY||t===T.HQ;}
 function busy(){
@@ -1481,7 +1482,7 @@ function bgmSetMute(m){
    保存キーにこの版番号を含めるので、古いクリア記録は自動的に無効化される。 */
 const STAGE_SET_VERSION=20;
 /* 画面表示用のバージョン情報（ファイルを更新したらここを変える） */
-const BUILD_VER="v57";
+const BUILD_VER="v58";
 const BUILD_DATE="2026-09-23";
 function scoreKey(idx){return 'mwdx_v'+STAGE_SET_VERSION+'_s'+idx;}
 function saveStageScore(idx,turns){
@@ -2651,6 +2652,7 @@ let mpStageIdx=null;
 let mpActive=false;    // 通信対戦が進行中か
 let mpMyPid=null;      // 自分が担当する陣営(hostは常にBLUE、参加者は割り当てられたpid)
 let mpAssignFinal={};  // 開始時に確定した割り当て(pid -> "host"|peerId|"cpu")
+let mpLastUiSig=null;  // 参加者側のUI再描画を、内容が変わった時だけに絞るための直前の状態の署名
 function mpStartGame(){
   if(mpStageIdx===null||mpStageIdx===undefined||!STAGES[mpStageIdx]){
     mpRenderError("ステージが選択されていません。もう一度「陣営を決めて始める」からやり直してください。");
@@ -2757,6 +2759,7 @@ function mpPeerJoinGame(data){
   currentStage=data.stageIdx;
   units=[];owner={};funds=[];propLevel={};developProgress={};captureProgress={};
   eliminated=new Set();icbmStrikes=[];ended=false;sel=null;mode="idle";moveData=null;attackTargets=[];prodOpen=null;
+  mpLastUiSig=null;
   turnBusy=false; // 参加者側は常にfalse(自分のターンかどうかはturn===mpMyPidで判定するため)
   applyPalette(currentStage);
   document.getElementById("overlay").classList.add("hidden");
@@ -2768,7 +2771,13 @@ function mpPeerJoinGame(data){
 }
 function mpPeerApplyState(st){
   owner=st.owner;
-  units=st.units;
+  // 前回のユニットの見た目上の位置(px/py)をidで引き継ぎ、なめらかに追従させる(いきなり位置が飛ばないように)
+  const prevPos={};
+  for(const u of units)if(u.id!==undefined)prevPos[u.id]={px:u.px,py:u.py};
+  units=st.units.map(u=>{
+    const p=prevPos[u.id];
+    return p?Object.assign({},u,{px:p.px,py:p.py}):Object.assign({},u,{px:u.x,py:u.y});
+  });
   funds=st.funds;
   turn=st.turn;turnCount=st.turnCount;
   propLevel=st.propLevel;developProgress=st.developProgress;
@@ -2780,8 +2789,14 @@ function mpPeerApplyState(st){
   terrainDirty=true;
   updateTop();
   const myTurn=(turn===mpMyPid)&&!ended;
+  // 内容が実際に変わった時だけボタン等を再描画する(毎回作り直すとタップの最中にボタンが消え、
+  // 「押しても買えたり買えなかったりする」原因になっていたため)
+  const uiSig=JSON.stringify({myTurn,prodOpen:st.prodOpen,mode:st.mode,selUnit:st.selUnit,
+    btns:st.btns,info:st.info,ended:st.ended,winner:st.winner});
+  const uiChanged=uiSig!==mpLastUiSig;
+  mpLastUiSig=uiSig;
   if(myTurn&&st.prodOpen&&st.prodOpen.pid===mpMyPid){
-    mpRenderProdMenu(st.prodOpen,st.prodOptions);
+    if(uiChanged)mpRenderProdMenu(st.prodOpen,st.prodOptions);
   }else if(myTurn){
     document.getElementById("overlay").classList.add("hidden");
     mode=st.mode;
@@ -2792,13 +2807,17 @@ function mpPeerApplyState(st){
     }else sel=null;
     moveData=st.reach?{reach:new Set(st.reach),merge:new Set(st.merge),origin:st.origin,parent:new Map()}:null;
     attackTargets=st.attackTargets||[];
-    updateUI(st.info);
-    mpRenderRemoteBtns(st.btns,true);
+    if(uiChanged){
+      updateUI(st.info);
+      mpRenderRemoteBtns(st.btns,true);
+    }
   }else{
     document.getElementById("overlay").classList.add("hidden");
     sel=null;mode="idle";moveData=null;attackTargets=[];
-    updateUI(ended?st.info:`${PLAYER_NAME[turn]}の番です…`);
-    mpRenderRemoteBtns([],false);
+    if(uiChanged){
+      updateUI(ended?st.info:`${PLAYER_NAME[turn]}の番です…`);
+      mpRenderRemoteBtns([],false);
+    }
   }
   if(ended&&!wasEnded){
     setTimeout(()=>{mpRenderEndResult(st.winner);},900);
@@ -3904,6 +3923,17 @@ function loop(t){
   rings=rings.filter(r=>r.life>0);
   for(const u of units)if(u.flash>0)u.flash=Math.max(0,u.flash-dt/180);
   if(shake>0)shake=Math.max(0,shake-dt/40);
+  if(mpActive&&!mpIsHost){
+    // 参加者側：サーバーから届く位置(x/y)へ、見た目上の位置(px/py)を毎フレームなめらかに追従させる
+    const factor=1-Math.exp(-dt/110);
+    for(const u of units){
+      if(u.px===undefined)continue;
+      u.px+=(u.x-u.px)*factor;
+      u.py+=(u.y-u.py)*factor;
+      if(Math.abs(u.x-u.px)<0.02)u.px=u.x;
+      if(Math.abs(u.y-u.py)<0.02)u.py=u.y;
+    }
+  }
   if(map.length)draw();
   requestAnimationFrame(loop);
 }
