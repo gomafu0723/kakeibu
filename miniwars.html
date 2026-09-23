@@ -32,9 +32,9 @@
     box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 2px 5px rgba(0,0,0,.4);
     white-space:nowrap;}
   .funds{color:var(--gold);white-space:nowrap;}
-  #mutebtn,#menubtn,#homebtn{background:none;border:none;font-size:18px;box-shadow:none;padding:2px 4px;}
+  #mutebtn,#homebtn{background:none;border:none;font-size:18px;box-shadow:none;padding:2px 4px;}
   /* ゲスト端末(未認証)：ヘッダー・フッターを可能な限りコンパクトにし、マップ表示を最大化する */
-  body.guestMode #homebtn,body.guestMode #menubtn{display:none;}
+  body.guestMode #homebtn{display:none;}
 
   #mapwrap{flex:1;position:relative;overflow:hidden;touch-action:none;
     clip-path:inset(0px);isolation:isolate;z-index:1;background:
@@ -129,7 +129,6 @@
     <span class="funds">💰 <span id="funds">0</span>G ／ 拠点<span id="props">0</span></span>
     <span>
       <button id="homebtn" onclick="goHome()">🏠</button>
-      <button id="menubtn" onclick="openStageSelect(true)">📋</button>
       <button id="mutebtn" onclick="toggleMute()">🔇</button>
     </span>
   </div>
@@ -253,6 +252,7 @@ try{IS_HOST_DEVICE=(localStorage.getItem("mw_device_role")==="host");}catch(e){}
 if(!IS_HOST_DEVICE)document.body.classList.add("guestMode");
 const BLUE=0, RED=1, GREEN=2, YELLOW=3;
 const PLAYER_NAME=["青軍","赤軍","緑軍","黄軍"];
+const PLAYER_EMOJI=["🔵","🔴","🟢","🟡"];
 const PLAYER_COLOR=["#3b6fe0","#e04a55","#3ecf5f","#e8c23d"];
 const PLAYER_DARK=["#24489e","#9c2c38","#227a35","#9c7a15"];
 const PLAYER_LIGHT=["#7fa8f5","#f2848e","#8ee89f","#f0d789"];
@@ -1478,7 +1478,7 @@ function bgmSetMute(m){
    保存キーにこの版番号を含めるので、古いクリア記録は自動的に無効化される。 */
 const STAGE_SET_VERSION=20;
 /* 画面表示用のバージョン情報（ファイルを更新したらここを変える） */
-const BUILD_VER="v59";
+const BUILD_VER="v60";
 const BUILD_DATE="2026-09-23";
 function scoreKey(idx){return 'mwdx_v'+STAGE_SET_VERSION+'_s'+idx;}
 function saveStageScore(idx,turns){
@@ -2835,7 +2835,10 @@ function mpPeerApplyState(st){
     moveData=st.reach?{reach:new Set(st.reach),merge:new Set(st.merge),origin:st.origin,parent:new Map()}:null;
     attackTargets=st.attackTargets||[];
     if(uiChanged){
-      updateUI(st.info);
+      // 自分の番が始まった直後(何も選択していない)は、ホスト側の一般的な文言でなく
+      // 自分向けの分かりやすい案内を出す(ホストが自分の番で見る案内と揃える)
+      const justStarted=st.mode==="idle"&&!st.selUnit&&!st.prodOpen;
+      updateUI(justStarted?`${PLAYER_EMOJI[mpMyPid]} あなたのターンです。ユニットをタップ！`:st.info);
       mpRenderRemoteBtns(st.btns,true);
     }
   }else{
@@ -2955,13 +2958,13 @@ function mpDoJoin(presetCode,retryCount){
       }
     });
     conn.on("close",()=>{
-      if(mpActive&&!ended&&retryCount<5){
-        // ゲーム中の予期しない切断：同じコードで自動的に再接続を試みる(最大5回)
-        updateUI("⚠️ 接続が切れました。再接続しています…");
-        setTimeout(()=>{mpDoJoin(code,retryCount+1);},1500);
+      if(mpActive&&!ended&&retryCount<20){
+        // ゲーム中の予期しない切断：同じコードで自動的に再接続を試みる(3秒おき・最大20回=約1分間)
+        updateUI(`⚠️ ホストとの接続が切れました。再接続を試みています…（${retryCount+1}/20）<br><small>ホストの端末がアプリの外に出ていないか確認してください</small>`);
+        setTimeout(()=>{mpDoJoin(code,retryCount+1);},3000);
       }else if(mpActive&&!ended){
         mpForgetRoom();
-        mpRenderError("ホストに再接続できませんでした。ホストの端末を確認してください。");
+        mpRenderError("ホストに再接続できませんでした。ホストの端末でアプリが開いているか確認し、もう一度お試しください。");
       }else{
         mpRenderError("ホストとの接続が切れました。");
       }
@@ -3413,6 +3416,7 @@ function cancelSel(){sel=null;mode="idle";moveData=null;attackTargets=[];
 function goHome(){
   bgmStop();
   ended=true;
+  if(mpActive)mpTeardown();
   anims=[];particles=[];popups=[];rings=[];
   sel=null;mode="idle";moveData=null;attackTargets=[];
   setBtns([]);
