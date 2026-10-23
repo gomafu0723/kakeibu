@@ -52,7 +52,7 @@
   #info{font-size:13px;line-height:1.35;height:46px;display:flex;align-items:center;gap:8px;
     overflow-y:auto;box-sizing:border-box;color:var(--soft);}
   #info b{color:#fff;font-weight:700;}
-  #info img{height:42px;width:42px;object-fit:contain;background:#7CC95A;border:3px solid var(--ink);border-radius:8px;padding:1px;flex-shrink:0;}
+  #info img{height:40px;width:40px;object-fit:contain;background:#7CC95A;border:3px solid var(--ink);border-radius:8px;padding:1px;flex-shrink:0;image-rendering:pixelated;}
   .uinfo{flex:1;display:flex;flex-direction:column;gap:3px;min-width:0;}
   .uinfo .l1{display:flex;align-items:baseline;gap:7px;white-space:nowrap;}
   .uinfo .nm{font-size:16px;color:#fff;font-weight:800;}
@@ -101,7 +101,7 @@
   .dialog .row button:not(.center){background:transparent;border:0;border-bottom:2px solid var(--line);box-shadow:none;}
   .dialog .row button:not(.center):active{background:var(--sel);transform:none;}
   .dialog .row button:not(.center):disabled{opacity:.4;}
-  .dialog button img{height:40px;width:40px;object-fit:contain;}
+  .dialog button img{height:32px;width:32px;object-fit:contain;image-rendering:pixelated;}
   .dialog button .pr{margin-left:auto;color:var(--gold);white-space:nowrap;font-size:16px;}
   .dialog button.gold .pr{color:#7a5b00;}
   .dialog button.center{justify-content:center;text-align:center;margin-top:4px;}
@@ -153,7 +153,7 @@
   #titleRow button:active{background:var(--sel);transform:none;}
   #titleRow button small{font-size:12px;color:var(--soft);display:block;}
   .tsUnits{position:absolute;left:0;right:0;bottom:calc(30% - 52px);z-index:1;display:flex;justify-content:center;align-items:flex-end;gap:4px;}
-  .tsUnits img{height:34px;}
+  .tsUnits img{height:32px;width:32px;image-rendering:pixelated;}
   .tsUnits .vs{width:22px;}
   .tsFooter{position:absolute;left:0;right:0;bottom:0;height:44px;z-index:2;background:var(--ink);
     display:flex;justify-content:space-between;align-items:center;padding:0 6px 0 16px;font-size:14px;color:var(--dim);}
@@ -497,16 +497,36 @@ const PX={
   ],
 };
 const sprCv={}, sprUrl={}, sprGrey={};
+/* ユニットはドット絵。16×16の元絵を「整数倍」でだけ拡大して描く
+   （中途半端な倍率だと黒い縁の太さがバラバラになるため） */
+function spriteBase(type,pal,flip){
+  const rows=PX[type],H=rows.length,W=rows[0].length;
+  const ox=Math.floor((16-W)/2),oy=Math.floor((16-H)/2);
+  const c=document.createElement("canvas");c.width=16;c.height=16;
+  const g=c.getContext("2d");
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    const ch=rows[y][x];if(ch==="."||!pal[ch])continue;
+    g.fillStyle=pal[ch];g.fillRect(ox+(flip?W-1-x:x),oy+y,1,1);
+  }
+  return c;
+}
+function spriteUrl(base){
+  const SC=6,c=document.createElement("canvas");c.width=16*SC;c.height=16*SC;
+  const g=c.getContext("2d");g.imageSmoothingEnabled=false;g.drawImage(base,0,0,16*SC,16*SC);
+  return c.toDataURL();
+}
 function buildSprites(){
+  const basePal={K:"#16161c",S:"#e8b88a",G:"#aeb4bc",W:"#e8e8ee",A:"#9adcf0",R:"#e0424f",M:"#4c525e",g:"#cfd4dc",Y:"#ffd76a"};
   for(const type in PX){
     sprCv[type]=[]; sprUrl[type]=[];
     for(let pid=0;pid<4;pid++){
-      const c=makeUnitCanvas(type,{c:PLAYER_COLOR[pid],d:PLAYER_DARK[pid],l:PLAYER_LIGHT[pid]},pid===1||pid===3);
+      const pal=Object.assign({},basePal,{T:PLAYER_COLOR[pid],t:PLAYER_DARK[pid],H:PLAYER_LIGHT[pid]});
+      const c=spriteBase(type,pal,pid===1||pid===3); // 赤・黄は左向き
       sprCv[type][pid]=c;
-      sprUrl[type][pid]=c.toDataURL();
+      sprUrl[type][pid]=spriteUrl(c);
     }
-    // 行動済み用のグレー版（右向き・左向き）
-    sprGrey[type]=[0,1].map(fl=>makeUnitCanvas(type,{c:"#9AA0AA",d:"#6E7380",l:"#C3C7CF"},!!fl));
+    const gp=Object.assign({},basePal,{S:"#c9ccd2",W:"#d8d8de",A:"#b8c4cc",R:"#9a9ea6",Y:"#c9ccd2",T:"#8E929C",t:"#5C606A",H:"#B6BAC2"});
+    sprGrey[type]=[spriteBase(type,gp,false),spriteBase(type,gp,true)];
   }
 }
 
@@ -895,7 +915,7 @@ function bgmSetMute(m){
    保存キーにこの版番号を含めるので、古いクリア記録は自動的に無効化される。 */
 const STAGE_SET_VERSION=21;
 /* 画面表示用のバージョン情報（ファイルを更新したらここを変える） */
-const BUILD_VER="v63";
+const BUILD_VER="v64";
 const BUILD_DATE="2026-10-23";
 function scoreKey(idx){return 'mwdx_v'+STAGE_SET_VERSION+'_s'+idx;}
 function saveStageScore(idx,turns){
@@ -2502,7 +2522,7 @@ let dragStart=null;       // {x,y,camX,camY,moved}
 const TAP_SLOP=10; // px（これ以上動いたらタップ扱いしない）
 
 function applyCam(){
-  cv.style.transform=`translate(${camX}px,${camY}px)`;
+  cv.style.transform=`translate(${Math.round(camX)}px,${Math.round(camY)}px)`;
 }
 function clampCam(){
   const wrap=document.getElementById("mapwrap");
@@ -3369,7 +3389,10 @@ function draw(){
     ctx.fillStyle=isAir?"rgba(0,0,0,.18)":"rgba(0,0,0,.28)";
     ctx.beginPath();ctx.ellipse(cx,cy+TILE*.36,TILE*.28,TILE*.08,0,0,7);ctx.fill();
     const spc=sprCv[u.type][u.pid];
-    const w=TILE*.92,h=w*(spc.height/spc.width);
+    // 端末の画素で「整数倍」になる大きさにそろえる（縁の太さを均一に）
+    const kDev=Math.max(1,Math.floor(TILE*DPR*.92/16));
+    const w=16*kDev/DPR,h=w;
+    const snap=v=>Math.round(v*DPR)/DPR;
     if(u.rank===5){
       const pulse=.5+.5*Math.sin(timeNow/220+u.x*3+u.y*1.7);
       const auraR=TILE*(.62+.09*pulse);
@@ -3387,7 +3410,9 @@ function draw(){
     const airLift=isAir?-TILE*.16+Math.sin(timeNow/300+u.x)*TILE*.03:0;
     const grey=u.acted&&u.pid===turn;
     const spd=grey&&sprGrey[u.type]?sprGrey[u.type][(u.pid===1||u.pid===3)?1:0]:spc;
-    ctx.drawImage(spd,cx-w/2,cy-h/2-TILE*.06+bob+airLift,w,h);
+    ctx.imageSmoothingEnabled=false;
+    ctx.drawImage(spd,snap(cx-w/2),snap(cy-h/2-TILE*.06+bob+airLift),w,h);
+    ctx.imageSmoothingEnabled=true;
     ctx.globalAlpha=1;
     if(u.flash>0){
       ctx.globalCompositeOperation="lighter";
