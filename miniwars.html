@@ -915,8 +915,8 @@ function bgmSetMute(m){
    保存キーにこの版番号を含めるので、古いクリア記録は自動的に無効化される。 */
 const STAGE_SET_VERSION=21;
 /* 画面表示用のバージョン情報（ファイルを更新したらここを変える） */
-const BUILD_VER="v65";
-const BUILD_DATE="2026-10-24";
+const BUILD_VER="v66";
+const BUILD_DATE="2026-10-26";
 function scoreKey(idx){return 'mwdx_v'+STAGE_SET_VERSION+'_s'+idx;}
 function saveStageScore(idx,turns){
   try{
@@ -3126,11 +3126,11 @@ function drawTileB(g,t,x,y,X,Y,S,at,own,lvl,dpr){
     for(let r=0;r<16;r++)for(let cc=0;cc<16;cc++){const ch=rows[r][cc];if(ch==="."||!pal[ch])continue;g.fillStyle=pal[ch];g.fillRect(ox+cc*k,oy+r*k,k,k);}
   }
 }
-const P_CITY=["................","..KKKKK.........","..KRRRK..KKKKK..","..KWAWK..KRRRK..","..KWWWK..KWAWK..","..KWAWK..KWWWK..","KKKWWWKKKKWAWK..","KRRRRRRRRKWWWKK.","KWWWWWWWWKWAWAK.","KWAWWAWWAKWWWWK.","KWWWWWWWWKWAWAK.","KWAWWDDWAKWWWWK.","KWWWWDDWWKWDDWK.","KKKKKKKKKKKKKKK.","................","................"];
-const P_CITY2=["......KKKK......","......KRRK......","....KKKWWKKK....","....KRRRRRRK....","....KWYWWYWK....","KKKKKWWWWWWKKKK.","KRRRKWYWWYWKRRK.","KWYWKWWWWWWKWYK.","KWWWKWYWWYWKWWK.","KWYWKWWWWWWKWYK.","KWWWKWYWWYWKWWK.","KWYWKWWWWWWKWYK.","KWWWKWWDDWWKWDK.","KKKKKKKKKKKKKKK.","................","................"];
-const P_FACT=["...........KK...","..........KGGK..","..........KGGK..","..........KGGK..","K....K....KGGK..","KK...KK...KRRK..","KRK..KRK..KRRK..","KRRK.KRRK.KGGK..","KRRRKKRRRKKGGKK.","KKKKKKKKKKKKKKK.","KWWWWWWWWWWWWWK.","KWAAWWAAWWKKKWK.","KWWWWWWWWWKGGWK.","KKKKKKKKKKKKKKK.","................","................"];
-const P_FACT2=["..KK.......KK...",".KOOK.....KOOK..","..KGK......KGK..","..KGK......KGK..","K.KGKK....KKGK..","KKKRKKK...KKRK..","KRKRKRKK..KRRK..","KRRKKRRKK.KRRK..","KRRRKKRRRKKGGKK.","KKKKKKKKKKKKKKK.","KWYYWWYYWWYYWWK.","KRRRRRRRRRRRRRK.","KWWWWWWWWWKGGWK.","KKKKKKKKKKKKKKK.","................","................"];
-const P_HQ=["......KF........","......KFFF......","......KFFFF.....","......KFF.......","......K.........","....KKKKK.......","....KRRRK.......","K.K.KWYWK.K.K...","KKKKKWWWKKKKK...","KRRRRRRRRRRRK...","KWWWWWYWWWWWK...","KWAWWYYYWWAWK...","KWWWWWYWWWWWK...","KWWWWKDKWWWWK...","KKKKKKKKKKKKK...","................"];
+const P_CITY=["................", "..KKKKK.........", "..KRRRK..KKKKK..", "..KRRRK..KRRRK..", "..KWAWK..KRRRK..", "..KWWWK..KWAWK..", "KKKWAWKKKKWWWK..", "KRRRRRRRRKWAWK..", "KRRRRRRRRKWWWKK.", "KWAWWAWWAKRRRRK.", "KWWWWWWWWKWAWAK.", "KWAWWDDWAKWWWWK.", "KWWWWDDWWKWDDWK.", "KKKKKKKKKKKKKKK.", "................", "................"];
+const P_CITY2=["......KKKK......", "......KRRK......", "....KKKRRKKK....", "....KRRRRRRK....", "....KRRRRRRK....", "KKKKKWYWWYWKKKK.", "KRRRKWWWWWWKRRK.", "KRRRKWYWWYWKRRK.", "KWYWKWWWWWWKWYK.", "KWWWKWYWWYWKWWK.", "KWYWKRRRRRRKWYK.", "KWWWKWWWWWWKWWK.", "KWYWKWWDDWWKWDK.", "KKKKKKKKKKKKKKK.", "................", "................"];
+const P_FACT=["...........KK...", "..........KGGK..", "..........KGGK..", "..........KRRK..", "K....K....KRRK..", "KK...KK...KRRK..", "KRK..KRK..KGGK..", "KRRK.KRRK.KGGK..", "KRRRKKRRRKKGGKK.", "KKKKKKKKKKKKKKK.", "KRRRRRRRRRRRRRK.", "KWAAWWAAWWKKKWK.", "KWWWWWWWWWKGGWK.", "KKKKKKKKKKKKKKK.", "................", "................"];
+const P_FACT2=["..KK.......KK...", ".KOOK.....KOOK..", "..KGK......KGK..", "..KRK......KRK..", "K.KRKK....KKRK..", "KKKRKKK...KKRK..", "KRKGKRKK..KRRK..", "KRRKKRRKK.KRRK..", "KRRRKKRRRKKGGKK.", "KKKKKKKKKKKKKKK.", "KRRRRRRRRRRRRRK.", "KWYYWWYYWWYYWWK.", "KRRRRRRRRRRRRRK.", "KKKKKKKKKKKKKKK.", "................", "................"];
+const P_HQ=["......KF........", "......KFFF......", "......KFFFF.....", "......KFF.......", "......K.........", "....KKKKK.......", "....KRRRK.......", "K.K.KRRRK.K.K...", "KKKKKWWWKKKKK...", "KRRRRRRRRRRRK...", "KRRRRRYRRRRRK...", "KWAWWYYYWWAWK...", "KWWWWWYWWWWWK...", "KWWWWKDKWWWWK...", "KKKKKKKKKKKKK...", "................"];
 const P_HQ2=["......KYYY......","......KYYYY.....","......KYYYYY....","......KYY.......","......K.........","...KKKKKKK......","...KRRRRRK......","K.KKWWYWWKK.K...","KKKRRRRRRRKKK...","KYYYYYYYYYYYK...","KWWWWWYWWWWWK...","KWAWWYYYWWAWK...","KWWWWWYWWWWWK...","KWWWWKDKWWWWK...","KKKKKKKKKKKKK...","................"];
 function gearS(g,cx,cy,r,col){g.fillStyle=col;for(let i=0;i<8;i++){g.save();g.translate(cx,cy);g.rotate(i*Math.PI/4);g.fillRect(-r*.22,-r*1.25,r*.44,r*.5);g.restore();}sCirc(g,cx,cy,r);g.fill();g.fillStyle="#FFF7EA";sCirc(g,cx,cy,r*.42);g.fill();}
 function renderTerrain(){
